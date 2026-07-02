@@ -8,14 +8,14 @@
     MinHeight="700"
     MinWidth="1200"
     WindowStartupLocation="CenterScreen">
-    <Grid Margin="8">
+    <Grid Margin="12" Background="{StaticResource WindowBackgroundBrush}">
         <Grid.RowDefinitions>
 
             <!-- Filters -->
             <RowDefinition Height="Auto"/>
 
             <!-- Splitter -->
-            <RowDefinition Height="5"/>
+            <RowDefinition Height="6"/>
 
             <!-- Active module -->
             <RowDefinition Height="*"/>
@@ -27,19 +27,86 @@
 
         <Border
             Grid.Row="0"
-            Padding="8"
-            Margin="0,0,0,6"
-            BorderBrush="#DADADA"
+            Padding="16,14"
+            Margin="0,0,0,10"
+            BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="4"
-            Background="#FAFAFA">
+            CornerRadius="8"
+            Background="{StaticResource HeaderBrush}"
+            Effect="{StaticResource CardShadowEffect}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0">
+                <!-- Brand -->
+                <StackPanel
+                    Grid.Row="0"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,14">
+                    <Border
+                        Width="28"
+                        Height="28"
+                        CornerRadius="7"
+                        Background="{StaticResource AccentBrush}">
+                        <TextBlock
+                            Text="K"
+                            FontWeight="Bold"
+                            FontSize="14"
+                            Foreground="{StaticResource TextOnAccentBrush}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock
+                            Text="KubaToolKit"
+                            FontWeight="Bold"
+                            FontSize="16"
+                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock
+                            Text="AWS CloudWatch Logs &amp; S3 Explorer"
+                            FontSize="11"
+                            Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Source -->
+                <StackPanel
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,12">
+
+                    <TextBlock
+                        Text="Source"
+                        VerticalAlignment="Center"
+                        Margin="0,0,12,0"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                    <WrapPanel VerticalAlignment="Center">
+                        <RadioButton
+                            x:Name="CloudWatchModeRadio"
+                            Content="CloudWatch"
+                            IsChecked="True"
+                            GroupName="Mode"
+                            Checked="ModeRadio_Checked"
+                            VerticalAlignment="Center"
+                            Margin="0,0,20,0"/>
+
+                        <RadioButton
+                            x:Name="S3ModeRadio"
+                            Content="S3 Explorer"
+                            GroupName="Mode"
+                            Checked="ModeRadio_Checked"
+                            VerticalAlignment="Center"
+                            Margin="0,0,20,0"/>
+                    </WrapPanel>
+                </StackPanel>
+
+                <Grid Grid.Row="2">
 
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="70"/>
@@ -47,8 +114,6 @@
 
                         <ColumnDefinition Width="70"/>
                         <ColumnDefinition Width="180"/>
-
-                        <ColumnDefinition Width="240"/>
 
                         <ColumnDefinition Width="55"/>
                         <ColumnDefinition Width="*"/>
@@ -59,12 +124,12 @@
         Grid.Column="0"
         VerticalAlignment="Center"
         FontWeight="SemiBold"
+        Foreground="{StaticResource TextSecondaryBrush}"
         Text="Profile"/>
 
                     <ComboBox
         x:Name="ProfileCombo"
         Grid.Column="1"
-        Height="28"
         Margin="6,0,12,0"
         SelectionChanged="ProfileCombo_SelectionChanged"/>
 
@@ -73,57 +138,26 @@
         Grid.Column="2"
         VerticalAlignment="Center"
         FontWeight="SemiBold"
+        Foreground="{StaticResource TextSecondaryBrush}"
         Text="Pattern"/>
 
                     <ComboBox
         x:Name="PatternCombo"
         Grid.Column="3"
-        Height="28"
         Margin="6,0,12,0"
         SelectionChanged="PatternCombo_SelectionChanged"/>
 
-                    <!-- Source -->
-                    <StackPanel
-        Grid.Column="4"
-        Orientation="Horizontal"
-        VerticalAlignment="Center"
-        Margin="6,0,12,0">
-
-                        <TextBlock
-            Text="Source"
-            VerticalAlignment="Center"
-            Margin="0,0,8,0"
-            FontWeight="SemiBold"/>
-
-                        <RadioButton
-            x:Name="CloudWatchModeRadio"
-            Content="CloudWatch"
-            IsChecked="True"
-            GroupName="Mode"
-            Checked="ModeRadio_Checked"
-            VerticalAlignment="Center"/>
-
-                        <RadioButton
-            x:Name="S3ModeRadio"
-            Content="S3 Explorer"
-            Margin="10,0,0,0"
-            GroupName="Mode"
-            Checked="ModeRadio_Checked"
-            VerticalAlignment="Center"/>
-
-                    </StackPanel>
-
                     <!-- Search -->
                     <TextBlock
-        Grid.Column="5"
+        Grid.Column="4"
         VerticalAlignment="Center"
         FontWeight="SemiBold"
+        Foreground="{StaticResource TextSecondaryBrush}"
         Text="Search"/>
 
                     <TextBox
         x:Name="SearchTextBox"
-        Grid.Column="6"
-        Height="28"
+        Grid.Column="5"
         Margin="6,0,0,0"
         VerticalContentAlignment="Center"
         KeyDown="SearchTextBox_KeyDown"/>
@@ -131,87 +165,81 @@
 
                 <!-- Ligne 2 -->
                 <Grid
-                    Grid.Row="1"
-                    Margin="0,8,0,0">
+                    Grid.Row="3"
+                    Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="45"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="35"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="70"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock
                         Grid.Column="0"
                         VerticalAlignment="Center"
                         FontWeight="SemiBold"
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Margin="0,0,8,0"
                         Text="Start"/>
                     <DatePicker
                         x:Name="StartDatePicker"
                         Grid.Column="1"
-                        Height="28"
+                        Width="110"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="StartTimeTextBox"
                         Grid.Column="2"
-                        Height="25"
-                        Margin="6,4,10,2"
+                        Width="72"
+                        Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Left"
-                        Padding="0"
+                        HorizontalContentAlignment="Center"
                         LostFocus="TimeTextBox_LostFocus"
                         PreviewKeyDown="TimeTextBox_PreviewKeyDown"
                         GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
                         PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
                     <TextBlock
-                        Grid.Column="4"
+                        Grid.Column="3"
                         VerticalAlignment="Center"
                         FontWeight="SemiBold"
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Margin="24,0,8,0"
                         Text="End"/>
                     <DatePicker
                         x:Name="EndDatePicker"
-                        Grid.Column="5"
-                        Height="28"
+                        Grid.Column="4"
+                        Width="110"
                         VerticalContentAlignment="Center"
-                        CalendarOpened="DatePicker_CalendarOpened" Margin="0,3,0,1"/>
+                        CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="EndTimeTextBox"
-                        Grid.Column="6"
-                        Height="26"
-                        Margin="6,4,10,2"
+                        Grid.Column="5"
+                        Width="72"
+                        Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Left"
-                        Padding="0"
+                        HorizontalContentAlignment="Center"
                         LostFocus="TimeTextBox_LostFocus"
                         PreviewKeyDown="TimeTextBox_PreviewKeyDown"
                         GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
                         PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
-                    <StackPanel
-    Grid.Column="8"
-    Orientation="Horizontal"
-    HorizontalAlignment="Right">
-
-                        <Button
-        x:Name="SearchButton"
-        Width="80"
-        Height="32"
-        Content="Search"
-        FontWeight="SemiBold"
-        Click="SearchButton_Click"/>
-                    </StackPanel>
+                    <Button
+                        x:Name="SearchButton"
+                        Grid.Column="7"
+                        Width="90"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Content="Search"
+                        Click="SearchButton_Click"/>
                 </Grid>
             </Grid>
         </Border>
         <GridSplitter
                Grid.Row="1"
-               Height="5"
+               Height="6"
                HorizontalAlignment="Stretch"
                VerticalAlignment="Center"
-               Background="#D0D0D0"
                ResizeBehavior="PreviousAndNext"
                ResizeDirection="Rows"/>
 

@@ -11,27 +11,36 @@
         </Grid.RowDefinitions>
 
         <!-- Bucket -->
-        <StackPanel Orientation="Horizontal">
+        <Border
+            Padding="14,10"
+            Margin="0,0,0,10"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}">
+            <StackPanel Orientation="Horizontal">
 
-            <TextBlock
-        Text="Bucket"
-        FontWeight="SemiBold"
-        VerticalAlignment="Center"
-        Margin="0,0,8,0"/>
+                <TextBlock
+            Text="Bucket"
+            FontWeight="SemiBold"
+            Foreground="{StaticResource TextSecondaryBrush}"
+            VerticalAlignment="Center"
+            Margin="0,0,10,0"/>
 
-            <ComboBox
-        x:Name="BucketCombo"
-        Width="350"
-        Height="28"
-        SelectionChanged="BucketCombo_SelectionChanged"/>
+                <ComboBox
+            x:Name="BucketCombo"
+            Width="350"
+            SelectionChanged="BucketCombo_SelectionChanged"/>
 
-        </StackPanel>
+            </StackPanel>
+        </Border>
         <Grid
 Grid.Row="1"
-Margin="6,4,6,6">
+Margin="0,0,0,10">
 
             <Grid.RowDefinitions>
-                <RowDefinition Height="28"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
@@ -41,15 +50,12 @@ Margin="6,4,6,6">
                 <!-- Barre -->
                 <ProgressBar
     x:Name="SearchProgressBar"
-    Height="6"
     Minimum="0"
     Maximum="100"
     Value="0"
     VerticalAlignment="Center"
     Margin="0,0,90,0"
-    Visibility="Collapsed"
-    Foreground="#4CAF50"
-    Background="#D9D9D9"/>
+    Visibility="Collapsed"/>
 
                 <!-- Pourcentage -->
                 <TextBlock
@@ -58,7 +64,7 @@ Margin="6,4,6,6">
     VerticalAlignment="Center"
     FontSize="10"
     FontWeight="SemiBold"
-    Foreground="Black"
+    Foreground="{StaticResource TextPrimaryBrush}"
     Visibility="Collapsed"
     Text="0%"/>
 
@@ -78,11 +84,11 @@ Margin="6,4,6,6">
             <TextBlock
                 x:Name="S3QueueText"
                 Grid.Row="1"
-                Margin="0,4,0,0"
+                Margin="0,6,0,0"
                 HorizontalAlignment="Center"
                 FontSize="11"
                 FontWeight="SemiBold"
-                Foreground="#606060"
+                Foreground="{StaticResource TextSecondaryBrush}"
                 TextWrapping="NoWrap"
                 TextTrimming="CharacterEllipsis"
                 Visibility="Collapsed"/>
@@ -92,15 +98,18 @@ Margin="6,4,6,6">
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
-                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="10"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Tree -->
             <Border
-        BorderBrush="#DADADA"
+        BorderBrush="{StaticResource BorderBrush}"
         BorderThickness="1"
-        Padding="8">
+        CornerRadius="8"
+        Background="{StaticResource SurfaceBrush}"
+        Effect="{StaticResource CardShadowEffect}"
+        Padding="10">
                 <TreeView
                     x:Name="S3TreeView"
                     SelectedItemChanged="S3TreeView_SelectedItemChanged">
@@ -125,72 +134,25 @@ Margin="6,4,6,6">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate
                             ItemsSource="{Binding Children}">
-                            <StackPanel
-                                Orientation="Horizontal"
+                            <Border
+                                Padding="6,3"
                                 Margin="0,1,0,1"
+                                CornerRadius="4"
                                 ContextMenu="{StaticResource S3FolderMenu}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSearchRoot}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <TextBlock
-                                    Text="├─"
-                                    Foreground="#909090"
-                                    FontFamily="Consolas"
-                                    Margin="0,0,4,0"
+                                    Text="{Binding Name}"
                                     VerticalAlignment="Center"/>
-                                <Border
-Padding="2">
-
-                                    <Border.Style>
-
-                                        <Style TargetType="Border">
-
-                                            <Setter
-        Property="Background"
-        Value="Transparent"/>
-
-                                            <Style.Triggers>
-
-                                                <DataTrigger
-            Binding="{Binding IsSearchRoot}"
-            Value="True">
-
-                                                    <Setter
-                        Property="Background"
-                Value="#C8CDD4"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Border
-Padding="2">
-
-                                        <Border.Style>
-
-                                            <Style TargetType="Border">
-
-                                                <Setter
-        Property="Background"
-        Value="Transparent"/>
-
-                                                <Style.Triggers>
-
-                                                    <DataTrigger
-            Binding="{Binding IsSearchRoot}"
-            Value="True">
-
-                                                        <Setter
-                Property="Background"
-                Value="#C8CDD4"/>
-
-                                                    </DataTrigger>
-
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock
-                                            Text="{Binding Name}"
-                                            VerticalAlignment="Center"/>
-                                    </Border>
-                                </Border>
-                            </StackPanel>
+                            </Border>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
                 </TreeView>
@@ -199,15 +161,18 @@ Padding="2">
             <!-- Splitter -->
             <GridSplitter
                 Grid.Column="1"
-                Width="8"
+                Width="10"
                 HorizontalAlignment="Stretch"/>
 
             <!-- Right panel -->
             <Border
 Grid.Column="2"
-BorderBrush="#DADADA"
+BorderBrush="{StaticResource BorderBrush}"
 BorderThickness="1"
-Padding="8">
+CornerRadius="8"
+Background="{StaticResource SurfaceBrush}"
+Effect="{StaticResource CardShadowEffect}"
+Padding="10">
 
                 <Grid>
 
@@ -258,10 +223,10 @@ MouseDoubleClick="S3FilesGrid_DoubleClick">
                     <Border
 x:Name="S3DropOverlay"
 Visibility="Collapsed"
-Background="#66000000"
-BorderBrush="#707070"
-BorderThickness="3"
-CornerRadius="6"
+Background="#E6103A66"
+BorderBrush="{StaticResource AccentBrush}"
+BorderThickness="2"
+CornerRadius="8"
 IsHitTestVisible="False">
 
                         <StackPanel
@@ -270,16 +235,16 @@ IsHitTestVisible="False">
 
                             <TextBlock
             Text="+"
-            FontSize="120"
+            FontSize="100"
             FontWeight="Light"
-            Foreground="#E0E0E0"
+            Foreground="White"
             HorizontalAlignment="Center"/>
 
                             <TextBlock
-            Text="Upload file(s)"
-            FontSize="28"
+            Text="Drop to upload file(s)"
+            FontSize="24"
             FontWeight="SemiBold"
-            Foreground="#E0E0E0"
+            Foreground="White"
             HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
