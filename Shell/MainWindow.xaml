@@ -187,7 +187,7 @@
                     <DatePicker
                         x:Name="StartDatePicker"
                         Grid.Column="1"
-                        Width="130"
+                        Width="110"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
@@ -211,7 +211,7 @@
                     <DatePicker
                         x:Name="EndDatePicker"
                         Grid.Column="4"
-                        Width="130"
+                        Width="110"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
