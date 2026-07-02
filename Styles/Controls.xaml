@@ -544,7 +544,7 @@
                                                     VerticalAlignment="Center"
                                                     RenderTransformOrigin="0.5,0.5">
                                                     <Path.RenderTransform>
-                                                        <RotateTransform x:Name="ArrowRotate" Angle="-90"/>
+                                                        <RotateTransform Angle="-90"/>
                                                     </Path.RenderTransform>
                                                 </Path>
                                                 <ContentPresenter
@@ -555,7 +555,11 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="ArrowRotate" Property="Angle" Value="0"/>
+                                                <Setter TargetName="Arrow" Property="RenderTransform">
+                                                    <Setter.Value>
+                                                        <RotateTransform Angle="0"/>
+                                                    </Setter.Value>
+                                                </Setter>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
