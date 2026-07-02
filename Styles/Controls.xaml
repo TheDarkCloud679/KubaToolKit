@@ -143,7 +143,9 @@
         <Setter Property="Height" Value="30"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource AccentSoftBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="SelectionTextBrush" Value="{StaticResource TextOnAccentBrush}"/>
+        <Setter Property="SelectionOpacity" Value="0.55"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -245,6 +247,28 @@
                                 BorderBrush="{StaticResource BorderStrongBrush}"
                                 BorderThickness="1"
                                 Effect="{StaticResource CardShadowEffect}"/>
+                        </Popup>
+                        <!--
+                            Purely decorative label synced to the calendar Popup via an
+                            ElementName binding, so it never touches PART_Popup's content.
+                        -->
+                        <Popup
+                            PlacementTarget="{Binding ElementName=Bd}"
+                            Placement="Top"
+                            IsOpen="{Binding IsOpen, ElementName=PART_Popup, Mode=OneWay}"
+                            AllowsTransparency="True"
+                            IsHitTestVisible="False">
+                            <Border
+                                Background="{StaticResource TextPrimaryBrush}"
+                                CornerRadius="6"
+                                Padding="10,5"
+                                Margin="0,0,0,6">
+                                <TextBlock
+                                    Text="{TemplateBinding Tag}"
+                                    FontWeight="SemiBold"
+                                    FontSize="12"
+                                    Foreground="White"/>
+                            </Border>
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>

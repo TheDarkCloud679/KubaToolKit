@@ -352,51 +352,37 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             return;
         }
 
+        e.Handled =
+            true;
+
+        // Index du caractère cliqué, indépendant du focus actuel : permet
+        // de savoir si l'utilisateur vise la partie heure ou minute même
+        // au tout premier clic (avant que le focus ne soit posé).
+        int charIndex =
+            textBox.GetCharacterIndexFromPoint(
+                e.GetPosition(textBox),
+                true);
+
         if (!textBox.IsKeyboardFocusWithin)
         {
-            e.Handled =
-                true;
-
             textBox.Focus();
+        }
 
-            Dispatcher.BeginInvoke(
-                new Action(() =>
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                if (charIndex <= 2)
                 {
                     SelectHourPart(
                         textBox);
-                }),
-                System.Windows.Threading.DispatcherPriority.Input);
-        }
-    }
-
-    private void
-TimeTextBox_PreviewMouseUp(
-    object sender,
-    MouseButtonEventArgs e)
-    {
-        if (sender
-            is not TextBox textBox)
-        {
-            return;
-        }
-
-        int caret =
-            textBox.CaretIndex;
-
-        // clic partie heure
-        if (caret <= 2)
-        {
-            SelectHourPart(
-                textBox);
-        }
-        else
-        {
-            SelectMinutePart(
-                textBox);
-        }
-
-        e.Handled =
-            true;
+                }
+                else
+                {
+                    SelectMinutePart(
+                        textBox);
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void
