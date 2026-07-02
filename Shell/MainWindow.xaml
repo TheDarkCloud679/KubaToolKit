@@ -168,70 +168,70 @@
                     Grid.Row="2"
                     Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="45"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="35"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="70"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock
                         Grid.Column="0"
                         VerticalAlignment="Center"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource TextSecondaryBrush}"
+                        Margin="0,0,8,0"
                         Text="Start"/>
                     <DatePicker
                         x:Name="StartDatePicker"
                         Grid.Column="1"
+                        Width="130"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="StartTimeTextBox"
                         Grid.Column="2"
-                        Margin="6,0,10,0"
+                        Width="72"
+                        Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Left"
+                        HorizontalContentAlignment="Center"
                         LostFocus="TimeTextBox_LostFocus"
                         PreviewKeyDown="TimeTextBox_PreviewKeyDown"
                         GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
                         PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
                     <TextBlock
-                        Grid.Column="4"
+                        Grid.Column="3"
                         VerticalAlignment="Center"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource TextSecondaryBrush}"
+                        Margin="24,0,8,0"
                         Text="End"/>
                     <DatePicker
                         x:Name="EndDatePicker"
-                        Grid.Column="5"
+                        Grid.Column="4"
+                        Width="130"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="EndTimeTextBox"
-                        Grid.Column="6"
-                        Margin="6,0,10,0"
+                        Grid.Column="5"
+                        Width="72"
+                        Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Left"
+                        HorizontalContentAlignment="Center"
                         LostFocus="TimeTextBox_LostFocus"
                         PreviewKeyDown="TimeTextBox_PreviewKeyDown"
                         GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
                         PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
-                    <StackPanel
-    Grid.Column="8"
-    Orientation="Horizontal"
-    HorizontalAlignment="Right">
-
-                        <Button
-        x:Name="SearchButton"
-        Width="90"
-        Style="{StaticResource AccentButtonStyle}"
-        Content="Search"
-        Click="SearchButton_Click"/>
-                    </StackPanel>
+                    <Button
+                        x:Name="SearchButton"
+                        Grid.Column="7"
+                        Width="90"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Content="Search"
+                        Click="SearchButton_Click"/>
                 </Grid>
             </Grid>
         </Border>

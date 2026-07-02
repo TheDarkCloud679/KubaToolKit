@@ -209,8 +209,8 @@
               Grid.Row="0"
               Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="140"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     x:Name="ProgressTextBlock"
@@ -222,6 +222,7 @@
                 <ProgressBar
                     x:Name="SearchProgressBar"
                     Grid.Column="1"
+                    Margin="16,0,4,0"
                     Minimum="0"
                     Maximum="100"
                     Value="0"
