@@ -227,6 +227,25 @@
                                 </Style>
                             </Button.Style>
                         </Button>
+                        <Popup
+                            x:Name="PART_Popup"
+                            Placement="Bottom"
+                            StaysOpen="False"
+                            AllowsTransparency="True"
+                            PopupAnimation="Slide">
+                            <!--
+                                DatePicker's own code expects the Popup's direct Child to be
+                                the Calendar (it casts _popUp.Child as Calendar) - wrapping it
+                                in another element here would silently break date selection.
+                            -->
+                            <Calendar
+                                x:Name="Calendar"
+                                Margin="0,4,0,0"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource BorderStrongBrush}"
+                                BorderThickness="1"
+                                Effect="{StaticResource CardShadowEffect}"/>
+                        </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
