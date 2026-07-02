@@ -463,11 +463,8 @@ SelectMinutePart(
             return;
         }
 
-        if (picker != StartDatePicker)
-        {
-            return;
-        }
-
+        // Que ce soit Start ou End qu'on ouvre en premier, le même flux
+        // "1er clic = début, 2e clic = fin" s'applique.
         _activeDatePicker = picker;
         picker.SelectedDateChanged -= StartDatePicker_SelectedDateChanged;
         picker.SelectedDateChanged += StartDatePicker_SelectedDateChanged;
@@ -480,6 +477,13 @@ SelectMinutePart(
     private void
     StartDatePicker_CalendarClosed(object? sender, RoutedEventArgs e)
     {
+        var picker = sender as DatePicker ?? _activeDatePicker;
+
+        if (picker == null)
+        {
+            return;
+        }
+
         // on attend un 2e clic
         if (_waitingForEndDate && _forceKeepCalendarOpen)
         {
@@ -488,9 +492,9 @@ SelectMinutePart(
                 {
                     // si focus toujours dans le DatePicker
                     // on rouvre
-                    if (StartDatePicker.IsKeyboardFocusWithin)
+                    if (picker.IsKeyboardFocusWithin)
                     {
-                        StartDatePicker.IsDropDownOpen = true;
+                        picker.IsDropDownOpen = true;
                     }
                     else
                     {
@@ -597,7 +601,7 @@ StartDatePicker_SelectedDateChanged(
             _startRangeDate =
                 null;
 
-            StartDatePicker
+            picker
                 .IsDropDownOpen =
                     false;
         }
