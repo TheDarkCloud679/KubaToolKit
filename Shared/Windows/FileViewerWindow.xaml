@@ -8,7 +8,7 @@
     Height="750"
     WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="8">
+    <Grid Margin="14">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,15 +18,17 @@
 
         <TextBlock
         x:Name="FileNameTextBlock"
-        FontWeight="SemiBold"
-        Margin="0,0,0,8"/>
+        FontWeight="Bold"
+        FontSize="15"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        Margin="0,0,0,10"/>
 
         <StackPanel
     x:Name="SearchPanel"
     Grid.Row="1"
     Orientation="Horizontal"
     Visibility="Collapsed"
-    Margin="0,0,0,8">
+    Margin="0,0,0,10">
 
             <TextBox
     x:Name="SearchTextBox"
@@ -46,38 +48,47 @@
         Click="FindPrevious_Click"/>
             <TextBlock
     x:Name="SearchCountText"
-    Margin="12,4,0,0"
+    Margin="12,0,0,0"
     VerticalAlignment="Center"
+    Foreground="{StaticResource TextSecondaryBrush}"
     Text="0 / 0"/>
         </StackPanel>
-        <avalonedit:TextEditor
-    x:Name="ContentEditor"
-    Grid.Row="2"
-    FontFamily="Consolas"
-    FontSize="13"
-    ShowLineNumbers="True"
-    IsReadOnly="True"
-    WordWrap="False"
-    HorizontalScrollBarVisibility="Auto"
-    VerticalScrollBarVisibility="Auto"
-    ContextMenuOpening="ContentEditor_ContextMenuOpening">
-            
-            
+        <Border
+            Grid.Row="2"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="4">
+            <avalonedit:TextEditor
+        x:Name="ContentEditor"
+        FontFamily="Cascadia Code, Consolas"
+        FontSize="13"
+        ShowLineNumbers="True"
+        IsReadOnly="True"
+        WordWrap="False"
+        Background="Transparent"
+        BorderThickness="0"
+        HorizontalScrollBarVisibility="Auto"
+        VerticalScrollBarVisibility="Auto"
+        ContextMenuOpening="ContentEditor_ContextMenuOpening">
 
-            <avalonedit:TextEditor.ContextMenu>
-                <ContextMenu>
-                    <MenuItem
-            x:Name="CopySelectedMenuItem"
-            Header="Copy selected"
-            Click="CopySelected_Click"/>
+                <avalonedit:TextEditor.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem
+                x:Name="CopySelectedMenuItem"
+                Header="Copy selected"
+                Click="CopySelected_Click"/>
 
-                    <Separator/>
+                        <Separator/>
 
-                    <MenuItem
-            Header="Copy all"
-            Click="CopyAll_Click"/>
-                </ContextMenu>
-            </avalonedit:TextEditor.ContextMenu>
-        </avalonedit:TextEditor>
+                        <MenuItem
+                Header="Copy all"
+                Click="CopyAll_Click"/>
+                    </ContextMenu>
+                </avalonedit:TextEditor.ContextMenu>
+            </avalonedit:TextEditor>
+        </Border>
     </Grid>
 </Window>

@@ -7,7 +7,7 @@
     Height="750"
     WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="8">
+    <Grid Margin="14" Background="{StaticResource WindowBackgroundBrush}">
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320"/>
@@ -17,9 +17,13 @@
         <!-- Tree archive -->
         <Border
             Grid.Column="0"
-            BorderBrush="#D0D0D0"
+            BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            Margin="0,0,8,0">
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Margin="0,0,10,0"
+            Padding="8">
 
             <TreeView
                 x:Name="ArchiveTreeView"
@@ -50,12 +54,15 @@
         <!-- Preview -->
         <Border
             Grid.Column="1"
-            BorderBrush="#D0D0D0"
-            BorderThickness="1">
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}">
 
             <TextBlock
                 Text="Double click a file to open it"
-                Foreground="Gray"
+                Foreground="{StaticResource TextMutedBrush}"
                 VerticalAlignment="Center"
                 HorizontalAlignment="Center"/>
         </Border>
