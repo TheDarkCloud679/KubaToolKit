@@ -1,0 +1,51 @@
+[
+  {
+    "Name": "API Gateway",
+    "Patterns": [
+      "API-Gateway-Execution-Logs",
+      "apigateway",
+      "APIGateway"
+    ]
+  },
+  {
+    "Name": "Lambda",
+    "Patterns": [
+      "lambda",
+      "lambda-insights",
+      "Lambda"
+    ]
+  },
+  {
+    "Name": "Glue",
+    "Patterns": [
+      "glue"
+    ]
+  },
+  {
+    "Name": "Database",
+    "Patterns": [
+      "rds",
+      "RDSOSMetrics"
+    ]
+  },
+  {
+    "Name": "KubaCache",
+    "Patterns": [
+      "redis",
+	  "kubacache",
+	  "KubaCache"
+    ]
+  },
+  {
+    "Name": "ECS",
+    "Patterns": [
+      "ecs"
+    ]
+  },
+  {
+    "Name": "Step Functions",
+    "Patterns": [
+      "StepFunction"
+    ]
+  }
+]

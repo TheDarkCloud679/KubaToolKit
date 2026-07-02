@@ -1,0 +1,10 @@
+/.vs
+/bin
+/obj
+
+# Personal AWS SSO reference files (see Config/README.md)
+Config/config
+Config/credentials
+
+# Per-user Visual Studio project settings (machine-specific paths)
+*.csproj.user

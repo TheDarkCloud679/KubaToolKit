@@ -1,0 +1,83 @@
+﻿<Window
+    x:Class="KubaToolKit.Shared.Windows.FileViewerWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+    Title="File Viewer"
+    Width="1200"
+    Height="750"
+    WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="8">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock
+        x:Name="FileNameTextBlock"
+        FontWeight="SemiBold"
+        Margin="0,0,0,8"/>
+
+        <StackPanel
+    x:Name="SearchPanel"
+    Grid.Row="1"
+    Orientation="Horizontal"
+    Visibility="Collapsed"
+    Margin="0,0,0,8">
+
+            <TextBox
+    x:Name="SearchTextBox"
+    Width="250"
+    Margin="0,0,8,0"
+    KeyDown="SearchTextBox_KeyDown"/>
+
+            <Button
+        Content="Next"
+        Width="70"
+        Margin="0,0,8,0"
+        Click="FindNext_Click"/>
+
+            <Button
+        Content="Previous"
+        Width="70"
+        Click="FindPrevious_Click"/>
+            <TextBlock
+    x:Name="SearchCountText"
+    Margin="12,4,0,0"
+    VerticalAlignment="Center"
+    Text="0 / 0"/>
+        </StackPanel>
+        <avalonedit:TextEditor
+    x:Name="ContentEditor"
+    Grid.Row="2"
+    FontFamily="Consolas"
+    FontSize="13"
+    ShowLineNumbers="True"
+    IsReadOnly="True"
+    WordWrap="False"
+    HorizontalScrollBarVisibility="Auto"
+    VerticalScrollBarVisibility="Auto"
+    ContextMenuOpening="ContentEditor_ContextMenuOpening">
+            
+            
+
+            <avalonedit:TextEditor.ContextMenu>
+                <ContextMenu>
+                    <MenuItem
+            x:Name="CopySelectedMenuItem"
+            Header="Copy selected"
+            Click="CopySelected_Click"/>
+
+                    <Separator/>
+
+                    <MenuItem
+            Header="Copy all"
+            Click="CopyAll_Click"/>
+                </ContextMenu>
+            </avalonedit:TextEditor.ContextMenu>
+        </avalonedit:TextEditor>
+    </Grid>
+</Window>
