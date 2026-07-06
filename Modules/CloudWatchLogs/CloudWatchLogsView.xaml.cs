@@ -22,6 +22,11 @@ public partial class CloudWatchLogsView
     private string? _currentProfile;
     private string _currentSearchText = "";
 
+    private const double QueryEditorBaseHeight = 120;
+    private const double QueryEditorLineHeight = 20;
+    private const double QueryEditorMaxHeight = 420;
+    private double _queryEditorCurrentHeight = QueryEditorBaseHeight;
+
     public CloudWatchLogsView()
     {
         InitializeComponent();
@@ -403,6 +408,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch
@@ -417,6 +423,59 @@ SearchAllLogsCheckBox_Changed(
     {
         DebugPanel.Visibility =
             Visibility.Collapsed;
+
+        // Rendre à la fenêtre l'espace qu'on lui avait emprunté.
+        if (Window.GetWindow(this) is Window window)
+        {
+            window.Height =
+                window.ActualHeight
+                - (_queryEditorCurrentHeight
+                    - QueryEditorBaseHeight);
+        }
+
+        QueryEditorTextBox.Height =
+            QueryEditorBaseHeight;
+
+        _queryEditorCurrentHeight =
+            QueryEditorBaseHeight;
+    }
+
+    /// Agrandit l'éditeur de requête (et la fenêtre) pour afficher toutes
+    /// les lignes pré-remplies sans scroll interne, dans une limite
+    /// raisonnable (QueryEditorMaxHeight).
+    private void
+    ResizeQueryEditorToFitContent()
+    {
+        int lineCount =
+            Math.Max(
+                1,
+                QueryEditorTextBox.Document.LineCount);
+
+        double desiredHeight =
+            Math.Clamp(
+                lineCount * QueryEditorLineHeight + 16,
+                QueryEditorBaseHeight,
+                QueryEditorMaxHeight);
+
+        QueryEditorTextBox.Height =
+            desiredHeight;
+
+        if (Window.GetWindow(this) is Window window)
+        {
+            double delta =
+                desiredHeight
+                - _queryEditorCurrentHeight;
+
+            if (Math.Abs(delta) > 0.5)
+            {
+                window.Height =
+                    window.ActualHeight
+                    + delta;
+            }
+        }
+
+        _queryEditorCurrentHeight =
+            desiredHeight;
     }
 
     private void
@@ -434,6 +493,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch (Exception ex)
@@ -525,6 +585,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch
