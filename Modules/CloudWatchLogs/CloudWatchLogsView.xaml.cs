@@ -114,14 +114,20 @@ SearchAllLogsCheckBox_Changed(
     object sender,
     RoutedEventArgs e)
     {
-        bool enabled =
+        bool searchAll =
             SearchAllLogsCheckBox
                 ?.IsChecked
-            != true;
+            == true;
 
         LogGroupsTreeView.IsEnabled =
-            enabled;
+            !searchAll;
 
+        // "Search in all log groups" doit visuellement cocher (ou décocher)
+        // tous les dossiers ; chaque nœud propage déjà l'état à ses enfants.
+        foreach (var node in _logGroupTree)
+        {
+            node.IsChecked = searchAll;
+        }
     }
 
     public async Task

@@ -397,40 +397,104 @@ ReadArchiveFile(
 
         try
         {
-            memoryStream.Position =
-                0;
-
-            using var archive =
-                new ZipArchive(
-                    memoryStream,
-                    ZipArchiveMode.Read,
-                    true);
-
-            var entry =
-                archive.GetEntry(
-                    entryPath);
-
-            if (entry == null)
-            {
-                return
-                    "File not found in archive.";
-            }
-
-            using var entryStream =
-                entry.Open();
-
-            using var reader =
-                new StreamReader(
-                    entryStream);
-
-            return await reader
-                .ReadToEndAsync();
+            return await ReadEntryContent(
+                memoryStream,
+                entryPath);
         }
         catch (Exception ex)
         {
             return
                 $"ERROR:\n{ex}";
         }
+    }
+
+    /// Lit le contenu d'une entrée quel que soit le format de l'archive
+    /// (zip, 7z, rar, tar...) au lieu de se limiter au zip natif .NET,
+    /// pour rester cohérent avec ReadArchiveEntries qui liste déjà ces
+    /// formats via SharpCompress.
+    private async Task<string>
+    ReadEntryContent(
+        Stream stream,
+        string entryPath)
+    {
+        stream.Position =
+            0;
+
+        try
+        {
+            using var reader =
+                ReaderFactory
+                    .OpenReader(
+                        stream,
+                        ReaderOptions.ForExternalStream);
+
+            while (reader.MoveToNextEntry())
+            {
+                if (reader.Entry.IsDirectory
+                    ||
+                    reader.Entry.Key
+                    != entryPath)
+                {
+                    continue;
+                }
+
+                using var entryStream =
+                    reader.OpenEntryStream();
+
+                using var textReader =
+                    new StreamReader(
+                        entryStream);
+
+                return await textReader
+                    .ReadToEndAsync();
+            }
+
+            return
+                "File not found in archive.";
+        }
+        catch
+        {
+            return Read7ZipEntryContent(
+                stream,
+                entryPath);
+        }
+    }
+
+    private string
+    Read7ZipEntryContent(
+        Stream stream,
+        string entryPath)
+    {
+        stream.Position =
+            0;
+
+        using var archive =
+            SevenZipArchive
+                .OpenArchive(
+                    stream,
+                    ReaderOptions.ForExternalStream);
+
+        var entry =
+            archive.Entries
+                .FirstOrDefault(x =>
+                    !x.IsDirectory
+                    && x.Key == entryPath);
+
+        if (entry == null)
+        {
+            return
+                "File not found in archive.";
+        }
+
+        using var entryStream =
+            entry.OpenEntryStream();
+
+        using var reader =
+            new StreamReader(
+                entryStream);
+
+        return reader
+            .ReadToEnd();
     }
 
     public async Task<List<S3ObjectItem>>
