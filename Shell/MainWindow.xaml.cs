@@ -473,14 +473,28 @@ SelectMinutePart(
         // on attend un 2e clic
         if (_waitingForEndDate && _forceKeepCalendarOpen)
         {
+            // Le 2e clic fixe toujours la date de fin : le calendrier doit
+            // se rouvrir sous le champ End, même si le 1er clic a eu lieu
+            // sur Start.
+            var targetPicker = EndDatePicker;
+
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render,
                 new Action(() =>
                 {
-                    // si focus toujours dans le DatePicker
-                    // on rouvre
+                    // On change de champ (le 1er clic avait ouvert Start) :
+                    // on ouvre directement le calendrier de fin.
+                    if (!ReferenceEquals(picker, targetPicker))
+                    {
+                        targetPicker.IsDropDownOpen = true;
+
+                        return;
+                    }
+
+                    // Sinon (le 1er clic avait déjà ouvert End) : on garde
+                    // le comportement d'origine, basé sur le focus.
                     if (picker.IsKeyboardFocusWithin)
                     {
-                        picker.IsDropDownOpen = true;
+                        targetPicker.IsDropDownOpen = true;
                     }
                     else
                     {
