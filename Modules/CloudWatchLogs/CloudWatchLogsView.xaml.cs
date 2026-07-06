@@ -25,6 +25,8 @@ public partial class CloudWatchLogsView
     private const double QueryEditorBaseHeight = 120;
     private const double QueryEditorLineHeight = 20;
     private const double QueryEditorMaxHeight = 420;
+    private const double LogGroupsBaseHeight = 300;
+    private const double LogGroupsMinHeight = 100;
     private double _queryEditorCurrentHeight = QueryEditorBaseHeight;
 
     public CloudWatchLogsView()
@@ -424,14 +426,9 @@ SearchAllLogsCheckBox_Changed(
         DebugPanel.Visibility =
             Visibility.Collapsed;
 
-        // Rendre à la fenêtre l'espace qu'on lui avait emprunté.
-        if (Window.GetWindow(this) is Window window)
-        {
-            window.Height =
-                window.ActualHeight
-                - (_queryEditorCurrentHeight
-                    - QueryEditorBaseHeight);
-        }
+        // Rendre à Log Groups l'espace qu'on lui avait emprunté.
+        LogGroupsRow.Height =
+            new GridLength(LogGroupsBaseHeight);
 
         QueryEditorTextBox.Height =
             QueryEditorBaseHeight;
@@ -440,9 +437,10 @@ SearchAllLogsCheckBox_Changed(
             QueryEditorBaseHeight;
     }
 
-    /// Agrandit l'éditeur de requête (et la fenêtre) pour afficher toutes
-    /// les lignes pré-remplies sans scroll interne, dans une limite
-    /// raisonnable (QueryEditorMaxHeight).
+    /// Agrandit l'éditeur de requête pour afficher toutes les lignes
+    /// pré-remplies sans scroll interne (dans une limite raisonnable), en
+    /// empruntant l'espace nécessaire au panneau Log Groups plutôt qu'aux
+    /// résultats.
     private void
     ResizeQueryEditorToFitContent()
     {
@@ -460,19 +458,15 @@ SearchAllLogsCheckBox_Changed(
         QueryEditorTextBox.Height =
             desiredHeight;
 
-        if (Window.GetWindow(this) is Window window)
-        {
-            double delta =
-                desiredHeight
-                - _queryEditorCurrentHeight;
+        double extraNeeded =
+            desiredHeight
+            - QueryEditorBaseHeight;
 
-            if (Math.Abs(delta) > 0.5)
-            {
-                window.Height =
-                    window.ActualHeight
-                    + delta;
-            }
-        }
+        LogGroupsRow.Height =
+            new GridLength(
+                Math.Max(
+                    LogGroupsMinHeight,
+                    LogGroupsBaseHeight - extraNeeded));
 
         _queryEditorCurrentHeight =
             desiredHeight;

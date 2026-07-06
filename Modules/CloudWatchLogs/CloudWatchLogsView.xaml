@@ -7,7 +7,8 @@
         <Grid.RowDefinitions>
 
             <!-- Log groups -->
-            <RowDefinition Height="300"
+            <RowDefinition x:Name="LogGroupsRow"
+                   Height="300"
                    MinHeight="80"/>
 
             <!-- Splitter -->
