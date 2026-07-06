@@ -122,14 +122,11 @@ SearchAllLogsCheckBox_Changed(
         LogGroupsTreeView.IsEnabled =
             !searchAll;
 
-        if (searchAll)
+        // "Search in all log groups" doit visuellement cocher (ou décocher)
+        // tous les dossiers ; chaque nœud propage déjà l'état à ses enfants.
+        foreach (var node in _logGroupTree)
         {
-            // "Search in all log groups" doit visuellement cocher tous les
-            // dossiers (chaque nœud propage déjà la coche à ses enfants).
-            foreach (var node in _logGroupTree)
-            {
-                node.IsChecked = true;
-            }
+            node.IsChecked = searchAll;
         }
     }
 
