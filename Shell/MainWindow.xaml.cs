@@ -352,51 +352,37 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             return;
         }
 
+        e.Handled =
+            true;
+
+        // Index du caractère cliqué, indépendant du focus actuel : permet
+        // de savoir si l'utilisateur vise la partie heure ou minute même
+        // au tout premier clic (avant que le focus ne soit posé).
+        int charIndex =
+            textBox.GetCharacterIndexFromPoint(
+                e.GetPosition(textBox),
+                true);
+
         if (!textBox.IsKeyboardFocusWithin)
         {
-            e.Handled =
-                true;
-
             textBox.Focus();
+        }
 
-            Dispatcher.BeginInvoke(
-                new Action(() =>
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                if (charIndex <= 2)
                 {
                     SelectHourPart(
                         textBox);
-                }),
-                System.Windows.Threading.DispatcherPriority.Input);
-        }
-    }
-
-    private void
-TimeTextBox_PreviewMouseUp(
-    object sender,
-    MouseButtonEventArgs e)
-    {
-        if (sender
-            is not TextBox textBox)
-        {
-            return;
-        }
-
-        int caret =
-            textBox.CaretIndex;
-
-        // clic partie heure
-        if (caret <= 2)
-        {
-            SelectHourPart(
-                textBox);
-        }
-        else
-        {
-            SelectMinutePart(
-                textBox);
-        }
-
-        e.Handled =
-            true;
+                }
+                else
+                {
+                    SelectMinutePart(
+                        textBox);
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void
@@ -463,11 +449,8 @@ SelectMinutePart(
             return;
         }
 
-        if (picker != StartDatePicker)
-        {
-            return;
-        }
-
+        // Que ce soit Start ou End qu'on ouvre en premier, le même flux
+        // "1er clic = début, 2e clic = fin" s'applique.
         _activeDatePicker = picker;
         picker.SelectedDateChanged -= StartDatePicker_SelectedDateChanged;
         picker.SelectedDateChanged += StartDatePicker_SelectedDateChanged;
@@ -480,17 +463,38 @@ SelectMinutePart(
     private void
     StartDatePicker_CalendarClosed(object? sender, RoutedEventArgs e)
     {
+        var picker = sender as DatePicker ?? _activeDatePicker;
+
+        if (picker == null)
+        {
+            return;
+        }
+
         // on attend un 2e clic
         if (_waitingForEndDate && _forceKeepCalendarOpen)
         {
+            // Le 2e clic fixe toujours la date de fin : le calendrier doit
+            // se rouvrir sous le champ End, même si le 1er clic a eu lieu
+            // sur Start.
+            var targetPicker = EndDatePicker;
+
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render,
                 new Action(() =>
                 {
-                    // si focus toujours dans le DatePicker
-                    // on rouvre
-                    if (StartDatePicker.IsKeyboardFocusWithin)
+                    // On change de champ (le 1er clic avait ouvert Start) :
+                    // on ouvre directement le calendrier de fin.
+                    if (!ReferenceEquals(picker, targetPicker))
                     {
-                        StartDatePicker.IsDropDownOpen = true;
+                        targetPicker.IsDropDownOpen = true;
+
+                        return;
+                    }
+
+                    // Sinon (le 1er clic avait déjà ouvert End) : on garde
+                    // le comportement d'origine, basé sur le focus.
+                    if (picker.IsKeyboardFocusWithin)
+                    {
+                        targetPicker.IsDropDownOpen = true;
                     }
                     else
                     {
@@ -597,7 +601,7 @@ StartDatePicker_SelectedDateChanged(
             _startRangeDate =
                 null;
 
-            StartDatePicker
+            picker
                 .IsDropDownOpen =
                     false;
         }

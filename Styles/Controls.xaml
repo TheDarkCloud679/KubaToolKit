@@ -143,7 +143,9 @@
         <Setter Property="Height" Value="30"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource AccentSoftBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="SelectionTextBrush" Value="{StaticResource TextOnAccentBrush}"/>
+        <Setter Property="SelectionOpacity" Value="0.55"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -192,6 +194,98 @@
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Grid>
+                        <Border
+                            x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            SnapsToDevicePixels="True"/>
+                        <DatePickerTextBox
+                            x:Name="PART_TextBox"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Focusable="False"
+                            IsHitTestVisible="False"
+                            Margin="{TemplateBinding Padding}"/>
+                        <!-- Invisible overlay: the whole field opens the calendar, no icon shown. -->
+                        <Button x:Name="PART_Button" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Popup
+                            x:Name="PART_Popup"
+                            Placement="Bottom"
+                            StaysOpen="False"
+                            AllowsTransparency="True"
+                            PopupAnimation="Slide">
+                            <!--
+                                DatePicker's own code expects the Popup's direct Child to be
+                                the Calendar (it casts _popUp.Child as Calendar) - wrapping it
+                                in another element here would silently break date selection.
+                            -->
+                            <Calendar
+                                x:Name="Calendar"
+                                Margin="0,4,0,0"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource BorderStrongBrush}"
+                                BorderThickness="1"
+                                Effect="{StaticResource CardShadowEffect}"/>
+                        </Popup>
+                        <!--
+                            Purely decorative label synced to the calendar Popup via an
+                            ElementName binding, so it never touches PART_Popup's content.
+                        -->
+                        <Popup
+                            PlacementTarget="{Binding ElementName=Bd}"
+                            Placement="Top"
+                            IsOpen="{Binding IsOpen, ElementName=PART_Popup, Mode=OneWay}"
+                            AllowsTransparency="True"
+                            IsHitTestVisible="False">
+                            <Border
+                                Background="{StaticResource TextPrimaryBrush}"
+                                CornerRadius="6"
+                                Padding="10,5"
+                                Margin="0,0,0,6">
+                                <TextBlock
+                                    Text="{TemplateBinding Tag}"
+                                    FontWeight="SemiBold"
+                                    FontSize="12"
+                                    Foreground="White"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- =====================================================
