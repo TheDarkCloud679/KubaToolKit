@@ -187,14 +187,14 @@
                     <DatePicker
                         x:Name="StartDatePicker"
                         Grid.Column="1"
-                        Width="110"
+                        Width="85"
                         Tag="Date de début"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="StartTimeTextBox"
                         Grid.Column="2"
-                        Width="72"
+                        Width="70"
                         Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
                         HorizontalContentAlignment="Center"
@@ -212,14 +212,14 @@
                     <DatePicker
                         x:Name="EndDatePicker"
                         Grid.Column="4"
-                        Width="110"
+                        Width="85"
                         Tag="Date de fin"
                         VerticalContentAlignment="Center"
                         CalendarOpened="DatePicker_CalendarOpened"/>
                     <TextBox
                         x:Name="EndTimeTextBox"
                         Grid.Column="5"
-                        Width="72"
+                        Width="70"
                         Margin="8,0,0,0"
                         VerticalContentAlignment="Center"
                         HorizontalContentAlignment="Center"
