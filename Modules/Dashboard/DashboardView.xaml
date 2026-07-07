@@ -102,7 +102,7 @@
                             Foreground="{StaticResource TextSecondaryBrush}"/>
 
                         <TextBlock
-                            Text="(double-click a metric for its 1h chart)"
+                            Text="(double-click a metric for its 1h chart, or a header to sort)"
                             Style="{StaticResource SectionHintStyle}"/>
                     </StackPanel>
                 </Expander.Header>
@@ -122,23 +122,28 @@
                         IsReadOnly="True"
                         CanUserAddRows="False"
                         CanUserDeleteRows="False"
+                        CanUserSortColumns="False"
                         HeadersVisibility="Column"
                         VirtualizingPanel.ScrollUnit="Pixel"
-                        RowHeight="40">
+                        RowHeight="40"
+                        MouseDoubleClick="RdsGrid_MouseDoubleClick">
 
                         <DataGrid.Columns>
                             <DataGridTextColumn
                                 Header="DB Instance"
                                 Binding="{Binding Identifier}"
+                                SortMemberPath="Identifier"
                                 Width="*"/>
 
                             <DataGridTextColumn
                                 Header="Engine"
                                 Binding="{Binding Engine}"
+                                SortMemberPath="Engine"
                                 Width="140"/>
 
                             <DataGridTemplateColumn
                                 Header="Status"
+                                SortMemberPath="Status"
                                 Width="130">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -158,6 +163,7 @@
 
                             <DataGridTemplateColumn
                                 Header="CPU"
+                                SortMemberPath="CpuPercent"
                                 Width="130">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -176,6 +182,7 @@
 
                             <DataGridTemplateColumn
                                 Header="Activity"
+                                SortMemberPath="DatabaseConnections"
                                 Width="150">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -221,7 +228,7 @@
                             Foreground="{StaticResource TextSecondaryBrush}"/>
 
                         <TextBlock
-                            Text="(double-click a row for its 1h CPU/RAM chart)"
+                            Text="(double-click a row for its 1h CPU/RAM chart, or a header to sort)"
                             Style="{StaticResource SectionHintStyle}"/>
                     </StackPanel>
                 </Expander.Header>
@@ -241,6 +248,7 @@
                         IsReadOnly="True"
                         CanUserAddRows="False"
                         CanUserDeleteRows="False"
+                        CanUserSortColumns="False"
                         HeadersVisibility="Column"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
@@ -250,15 +258,18 @@
                             <DataGridTextColumn
                                 Header="Name"
                                 Binding="{Binding Name}"
+                                SortMemberPath="Name"
                                 Width="*"/>
 
                             <DataGridTextColumn
                                 Header="Type"
                                 Binding="{Binding InstanceType}"
+                                SortMemberPath="InstanceType"
                                 Width="120"/>
 
                             <DataGridTemplateColumn
                                 Header="State"
+                                SortMemberPath="State"
                                 Width="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -279,11 +290,13 @@
                             <DataGridTextColumn
                                 Header="Auto-Start"
                                 Binding="{Binding AutoStart}"
+                                SortMemberPath="AutoStart"
                                 Width="100"/>
 
                             <DataGridTextColumn
                                 Header="Auto-Stop"
                                 Binding="{Binding AutoStop}"
+                                SortMemberPath="AutoStop"
                                 Width="100"/>
                         </DataGrid.Columns>
                     </DataGrid>
