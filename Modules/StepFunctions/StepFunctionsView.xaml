@@ -85,7 +85,7 @@
                         Header="Type"
                         Binding="{Binding Type}"
                         SortMemberPath="Type"
-                        Width="140"/>
+                        Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

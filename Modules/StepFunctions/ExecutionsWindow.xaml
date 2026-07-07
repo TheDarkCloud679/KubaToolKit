@@ -98,7 +98,7 @@
                     <DataGridTemplateColumn
                         Header="Status"
                         SortMemberPath="Status"
-                        Width="130">
+                        Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Border
@@ -119,13 +119,13 @@
                         Header="Start"
                         Binding="{Binding StartDisplay}"
                         SortMemberPath="StartDate"
-                        Width="160"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Stop"
                         Binding="{Binding StopDisplay}"
                         SortMemberPath="StopDate"
-                        Width="160"/>
+                        Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
