@@ -21,12 +21,61 @@ public partial class DashboardView
     private string? _currentProfile;
     private CancellationTokenSource? _loadCancellation;
 
+    // Hauteur de la section RDS mémorisée avant repli, pour la restaurer
+    // (y compris si l'utilisateur l'a redimensionnée via le splitter).
+    private GridLength _rdsExpandedHeight = new(280);
+
     public DashboardView()
     {
         InitializeComponent();
 
         RdsGrid.ItemsSource = _rdsMetrics;
         Ec2Grid.ItemsSource = _ec2Metrics;
+    }
+
+    private void
+    RdsExpander_ExpandedCollapsed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (RdsExpander.IsExpanded)
+        {
+            RdsRow.Height = _rdsExpandedHeight;
+        }
+        else
+        {
+            if (RdsRow.Height.IsAbsolute)
+            {
+                _rdsExpandedHeight = RdsRow.Height;
+            }
+
+            RdsRow.Height = GridLength.Auto;
+        }
+
+        UpdateSplitterState();
+    }
+
+    private void
+    Ec2Expander_ExpandedCollapsed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Ec2Row.Height =
+            Ec2Expander.IsExpanded
+                ? new GridLength(1, GridUnitType.Star)
+                : GridLength.Auto;
+
+        UpdateSplitterState();
+    }
+
+    private void
+    UpdateSplitterState()
+    {
+        // Redimensionner n'a de sens que si les deux sections sont
+        // dépliées ; sinon il n'y a rien à répartir entre elles.
+        RdsEc2Splitter.IsEnabled =
+            RdsExpander.IsExpanded
+            && Ec2Expander.IsExpanded;
     }
 
     public async Task
