@@ -50,9 +50,10 @@ public static class MetricColorHelper
 
         Color? color = normalized switch
         {
-            "available" => SuccessColor,
+            "available" or "running" => SuccessColor,
 
             "stopped"
+                or "terminated"
                 or "failed"
                 or "incompatible-restore"
                 or "storage-full"
@@ -60,6 +61,8 @@ public static class MetricColorHelper
 
             "starting"
                 or "stopping"
+                or "shutting-down"
+                or "pending"
                 or "backing-up"
                 or "modifying"
                 or "rebooting"

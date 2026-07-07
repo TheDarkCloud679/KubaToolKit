@@ -42,137 +42,218 @@
         </Grid>
 
         <!-- Metric sections -->
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <StackPanel.Resources>
+                    <!--
+                        Le fond (dégradé bleu -> rouge selon la charge) est
+                        posé en local via Binding sur chaque cellule, donc
+                        le survol se signale via la bordure plutôt que le
+                        fond pour ne pas l'écraser.
+                    -->
+                    <Style x:Key="MetricCellStyle" TargetType="Border">
+                        <Setter Property="Padding" Value="10,4"/>
+                        <Setter Property="Margin" Value="0,0,4,0"/>
+                        <Setter Property="CornerRadius" Value="4"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="BorderThickness" Value="1.5"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Resources>
 
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                <TextBlock
-                    Text="RDS Instances"
-                    FontWeight="SemiBold"
-                    FontSize="13"
-                    Foreground="{StaticResource TextSecondaryBrush}"/>
+                <!-- RDS -->
+                <StackPanel Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock
+                            Text="RDS Instances"
+                            FontWeight="SemiBold"
+                            FontSize="13"
+                            Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                <TextBlock
-                    Text="(double-click a metric for its 1h chart)"
-                    FontSize="11"
-                    FontStyle="Italic"
-                    Foreground="{StaticResource TextMutedBrush}"
-                    Margin="8,0,0,0"
-                    VerticalAlignment="Bottom"/>
+                        <TextBlock
+                            Text="(double-click a metric for its 1h chart)"
+                            FontSize="11"
+                            FontStyle="Italic"
+                            Foreground="{StaticResource TextMutedBrush}"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Bottom"/>
+                    </StackPanel>
+
+                    <Border
+                        Height="240"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Background="{StaticResource SurfaceBrush}"
+                        Effect="{StaticResource CardShadowEffect}"
+                        Padding="8">
+
+                        <DataGrid
+                            x:Name="RdsGrid"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            HeadersVisibility="Column"
+                            RowHeight="40">
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Header="DB Instance"
+                                    Binding="{Binding Identifier}"
+                                    Width="*"/>
+
+                                <DataGridTextColumn
+                                    Header="Engine"
+                                    Binding="{Binding Engine}"
+                                    Width="140"/>
+
+                                <DataGridTemplateColumn
+                                    Header="Status"
+                                    Width="130">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Padding="10,4"
+                                                CornerRadius="4"
+                                                HorizontalAlignment="Left"
+                                                Background="{Binding StatusBackground}">
+                                                <TextBlock
+                                                    Text="{Binding Status}"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn
+                                    Header="CPU"
+                                    Width="130">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Style="{StaticResource MetricCellStyle}"
+                                                Background="{Binding CpuBackground}"
+                                                MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
+                                                <TextBlock
+                                                    Text="{Binding CpuDisplay}"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn
+                                    Header="Activity"
+                                    Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Style="{StaticResource MetricCellStyle}"
+                                                Background="{Binding ActivityBackground}"
+                                                MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
+                                                <TextBlock
+                                                    Text="{Binding ActivityDisplay}"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </StackPanel>
+
+                <!-- EC2 -->
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock
+                            Text="EC2 Instances"
+                            FontWeight="SemiBold"
+                            FontSize="13"
+                            Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                        <TextBlock
+                            Text="(double-click a row for its 1h CPU/RAM chart)"
+                            FontSize="11"
+                            FontStyle="Italic"
+                            Foreground="{StaticResource TextMutedBrush}"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Bottom"/>
+                    </StackPanel>
+
+                    <Border
+                        Height="240"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Background="{StaticResource SurfaceBrush}"
+                        Effect="{StaticResource CardShadowEffect}"
+                        Padding="8">
+
+                        <DataGrid
+                            x:Name="Ec2Grid"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            HeadersVisibility="Column"
+                            RowHeight="40"
+                            MouseDoubleClick="Ec2Grid_MouseDoubleClick">
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Header="Name"
+                                    Binding="{Binding Name}"
+                                    Width="*"/>
+
+                                <DataGridTextColumn
+                                    Header="Type"
+                                    Binding="{Binding InstanceType}"
+                                    Width="120"/>
+
+                                <DataGridTemplateColumn
+                                    Header="State"
+                                    Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Padding="10,4"
+                                                CornerRadius="4"
+                                                HorizontalAlignment="Left"
+                                                Background="{Binding StateBackground}">
+                                                <TextBlock
+                                                    Text="{Binding State}"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn
+                                    Header="Auto-Start"
+                                    Binding="{Binding AutoStart}"
+                                    Width="100"/>
+
+                                <DataGridTextColumn
+                                    Header="Auto-Stop"
+                                    Binding="{Binding AutoStop}"
+                                    Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </StackPanel>
             </StackPanel>
-
-            <Border
-                Grid.Row="1"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Background="{StaticResource SurfaceBrush}"
-                Effect="{StaticResource CardShadowEffect}"
-                Padding="8">
-
-                <DataGrid
-                    x:Name="RdsGrid"
-                    AutoGenerateColumns="False"
-                    IsReadOnly="True"
-                    CanUserAddRows="False"
-                    CanUserDeleteRows="False"
-                    HeadersVisibility="Column"
-                    RowHeight="40">
-
-                    <DataGrid.Resources>
-                        <!--
-                            Le fond (dégradé bleu -> rouge selon la charge) est
-                            posé en local via Binding sur chaque cellule, donc
-                            le survol se signale via la bordure plutôt que le
-                            fond pour ne pas l'écraser.
-                        -->
-                        <Style x:Key="MetricCellStyle" TargetType="Border">
-                            <Setter Property="Padding" Value="10,4"/>
-                            <Setter Property="Margin" Value="0,0,4,0"/>
-                            <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="BorderThickness" Value="1.5"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.Resources>
-
-                    <DataGrid.Columns>
-                        <DataGridTextColumn
-                            Header="DB Instance"
-                            Binding="{Binding Identifier}"
-                            Width="*"/>
-
-                        <DataGridTextColumn
-                            Header="Engine"
-                            Binding="{Binding Engine}"
-                            Width="140"/>
-
-                        <DataGridTemplateColumn
-                            Header="Status"
-                            Width="130">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border
-                                        Padding="10,4"
-                                        CornerRadius="4"
-                                        HorizontalAlignment="Left"
-                                        Background="{Binding StatusBackground}">
-                                        <TextBlock
-                                            Text="{Binding Status}"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </Border>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTemplateColumn
-                            Header="CPU"
-                            Width="130">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border
-                                        Style="{StaticResource MetricCellStyle}"
-                                        Background="{Binding CpuBackground}"
-                                        MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
-                                        <TextBlock
-                                            Text="{Binding CpuDisplay}"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </Border>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTemplateColumn
-                            Header="Activity"
-                            Width="150">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border
-                                        Style="{StaticResource MetricCellStyle}"
-                                        Background="{Binding ActivityBackground}"
-                                        MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
-                                        <TextBlock
-                                            Text="{Binding ActivityDisplay}"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </Border>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
-        </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>
