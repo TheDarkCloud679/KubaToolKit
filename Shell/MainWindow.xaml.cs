@@ -40,7 +40,7 @@ public partial class MainWindow
     // défilement fluide qui envoient beaucoup de petits deltas par
     // mouvement (sinon chacun d'eux sautait du même montant fixe, ce qui
     // donnait une impression de scroll bien trop rapide).
-    private const double PixelsPerNotch = 18;
+    private const double PixelsPerNotch = 9;
 
     public MainWindow()
     {
