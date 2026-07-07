@@ -11,6 +11,12 @@ public class ExecutionItem
     public DateTime? StartDate { get; set; }
     public DateTime? StopDate { get; set; }
 
+    // Renseigné uniquement pour les exécutions EXPRESS reconstruites via
+    // CloudWatch Logs : indique à ExecutionEventsWindow d'aller chercher
+    // l'historique dans ces mêmes logs plutôt que via GetExecutionHistory
+    // (non supporté par les state machines EXPRESS).
+    public string? LogGroupIdentifier { get; set; }
+
     public string StartDisplay =>
         StartDate.HasValue
             ? StartDate.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")

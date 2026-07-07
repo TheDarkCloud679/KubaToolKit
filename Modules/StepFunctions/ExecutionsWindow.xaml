@@ -37,6 +37,15 @@
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"
                     Margin="0,2,0,0"/>
+
+                <TextBlock
+                    x:Name="ExpressHintTextBlock"
+                    Text="EXPRESS : liste reconstruite depuis CloudWatch Logs (7 derniers jours, nécessite la journalisation activée)"
+                    FontSize="11"
+                    FontStyle="Italic"
+                    Foreground="{StaticResource TextMutedBrush}"
+                    Margin="0,2,0,0"
+                    Visibility="Collapsed"/>
             </StackPanel>
 
             <ProgressBar

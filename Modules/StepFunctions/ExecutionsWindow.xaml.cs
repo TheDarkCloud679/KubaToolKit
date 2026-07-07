@@ -1,4 +1,3 @@
-using Amazon.StepFunctions.Model;
 using KubaToolKit.Modules.StepFunctions.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -13,19 +12,27 @@ public partial class ExecutionsWindow
     private readonly ObservableCollection<ExecutionItem> _executions = new();
     private readonly string _profile;
     private readonly string _stateMachineArn;
+    private readonly bool _isExpress;
     private CancellationTokenSource? _loadCancellation;
 
     public ExecutionsWindow(
         string profile,
         string stateMachineName,
-        string stateMachineArn)
+        string stateMachineArn,
+        string stateMachineType)
     {
         InitializeComponent();
 
         _profile = profile;
         _stateMachineArn = stateMachineArn;
+        _isExpress = string.Equals(stateMachineType, "EXPRESS", StringComparison.OrdinalIgnoreCase);
 
         StateMachineNameTextBlock.Text = stateMachineName;
+
+        if (_isExpress)
+        {
+            ExpressHintTextBlock.Visibility = Visibility.Visible;
+        }
 
         ExecutionsGrid.ItemsSource = _executions;
 
@@ -50,10 +57,15 @@ public partial class ExecutionsWindow
                 new CancellationTokenSource();
 
             var executions =
-                await _stepFunctionsService.ListExecutions(
-                    _profile,
-                    _stateMachineArn,
-                    _loadCancellation.Token);
+                _isExpress
+                    ? await _stepFunctionsService.ListExpressExecutionsFromLogs(
+                        _profile,
+                        _stateMachineArn,
+                        _loadCancellation.Token)
+                    : await _stepFunctionsService.ListExecutions(
+                        _profile,
+                        _stateMachineArn,
+                        _loadCancellation.Token);
 
             _executions.Clear();
 
@@ -65,14 +77,11 @@ public partial class ExecutionsWindow
         catch (OperationCanceledException)
         {
         }
-        catch (StateMachineTypeNotSupportedException)
+        catch (ExpressLoggingNotConfiguredException ex)
         {
-            // State machine EXPRESS : Step Functions ne conserve pas la
-            // liste de ses exécutions (normalement filtré en amont dans
-            // StepFunctionsView, gardé ici par sécurité).
             MessageBox.Show(
-                "Cette state machine est de type EXPRESS : Step Functions ne conserve pas la liste de ses exécutions. Consultez ses logs via CloudWatch Logs.",
-                "Non disponible pour EXPRESS");
+                ex.Message,
+                "Journalisation non configurée");
 
             Close();
         }
@@ -114,7 +123,8 @@ public partial class ExecutionsWindow
             new ExecutionEventsWindow(
                 _profile,
                 execution.Name,
-                execution.Arn);
+                execution.Arn,
+                execution.LogGroupIdentifier);
 
         window.Owner = this;
 

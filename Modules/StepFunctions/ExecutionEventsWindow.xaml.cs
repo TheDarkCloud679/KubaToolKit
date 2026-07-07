@@ -13,17 +13,20 @@ public partial class ExecutionEventsWindow
     private readonly ObservableCollection<HistoryEventItem> _events = new();
     private readonly string _profile;
     private readonly string _executionArn;
+    private readonly string? _logGroupIdentifier;
     private CancellationTokenSource? _loadCancellation;
 
     public ExecutionEventsWindow(
         string profile,
         string executionName,
-        string executionArn)
+        string executionArn,
+        string? logGroupIdentifier)
     {
         InitializeComponent();
 
         _profile = profile;
         _executionArn = executionArn;
+        _logGroupIdentifier = logGroupIdentifier;
 
         ExecutionNameTextBlock.Text = executionName;
 
@@ -50,10 +53,16 @@ public partial class ExecutionEventsWindow
                 new CancellationTokenSource();
 
             var events =
-                await _stepFunctionsService.GetExecutionHistory(
-                    _profile,
-                    _executionArn,
-                    _loadCancellation.Token);
+                _logGroupIdentifier != null
+                    ? await _stepFunctionsService.GetExpressExecutionHistoryFromLogs(
+                        _profile,
+                        _logGroupIdentifier,
+                        _executionArn,
+                        _loadCancellation.Token)
+                    : await _stepFunctionsService.GetExecutionHistory(
+                        _profile,
+                        _executionArn,
+                        _loadCancellation.Token);
 
             _events.Clear();
 
