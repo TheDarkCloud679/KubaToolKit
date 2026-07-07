@@ -94,9 +94,8 @@
                             <Setter Property="Margin" Value="0,0,4,0"/>
                             <Setter Property="CornerRadius" Value="4"/>
                             <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="BorderThickness" Value="1.5"/>
-                            <Setter Property="BorderBrush" Value="Transparent"/>
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
