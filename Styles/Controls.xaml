@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="clr-namespace:KubaToolKit.Shared.Behaviors">
 
     <!-- =====================================================
          WINDOW / TEXT DEFAULTS
@@ -401,7 +402,9 @@
                                 MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                 Effect="{StaticResource CardShadowEffect}"
                                 SnapsToDevicePixels="True">
-                                <ScrollViewer SnapsToDevicePixels="True">
+                                <ScrollViewer
+                                    SnapsToDevicePixels="True"
+                                    behaviors:ScrollSpeedBehavior.LinesPerNotch="1.5">
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
                                 </ScrollViewer>
                             </Border>
