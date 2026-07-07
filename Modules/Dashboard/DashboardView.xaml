@@ -89,7 +89,7 @@
                             <Setter Property="CornerRadius" Value="4"/>
                             <Setter Property="Cursor" Value="Hand"/>
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
