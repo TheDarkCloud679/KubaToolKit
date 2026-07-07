@@ -7,6 +7,7 @@ public static class ToolModuleRegistry
     public static IReadOnlyList<IToolModule> CreateModules() =>
         new IToolModule[]
         {
+            new Modules.Dashboard.DashboardModule(),
             new Modules.CloudWatchLogs.CloudWatchLogsModule(),
             new Modules.S3Explorer.S3ExplorerModule(),
             new Modules.Sqs.SqsModule(),
