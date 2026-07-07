@@ -404,7 +404,7 @@
                                 SnapsToDevicePixels="True">
                                 <ScrollViewer
                                     SnapsToDevicePixels="True"
-                                    behaviors:ScrollSpeedBehavior.LinesPerNotch="2">
+                                    behaviors:ScrollSpeedBehavior.LinesPerNotch="1.5">
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
                                 </ScrollViewer>
                             </Border>

@@ -3,6 +3,7 @@ using KubaToolKit.Infrastructure;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
+using KubaToolKit.Shared.Behaviors;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
 using System.Windows;
@@ -989,6 +990,14 @@ MainWindow_PreviewMouseWheel(
         }
 
         if (currentScroll == null)
+        {
+            return;
+        }
+
+        // Certains ScrollViewer (ex: popup de ComboBox) gèrent eux-mêmes
+        // leur vitesse de défilement via ScrollSpeedBehavior ; on ne doit
+        // pas leur imposer le ScrollSpeed générique par-dessus.
+        if (ScrollSpeedBehavior.GetLinesPerNotch(currentScroll) > 0)
         {
             return;
         }
