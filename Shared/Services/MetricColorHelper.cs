@@ -2,8 +2,8 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Shared.Services;
 
-/// Dégradé bleu (charge faible) -> rouge (charge élevée) utilisé pour
-/// colorer les cellules de métriques du Dashboard.
+/// Coloration des cellules des métriques du Dashboard.
+
 public static class MetricColorHelper
 {
     private static readonly Color LowColor = Color.FromRgb(0x2F, 0x6F, 0xED);
@@ -37,8 +37,8 @@ public static class MetricColorHelper
         return ToBrush(r, g, b, opacity);
     }
 
-    /// Colore un statut d'instance (RDS, etc.) : vert pour disponible,
-    /// rouge pour arrêtée/en échec, orange pour les états transitoires.
+    /// Coloration des états des EC2
+  
     public static Brush?
     GetStatusBrush(
         string? status,
