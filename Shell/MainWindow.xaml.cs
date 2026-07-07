@@ -1,6 +1,7 @@
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Infrastructure;
 using KubaToolKit.Modules.CloudWatchLogs;
+using KubaToolKit.Modules.Dashboard;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
 using KubaToolKit.Shared.Behaviors;
@@ -19,6 +20,7 @@ public partial class MainWindow
     // New bricks are registered in ToolModuleRegistry; add typed accessors below
     // only if the Shell needs to talk to that module's specific API.
     private readonly IReadOnlyList<IToolModule> _modules = ToolModuleRegistry.CreateModules();
+    private readonly DashboardView _dashboardView;
     private readonly CloudWatchLogsView _cloudWatchView;
     private readonly S3ExplorerView _s3View;
     private readonly SqsView _sqsView;
@@ -37,6 +39,7 @@ public partial class MainWindow
     {
         InitializeComponent();
 
+        _dashboardView = _modules.OfType<DashboardModule>().Single().TypedView;
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
@@ -47,7 +50,7 @@ public partial class MainWindow
             ModuleHost.Children.Add(module.View);
         }
 
-        _cloudWatchView.Visibility = Visibility.Visible;
+        _dashboardView.Visibility = Visibility.Visible;
 
         _cloudWatchView.GetDateRange =
             () => (StartDatePicker.SelectedDate, StartTimeTextBox.Text, EndDatePicker.SelectedDate, EndTimeTextBox.Text);
@@ -185,6 +188,10 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             await _sqsView.OnProfileChanged(profile);
         }
+        else if (DashboardModeRadio?.IsChecked == true)
+        {
+            await _dashboardView.OnProfileChanged(profile);
+        }
         else
         {
             await LoadCloudWatchLogGroupsAsync(profile);
@@ -244,6 +251,22 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 try
                 {
                     await _sqsView.RefreshAsync();
+                }
+                finally
+                {
+                    SearchButton.IsEnabled = true;
+                }
+
+                return;
+            }
+
+            if (DashboardModeRadio?.IsChecked == true)
+            {
+                SearchButton.IsEnabled = false;
+
+                try
+                {
+                    await _dashboardView.RefreshAsync();
                 }
                 finally
                 {
@@ -937,8 +960,16 @@ FormatTimeTextBox(
                 ?.IsChecked
             == true;
 
+        bool isDashboard =
+            DashboardModeRadio
+                ?.IsChecked
+            == true;
+
+        _dashboardView.Visibility =
+            isDashboard ? Visibility.Visible : Visibility.Collapsed;
+
         _cloudWatchView.Visibility =
-            !isS3 && !isSqs
+            !isS3 && !isSqs && !isDashboard
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -956,6 +987,11 @@ FormatTimeTextBox(
         else if (isSqs)
         {
             await _sqsView.OnProfileChanged(
+                ProfileCombo.SelectedItem?.ToString());
+        }
+        else if (isDashboard)
+        {
+            await _dashboardView.OnProfileChanged(
                 ProfileCombo.SelectedItem?.ToString());
         }
     }
