@@ -83,6 +83,12 @@
                     RowHeight="40">
 
                     <DataGrid.Resources>
+                        <!--
+                            Le fond (dégradé bleu -> rouge selon la charge) est
+                            posé en local via Binding sur chaque cellule, donc
+                            le survol se signale via la bordure plutôt que le
+                            fond pour ne pas l'écraser.
+                        -->
                         <Style x:Key="MetricCellStyle" TargetType="Border">
                             <Setter Property="Padding" Value="10,4"/>
                             <Setter Property="Margin" Value="0,0,4,0"/>
@@ -92,7 +98,7 @@
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -109,10 +115,24 @@
                             Binding="{Binding Engine}"
                             Width="140"/>
 
-                        <DataGridTextColumn
+                        <DataGridTemplateColumn
                             Header="Status"
-                            Binding="{Binding Status}"
-                            Width="120"/>
+                            Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="10,4"
+                                        CornerRadius="4"
+                                        HorizontalAlignment="Left"
+                                        Background="{Binding StatusBackground}">
+                                        <TextBlock
+                                            Text="{Binding Status}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <DataGridTemplateColumn
                             Header="CPU"
@@ -121,6 +141,7 @@
                                 <DataTemplate>
                                     <Border
                                         Style="{StaticResource MetricCellStyle}"
+                                        Background="{Binding CpuBackground}"
                                         MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
                                         <TextBlock
                                             Text="{Binding CpuDisplay}"
@@ -138,6 +159,7 @@
                                 <DataTemplate>
                                     <Border
                                         Style="{StaticResource MetricCellStyle}"
+                                        Background="{Binding ActivityBackground}"
                                         MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
                                         <TextBlock
                                             Text="{Binding ActivityDisplay}"
