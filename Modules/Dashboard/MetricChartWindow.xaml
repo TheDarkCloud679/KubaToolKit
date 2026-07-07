@@ -1,0 +1,62 @@
+<Window
+    x:Class="KubaToolKit.Modules.Dashboard.MetricChartWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Metric"
+    Width="760"
+    Height="480"
+    MinWidth="520"
+    MinHeight="360"
+    WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,4">
+            <TextBlock
+                x:Name="TitleTextBlock"
+                FontWeight="Bold"
+                FontSize="16"
+                Foreground="{StaticResource TextPrimaryBrush}"/>
+
+            <TextBlock
+                x:Name="SubtitleTextBlock"
+                FontSize="12"
+                Foreground="{StaticResource TextSecondaryBrush}"
+                Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <ProgressBar
+            x:Name="LoadingProgressBar"
+            Grid.Row="1"
+            Margin="0,10,0,10"
+            IsIndeterminate="True"
+            Visibility="Collapsed"/>
+
+        <Border
+            Grid.Row="2"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="16">
+
+            <Grid x:Name="ChartHost" SizeChanged="ChartHost_SizeChanged">
+                <TextBlock
+                    x:Name="EmptyStateText"
+                    Text="No data for this period."
+                    Foreground="{StaticResource TextMutedBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed"/>
+
+                <Canvas x:Name="ChartCanvas" ClipToBounds="True"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -3,6 +3,7 @@ using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace KubaToolKit.Modules.Dashboard;
 
@@ -101,5 +102,67 @@ public partial class DashboardView
         RoutedEventArgs e)
     {
         await RefreshAsync();
+    }
+
+    private void
+    CpuMetric_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2)
+        {
+            return;
+        }
+
+        OpenMetricChart(
+            sender,
+            "CPUUtilization",
+            "CPU Utilization",
+            "%");
+    }
+
+    private void
+    ActivityMetric_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2)
+        {
+            return;
+        }
+
+        OpenMetricChart(
+            sender,
+            "DatabaseConnections",
+            "Activity (sessions)",
+            "sessions");
+    }
+
+    private void
+    OpenMetricChart(
+        object sender,
+        string metricName,
+        string metricDisplayName,
+        string unit)
+    {
+        if (sender is not FrameworkElement element
+            || element.DataContext is not RdsMetricItem item
+            || string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            return;
+        }
+
+        var window =
+            new MetricChartWindow(
+                _currentProfile,
+                item.Identifier,
+                metricName,
+                metricDisplayName,
+                unit);
+
+        window.Owner =
+            Window.GetWindow(this);
+
+        window.Show();
     }
 }

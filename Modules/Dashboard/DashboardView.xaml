@@ -48,13 +48,21 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TextBlock
-                Grid.Row="0"
-                Text="RDS Instances"
-                FontWeight="SemiBold"
-                FontSize="13"
-                Foreground="{StaticResource TextSecondaryBrush}"
-                Margin="0,0,0,8"/>
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock
+                    Text="RDS Instances"
+                    FontWeight="SemiBold"
+                    FontSize="13"
+                    Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                <TextBlock
+                    Text="(double-click a metric for its 1h chart)"
+                    FontSize="11"
+                    FontStyle="Italic"
+                    Foreground="{StaticResource TextMutedBrush}"
+                    Margin="8,0,0,0"
+                    VerticalAlignment="Bottom"/>
+            </StackPanel>
 
             <Border
                 Grid.Row="1"
@@ -72,7 +80,23 @@
                     CanUserAddRows="False"
                     CanUserDeleteRows="False"
                     HeadersVisibility="Column"
-                    RowHeight="34">
+                    RowHeight="40">
+
+                    <DataGrid.Resources>
+                        <Style x:Key="MetricCellStyle" TargetType="Border">
+                            <Setter Property="Padding" Value="10,4"/>
+                            <Setter Property="Margin" Value="0,0,4,0"/>
+                            <Setter Property="CornerRadius" Value="4"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
 
                     <DataGrid.Columns>
                         <DataGridTextColumn
@@ -90,29 +114,39 @@
                             Binding="{Binding Status}"
                             Width="120"/>
 
-                        <DataGridTextColumn
+                        <DataGridTemplateColumn
                             Header="CPU"
-                            Binding="{Binding CpuDisplay}"
-                            Width="110">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    <Setter Property="Margin" Value="0,0,10,0"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                            Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Style="{StaticResource MetricCellStyle}"
+                                        MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
+                                        <TextBlock
+                                            Text="{Binding CpuDisplay}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                        <DataGridTextColumn
-                            Header="Connections"
-                            Binding="{Binding ConnectionsDisplay}"
-                            Width="120">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    <Setter Property="Margin" Value="0,0,10,0"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTemplateColumn
+                            Header="Activity"
+                            Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Style="{StaticResource MetricCellStyle}"
+                                        MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
+                                        <TextBlock
+                                            Text="{Binding ActivityDisplay}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

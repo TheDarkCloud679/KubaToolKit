@@ -13,8 +13,8 @@ public class RdsMetricItem
             ? $"{CpuPercent.Value:F1} %"
             : "N/A";
 
-    public string ConnectionsDisplay =>
+    public string ActivityDisplay =>
         DatabaseConnections.HasValue
-            ? $"{DatabaseConnections.Value:F0}"
+            ? $"{DatabaseConnections.Value:F0} sessions"
             : "N/A";
 }
