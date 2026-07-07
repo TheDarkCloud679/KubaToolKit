@@ -116,10 +116,24 @@
                             Binding="{Binding Engine}"
                             Width="140"/>
 
-                        <DataGridTextColumn
+                        <DataGridTemplateColumn
                             Header="Status"
-                            Binding="{Binding Status}"
-                            Width="120"/>
+                            Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="10,4"
+                                        CornerRadius="4"
+                                        HorizontalAlignment="Left"
+                                        Background="{Binding StatusBackground}">
+                                        <TextBlock
+                                            Text="{Binding Status}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <DataGridTemplateColumn
                             Header="CPU"

@@ -36,4 +36,7 @@ public class RdsMetricItem
             DatabaseConnections.HasValue
                 ? DatabaseConnections.Value / ActivityScaleMax
                 : (double?)null);
+
+    public Brush? StatusBackground =>
+        MetricColorHelper.GetStatusBrush(Status);
 }
