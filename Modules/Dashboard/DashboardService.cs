@@ -107,6 +107,10 @@ public class DashboardService
                     "DatabaseConnections",
                     cancellationToken);
 
+            var tags =
+                instance.TagList
+                ?? new List<Amazon.RDS.Model.Tag>();
+
             results.Add(
                 new RdsMetricItem
                 {
@@ -114,7 +118,23 @@ public class DashboardService
                     Engine = instance.Engine,
                     Status = instance.DBInstanceStatus,
                     CpuPercent = cpu,
-                    DatabaseConnections = connections
+                    DatabaseConnections = connections,
+
+                    AutoStart =
+                        FindTagValue(
+                            tags,
+                            "auto-start",
+                            "autostart",
+                            "auto_start")
+                        ?? "—",
+
+                    AutoStop =
+                        FindTagValue(
+                            tags,
+                            "auto-stop",
+                            "autostop",
+                            "auto_stop")
+                        ?? "—"
                 });
         }
 
@@ -317,6 +337,29 @@ public class DashboardService
     private string?
     FindTagValue(
         List<Amazon.EC2.Model.Tag> tags,
+        params string[] keyVariants)
+    {
+        foreach (var variant in keyVariants)
+        {
+            var match =
+                tags.FirstOrDefault(t =>
+                    string.Equals(
+                        t.Key,
+                        variant,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                return match.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private string?
+    FindTagValue(
+        List<Amazon.RDS.Model.Tag> tags,
         params string[] keyVariants)
     {
         foreach (var variant in keyVariants)

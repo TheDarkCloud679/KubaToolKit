@@ -26,7 +26,7 @@
                     VerticalAlignment="Center"/>
 
                 <TextBlock
-                    Text="(double-click a state machine for its executions)"
+                    Text="(double-click a state machine for its executions, or a header to sort)"
                     FontSize="11"
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"
@@ -66,6 +66,7 @@
                 IsReadOnly="True"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
+                CanUserSortColumns="False"
                 HeadersVisibility="Column"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
@@ -77,11 +78,13 @@
                     <DataGridTextColumn
                         Header="State Machine"
                         Binding="{Binding Name}"
+                        SortMemberPath="Name"
                         Width="*"/>
 
                     <DataGridTextColumn
                         Header="Type"
                         Binding="{Binding Type}"
+                        SortMemberPath="Type"
                         Width="140"/>
                 </DataGrid.Columns>
             </DataGrid>

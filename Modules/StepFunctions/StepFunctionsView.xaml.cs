@@ -1,8 +1,10 @@
 using KubaToolKit.Modules.StepFunctions.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 namespace KubaToolKit.Modules.StepFunctions;
@@ -14,6 +16,9 @@ public partial class StepFunctionsView
     private readonly ObservableCollection<StateMachineItem> _stateMachines = new();
     private string? _currentProfile;
     private CancellationTokenSource? _loadCancellation;
+
+    private DataGridColumn? _sortColumn;
+    private ListSortDirection _sortDirection = ListSortDirection.Ascending;
 
     public StepFunctionsView()
     {
@@ -108,6 +113,19 @@ public partial class StepFunctionsView
         object sender,
         MouseButtonEventArgs e)
     {
+        if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+            is { } header)
+        {
+            DataGridSortHelper.SortByColumn(
+                _stateMachines,
+                StateMachinesGrid.Columns,
+                header.Column,
+                ref _sortColumn,
+                ref _sortDirection);
+
+            return;
+        }
+
         if (StateMachinesGrid.SelectedItem is not StateMachineItem stateMachine
             || string.IsNullOrWhiteSpace(_currentProfile))
         {

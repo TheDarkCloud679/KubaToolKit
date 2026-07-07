@@ -1,7 +1,11 @@
 using KubaToolKit.Modules.StepFunctions.Models;
+using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 namespace KubaToolKit.Modules.StepFunctions;
@@ -15,6 +19,9 @@ public partial class ExecutionEventsWindow
     private readonly string _executionArn;
     private readonly string? _logGroupIdentifier;
     private CancellationTokenSource? _loadCancellation;
+
+    private DataGridColumn? _sortColumn;
+    private ListSortDirection _sortDirection = ListSortDirection.Ascending;
 
     public ExecutionEventsWindow(
         string profile,
@@ -103,6 +110,19 @@ public partial class ExecutionEventsWindow
         object sender,
         MouseButtonEventArgs e)
     {
+        if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+            is { } header)
+        {
+            DataGridSortHelper.SortByColumn(
+                _events,
+                EventsGrid.Columns,
+                header.Column,
+                ref _sortColumn,
+                ref _sortDirection);
+
+            return;
+        }
+
         if (EventsGrid.SelectedItem is not HistoryEventItem historyEvent)
         {
             return;

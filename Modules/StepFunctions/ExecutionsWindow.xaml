@@ -32,7 +32,7 @@
                     Foreground="{StaticResource TextPrimaryBrush}"/>
 
                 <TextBlock
-                    Text="(double-click an execution for its event history)"
+                    Text="(double-click an execution for its event history, or a header to sort)"
                     FontSize="11"
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"
@@ -80,6 +80,7 @@
                 IsReadOnly="True"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
+                CanUserSortColumns="False"
                 HeadersVisibility="Column"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
@@ -91,10 +92,12 @@
                     <DataGridTextColumn
                         Header="Execution"
                         Binding="{Binding Name}"
+                        SortMemberPath="Name"
                         Width="*"/>
 
                     <DataGridTemplateColumn
                         Header="Status"
+                        SortMemberPath="Status"
                         Width="130">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -115,11 +118,13 @@
                     <DataGridTextColumn
                         Header="Start"
                         Binding="{Binding StartDisplay}"
+                        SortMemberPath="StartDate"
                         Width="160"/>
 
                     <DataGridTextColumn
                         Header="Stop"
                         Binding="{Binding StopDisplay}"
+                        SortMemberPath="StopDate"
                         Width="160"/>
                 </DataGrid.Columns>
             </DataGrid>

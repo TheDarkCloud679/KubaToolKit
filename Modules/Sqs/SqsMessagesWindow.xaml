@@ -117,7 +117,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
-                                        Text="{Binding Body}"
+                                        Text="{Binding BodyPreview}"
                                         TextTrimming="CharacterEllipsis"
                                         VerticalAlignment="Center"/>
                                 </DataTemplate>

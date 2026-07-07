@@ -14,6 +14,8 @@ public class RdsMetricItem
     public string Status { get; set; } = "";
     public double? CpuPercent { get; set; }
     public double? DatabaseConnections { get; set; }
+    public string AutoStart { get; set; } = "—";
+    public string AutoStop { get; set; } = "—";
 
     public string CpuDisplay =>
         CpuPercent.HasValue
