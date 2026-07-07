@@ -1,6 +1,8 @@
 using Amazon;
 using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
+using Amazon.EC2;
+using Amazon.EC2.Model;
 using Amazon.RDS;
 using Amazon.RDS.Model;
 using Amazon.Runtime.CredentialManagement;
@@ -162,13 +164,15 @@ public class DashboardService
             .Average;
     }
 
-    /// Historique d'une métrique RDS pour afficher un graphique. La
-    /// période demandée à CloudWatch vise ~1 point par minute.
+    /// Historique d'une métrique CloudWatch (namespace/dimensions
+    /// génériques) pour afficher un graphique. La période demandée vise
+    /// ~1 point par minute sur la plage.
     public async Task<List<(DateTime Timestamp, double Value)>>
     GetMetricHistory(
         string profile,
-        string dbInstanceIdentifier,
+        string @namespace,
         string metricName,
+        List<Dimension> dimensions,
         TimeSpan duration,
         CancellationToken cancellationToken = default)
     {
@@ -187,16 +191,9 @@ public class DashboardService
             await client.GetMetricStatisticsAsync(
                 new GetMetricStatisticsRequest
                 {
-                    Namespace = "AWS/RDS",
+                    Namespace = @namespace,
                     MetricName = metricName,
-                    Dimensions = new List<Dimension>
-                    {
-                        new Dimension
-                        {
-                            Name = "DBInstanceIdentifier",
-                            Value = dbInstanceIdentifier
-                        }
-                    },
+                    Dimensions = dimensions,
                     StartTime = now - duration,
                     EndTime = now,
                     Period = ComputePeriodSeconds(duration),
@@ -214,6 +211,130 @@ public class DashboardService
             .OrderBy(x => x.Timestamp!.Value)
             .Select(x => (x.Timestamp!.Value, x.Average!.Value))
             .ToList();
+    }
+
+    public async Task<List<Ec2MetricItem>>
+    GetEc2Instances(
+        string profile,
+        CancellationToken cancellationToken = default)
+    {
+        var credentials =
+            GetCredentials(profile);
+
+        using var client =
+            new AmazonEC2Client(
+                credentials,
+                RegionEndpoint.EUWest3);
+
+        var items =
+            new List<Ec2MetricItem>();
+
+        string? nextToken = null;
+
+        do
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var response =
+                await client.DescribeInstancesAsync(
+                    new DescribeInstancesRequest
+                    {
+                        NextToken = nextToken
+                    },
+                    cancellationToken);
+
+            if (response.Reservations != null)
+            {
+                foreach (var reservation in response.Reservations)
+                {
+                    if (reservation.Instances == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var instance in reservation.Instances)
+                    {
+                        var stateName =
+                            instance.State?.Name?.Value
+                            ?? "";
+
+                        // Une instance terminée disparaît définitivement :
+                        // pas utile dans un dashboard d'instances actives.
+                        if (stateName == "terminated")
+                        {
+                            continue;
+                        }
+
+                        var tags =
+                            instance.Tags
+                            ?? new List<Amazon.EC2.Model.Tag>();
+
+                        items.Add(
+                            new Ec2MetricItem
+                            {
+                                InstanceId = instance.InstanceId,
+
+                                Name =
+                                    FindTagValue(tags, "Name")
+                                    ?? instance.InstanceId,
+
+                                InstanceType =
+                                    instance.InstanceType?.Value
+                                    ?? "",
+
+                                State = stateName,
+
+                                AutoStart =
+                                    FindTagValue(
+                                        tags,
+                                        "auto-start",
+                                        "autostart",
+                                        "auto_start")
+                                    ?? "—",
+
+                                AutoStop =
+                                    FindTagValue(
+                                        tags,
+                                        "auto-stop",
+                                        "autostop",
+                                        "auto_stop")
+                                    ?? "—"
+                            });
+                    }
+                }
+            }
+
+            nextToken = response.NextToken;
+        }
+        while (!string.IsNullOrEmpty(nextToken));
+
+        return items
+            .OrderBy(x => x.Name)
+            .ToList();
+    }
+
+    private string?
+    FindTagValue(
+        List<Amazon.EC2.Model.Tag> tags,
+        params string[] keyVariants)
+    {
+        foreach (var variant in keyVariants)
+        {
+            var match =
+                tags.FirstOrDefault(t =>
+                    string.Equals(
+                        t.Key,
+                        variant,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                return match.Value;
+            }
+        }
+
+        return null;
     }
 
     private int

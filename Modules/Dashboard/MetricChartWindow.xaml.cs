@@ -9,30 +9,33 @@ namespace KubaToolKit.Modules.Dashboard;
 public partial class MetricChartWindow
     : Window
 {
+    private class LoadedSeries
+    {
+        public string DisplayName { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public Color Color { get; set; }
+        public List<(DateTime Timestamp, double Value)> Points { get; set; } = new();
+    }
+
     private readonly DashboardService _dashboardService = new();
     private readonly string _profile;
-    private readonly string _dbInstanceIdentifier;
-    private readonly string _metricName;
-    private readonly string _unit;
-    private List<(DateTime Timestamp, double Value)> _points = new();
+    private readonly List<ChartSeriesRequest> _seriesRequests;
+    private List<LoadedSeries> _series = new();
 
     public MetricChartWindow(
         string profile,
-        string dbInstanceIdentifier,
-        string metricName,
-        string metricDisplayName,
-        string unit)
+        string title,
+        string subtitle,
+        List<ChartSeriesRequest> seriesRequests)
     {
         InitializeComponent();
 
         _profile = profile;
-        _dbInstanceIdentifier = dbInstanceIdentifier;
-        _metricName = metricName;
-        _unit = unit;
+        _seriesRequests = seriesRequests;
 
-        Title = $"{metricDisplayName} - {dbInstanceIdentifier}";
-        TitleTextBlock.Text = metricDisplayName;
-        SubtitleTextBlock.Text = $"{dbInstanceIdentifier} • Last 1 hour";
+        Title = title;
+        TitleTextBlock.Text = title;
+        SubtitleTextBlock.Text = $"{subtitle} • Last 1 hour";
 
         Loaded += async (_, __) =>
             await LoadAsync();
@@ -46,14 +49,32 @@ public partial class MetricChartWindow
             LoadingProgressBar.Visibility =
                 Visibility.Visible;
 
-            _points =
-                await _dashboardService.GetMetricHistory(
-                    _profile,
-                    _dbInstanceIdentifier,
-                    _metricName,
-                    TimeSpan.FromHours(1));
+            var loaded = new List<LoadedSeries>();
+
+            foreach (var request in _seriesRequests)
+            {
+                var points =
+                    await _dashboardService.GetMetricHistory(
+                        _profile,
+                        request.Namespace,
+                        request.MetricName,
+                        request.Dimensions,
+                        TimeSpan.FromHours(1));
+
+                loaded.Add(
+                    new LoadedSeries
+                    {
+                        DisplayName = request.DisplayName,
+                        Unit = request.Unit,
+                        Color = request.Color,
+                        Points = points
+                    });
+            }
+
+            _series = loaded;
 
             DrawChart();
+            DrawLegend();
         }
         catch (Exception ex)
         {
@@ -89,6 +110,58 @@ public partial class MetricChartWindow
     }
 
     private void
+    DrawLegend()
+    {
+        LegendPanel.Children.Clear();
+
+        // Une seule courbe : le nom est déjà dans le titre, pas besoin de
+        // légende séparée.
+        if (_series.Count <= 1)
+        {
+            LegendPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        LegendPanel.Visibility = Visibility.Visible;
+
+        foreach (var series in _series)
+        {
+            var item = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 16, 0)
+            };
+
+            var swatch = new Border
+            {
+                Width = 10,
+                Height = 10,
+                CornerRadius = new CornerRadius(2),
+                Background = new SolidColorBrush(series.Color),
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var hasData = series.Points.Count > 0;
+
+            var label = new TextBlock
+            {
+                Text = hasData
+                    ? series.DisplayName
+                    : $"{series.DisplayName} (no data)",
+                FontSize = 12,
+                Foreground = (Brush)FindResource(
+                    hasData ? "TextPrimaryBrush" : "TextMutedBrush"),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            item.Children.Add(swatch);
+            item.Children.Add(label);
+            LegendPanel.Children.Add(item);
+        }
+    }
+
+    private void
     DrawChart()
     {
         ChartCanvas.Children.Clear();
@@ -104,7 +177,12 @@ public partial class MetricChartWindow
             return;
         }
 
-        if (_points.Count == 0)
+        var allPoints =
+            _series
+                .SelectMany(s => s.Points)
+                .ToList();
+
+        if (allPoints.Count == 0)
         {
             EmptyStateText.Visibility =
                 Visibility.Visible;
@@ -130,10 +208,10 @@ public partial class MetricChartWindow
             Math.Max(10, height - bottomAxisHeight - topPadding);
 
         double minValue =
-            _points.Min(p => p.Value);
+            allPoints.Min(p => p.Value);
 
         double maxValue =
-            _points.Max(p => p.Value);
+            allPoints.Max(p => p.Value);
 
         if (Math.Abs(maxValue - minValue) < 0.0001)
         {
@@ -143,9 +221,6 @@ public partial class MetricChartWindow
             minValue = Math.Max(0, minValue - 1);
         }
 
-        var accentBrush =
-            (Brush)FindResource("AccentBrush");
-
         var borderBrush =
             (Brush)FindResource("BorderBrush");
 
@@ -154,6 +229,10 @@ public partial class MetricChartWindow
 
         var secondaryBrush =
             (Brush)FindResource("TextSecondaryBrush");
+
+        var unit =
+            _series.FirstOrDefault()?.Unit
+            ?? "";
 
         // Gridlines horizontales + labels de valeur
         const int GridLines = 4;
@@ -178,7 +257,7 @@ public partial class MetricChartWindow
 
             var label = new TextBlock
             {
-                Text = FormatValue(value),
+                Text = FormatValue(value, unit),
                 FontSize = 10,
                 Foreground = mutedBrush
             };
@@ -189,81 +268,94 @@ public partial class MetricChartWindow
             ChartCanvas.Children.Add(label);
         }
 
-        // Points -> coordonnées écran
-        var startTime = _points.First().Timestamp;
-        var endTime = _points.Last().Timestamp;
+        var startTime =
+            allPoints.Min(p => p.Timestamp);
+
+        var endTime =
+            allPoints.Max(p => p.Timestamp);
 
         double totalSeconds =
             Math.Max(1, (endTime - startTime).TotalSeconds);
 
-        var screenPoints =
-            _points.Select(p =>
+        bool singleSeries = _series.Count == 1;
+
+        foreach (var series in _series)
+        {
+            if (series.Points.Count == 0)
             {
-                double xRatio =
-                    (p.Timestamp - startTime).TotalSeconds
-                    / totalSeconds;
+                continue;
+            }
 
-                double yRatio =
-                    (p.Value - minValue)
-                    / (maxValue - minValue);
+            var screenPoints =
+                series.Points.Select(p =>
+                {
+                    double xRatio =
+                        (p.Timestamp - startTime).TotalSeconds
+                        / totalSeconds;
 
-                double x = plotLeft + plotWidth * xRatio;
-                double y = plotTop + plotHeight * (1 - yRatio);
+                    double yRatio =
+                        (p.Value - minValue)
+                        / (maxValue - minValue);
 
-                return new Point(x, y);
-            })
-            .ToList();
+                    double x = plotLeft + plotWidth * xRatio;
+                    double y = plotTop + plotHeight * (1 - yRatio);
 
-        // Zone remplie sous la courbe
-        var fillPoints = new PointCollection();
+                    return new Point(x, y);
+                })
+                .ToList();
 
-        fillPoints.Add(
-            new Point(screenPoints.First().X, plotTop + plotHeight));
+            // Zone remplie sous la courbe : seulement pour une courbe
+            // unique, pour ne pas superposer plusieurs dégradés opaques.
+            if (singleSeries)
+            {
+                var fillPoints = new PointCollection();
 
-        foreach (var p in screenPoints)
-        {
-            fillPoints.Add(p);
+                fillPoints.Add(
+                    new Point(screenPoints.First().X, plotTop + plotHeight));
+
+                foreach (var p in screenPoints)
+                {
+                    fillPoints.Add(p);
+                }
+
+                fillPoints.Add(
+                    new Point(screenPoints.Last().X, plotTop + plotHeight));
+
+                var fillBrush = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(0, 1)
+                };
+
+                fillBrush.GradientStops.Add(
+                    new GradientStop(
+                        Color.FromArgb(70, series.Color.R, series.Color.G, series.Color.B),
+                        0));
+
+                fillBrush.GradientStops.Add(
+                    new GradientStop(
+                        Color.FromArgb(0, series.Color.R, series.Color.G, series.Color.B),
+                        1));
+
+                var fillPolygon = new Polygon
+                {
+                    Points = fillPoints,
+                    Fill = fillBrush
+                };
+
+                ChartCanvas.Children.Add(fillPolygon);
+            }
+
+            var polyline = new Polyline
+            {
+                Points = new PointCollection(screenPoints),
+                Stroke = new SolidColorBrush(series.Color),
+                StrokeThickness = 2,
+                StrokeLineJoin = PenLineJoin.Round
+            };
+
+            ChartCanvas.Children.Add(polyline);
         }
-
-        fillPoints.Add(
-            new Point(screenPoints.Last().X, plotTop + plotHeight));
-
-        var accentColor = ((SolidColorBrush)accentBrush).Color;
-
-        var fillBrush = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(0, 1)
-        };
-
-        fillBrush.GradientStops.Add(
-            new GradientStop(
-                Color.FromArgb(70, accentColor.R, accentColor.G, accentColor.B),
-                0));
-
-        fillBrush.GradientStops.Add(
-            new GradientStop(
-                Color.FromArgb(0, accentColor.R, accentColor.G, accentColor.B),
-                1));
-
-        var fillPolygon = new Polygon
-        {
-            Points = fillPoints,
-            Fill = fillBrush
-        };
-
-        ChartCanvas.Children.Add(fillPolygon);
-
-        // Ligne de la courbe
-        var polyline = new Polyline
-        {
-            Points = new PointCollection(screenPoints),
-            Stroke = accentBrush,
-            StrokeThickness = 2,
-            StrokeLineJoin = PenLineJoin.Round
-        };
-
-        ChartCanvas.Children.Add(polyline);
 
         // Labels d'axe temporel (début / milieu / fin)
         AddTimeLabel(
@@ -321,9 +413,10 @@ public partial class MetricChartWindow
 
     private string
     FormatValue(
-        double value)
+        double value,
+        string unit)
     {
-        return _unit == "%"
+        return unit == "%"
             ? $"{value:F0}%"
             : $"{value:F0}";
     }
