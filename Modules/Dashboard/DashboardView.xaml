@@ -75,9 +75,15 @@
             </Grid.Resources>
 
             <Grid.RowDefinitions>
-                <RowDefinition x:Name="RdsRow" Height="280" MinHeight="120"/>
+                <!--
+                    Pas de MinHeight ici : une section repliée doit pouvoir
+                    se réduire jusqu'à ne plus afficher que son titre. La
+                    taille minimale visible en mode déplié est portée par
+                    le Border de contenu (MinHeight="120") à la place.
+                -->
+                <RowDefinition x:Name="RdsRow" Height="280"/>
                 <RowDefinition Height="6"/>
-                <RowDefinition x:Name="Ec2Row" Height="*" MinHeight="120"/>
+                <RowDefinition x:Name="Ec2Row" Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- RDS -->
@@ -102,6 +108,7 @@
                 </Expander.Header>
 
                 <Border
+                    MinHeight="120"
                     BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
@@ -220,6 +227,7 @@
                 </Expander.Header>
 
                 <Border
+                    MinHeight="120"
                     BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8"

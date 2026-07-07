@@ -32,7 +32,7 @@ public partial class DashboardView
         RdsGrid.ItemsSource = _rdsMetrics;
         Ec2Grid.ItemsSource = _ec2Metrics;
 
-        UpdateSplitterState();
+        UpdateSectionRows();
     }
 
     private void
@@ -40,21 +40,12 @@ public partial class DashboardView
         object sender,
         RoutedEventArgs e)
     {
-        if (RdsExpander.IsExpanded)
+        if (RdsRow.Height.IsAbsolute)
         {
-            RdsRow.Height = _rdsExpandedHeight;
-        }
-        else
-        {
-            if (RdsRow.Height.IsAbsolute)
-            {
-                _rdsExpandedHeight = RdsRow.Height;
-            }
-
-            RdsRow.Height = GridLength.Auto;
+            _rdsExpandedHeight = RdsRow.Height;
         }
 
-        UpdateSplitterState();
+        UpdateSectionRows();
     }
 
     private void
@@ -62,34 +53,47 @@ public partial class DashboardView
         object sender,
         RoutedEventArgs e)
     {
-        Ec2Row.Height =
-            Ec2Expander.IsExpanded
-                ? new GridLength(1, GridUnitType.Star)
-                : GridLength.Auto;
-
-        UpdateSplitterState();
+        UpdateSectionRows();
     }
 
     private void
-    UpdateSplitterState()
+    UpdateSectionRows()
     {
         // IsExpanded="True" en XAML déclenche l'évènement Expanded dès la
         // construction de l'élément, avant que les éléments suivants du
         // même document (ici RdsEc2Splitter / Ec2Expander) n'existent
         // encore : sans ce garde, ce serait un NullReferenceException au
         // démarrage.
-        if (RdsExpander == null
+        if (RdsRow == null
+            || Ec2Row == null
+            || RdsExpander == null
             || Ec2Expander == null
             || RdsEc2Splitter == null)
         {
             return;
         }
 
+        bool rdsExpanded = RdsExpander.IsExpanded;
+        bool ec2Expanded = Ec2Expander.IsExpanded;
+
+        // Une section repliée ne garde que la hauteur de son titre (Auto).
+        // La dernière section encore dépliée récupère l'espace ainsi
+        // libéré (Height="*") ; les autres sections dépliées gardent leur
+        // hauteur fixe/redimensionnée.
+        if (ec2Expanded)
+        {
+            Ec2Row.Height = new GridLength(1, GridUnitType.Star);
+            RdsRow.Height = rdsExpanded ? _rdsExpandedHeight : GridLength.Auto;
+        }
+        else
+        {
+            Ec2Row.Height = GridLength.Auto;
+            RdsRow.Height = rdsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        }
+
         // Redimensionner n'a de sens que si les deux sections sont
         // dépliées ; sinon il n'y a rien à répartir entre elles.
-        RdsEc2Splitter.IsEnabled =
-            RdsExpander.IsExpanded
-            && Ec2Expander.IsExpanded;
+        RdsEc2Splitter.IsEnabled = rdsExpanded && ec2Expanded;
     }
 
     public async Task
