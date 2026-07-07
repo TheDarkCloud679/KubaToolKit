@@ -83,16 +83,23 @@
                     RowHeight="40">
 
                     <DataGrid.Resources>
+                        <!--
+                            Le fond (dégradé bleu -> rouge selon la charge) est
+                            posé en local via Binding sur chaque cellule, donc
+                            le survol se signale via la bordure plutôt que le
+                            fond pour ne pas l'écraser.
+                        -->
                         <Style x:Key="MetricCellStyle" TargetType="Border">
                             <Setter Property="Padding" Value="10,4"/>
                             <Setter Property="Margin" Value="0,0,4,0"/>
                             <Setter Property="CornerRadius" Value="4"/>
                             <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="1.5"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="HorizontalAlignment" Value="Right"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -121,6 +128,7 @@
                                 <DataTemplate>
                                     <Border
                                         Style="{StaticResource MetricCellStyle}"
+                                        Background="{Binding CpuBackground}"
                                         MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
                                         <TextBlock
                                             Text="{Binding CpuDisplay}"
@@ -138,6 +146,7 @@
                                 <DataTemplate>
                                     <Border
                                         Style="{StaticResource MetricCellStyle}"
+                                        Background="{Binding ActivityBackground}"
                                         MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
                                         <TextBlock
                                             Text="{Binding ActivityDisplay}"
