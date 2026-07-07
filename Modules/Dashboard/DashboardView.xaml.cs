@@ -31,6 +31,8 @@ public partial class DashboardView
 
         RdsGrid.ItemsSource = _rdsMetrics;
         Ec2Grid.ItemsSource = _ec2Metrics;
+
+        UpdateSplitterState();
     }
 
     private void
@@ -71,6 +73,18 @@ public partial class DashboardView
     private void
     UpdateSplitterState()
     {
+        // IsExpanded="True" en XAML déclenche l'évènement Expanded dès la
+        // construction de l'élément, avant que les éléments suivants du
+        // même document (ici RdsEc2Splitter / Ec2Expander) n'existent
+        // encore : sans ce garde, ce serait un NullReferenceException au
+        // démarrage.
+        if (RdsExpander == null
+            || Ec2Expander == null
+            || RdsEc2Splitter == null)
+        {
+            return;
+        }
+
         // Redimensionner n'a de sens que si les deux sections sont
         // dépliées ; sinon il n'y a rien à répartir entre elles.
         RdsEc2Splitter.IsEnabled =
