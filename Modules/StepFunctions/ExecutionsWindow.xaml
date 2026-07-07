@@ -94,7 +94,7 @@
                         Header="Execution"
                         Binding="{Binding Name}"
                         SortMemberPath="Name"
-                        Width="*"/>
+                        Width="Auto"/>
 
                     <DataGridTemplateColumn
                         Header="Status"

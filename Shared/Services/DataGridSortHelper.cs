@@ -68,4 +68,24 @@ public static class DataGridSortHelper
 
         return current as T;
     }
+
+    /// Les colonnes Width="Auto"/"*" ne se dimensionnent parfois
+    /// correctement qu'après un premier resize/interaction : au tout
+    /// premier chargement (ItemsSource peuplé de façon asynchrone après la
+    /// construction de la fenêtre), WPF calcule leur largeur avant que les
+    /// lignes ne soient réellement là pour la mesurer. Rebasculer chaque
+    /// colonne sur elle-même force WPF à refaire ce calcul avec les
+    /// données effectivement chargées.
+    public static void
+    RefreshColumnWidths(
+        DataGrid grid)
+    {
+        foreach (var column in grid.Columns)
+        {
+            var width = column.Width;
+
+            column.Width = new DataGridLength(0);
+            column.Width = width;
+        }
+    }
 }

@@ -75,7 +75,7 @@
                     <DataGridTextColumn
                         Header="Queue Name"
                         Binding="{Binding Name}"
-                        Width="*"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Available"

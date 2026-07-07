@@ -134,7 +134,7 @@
                                 Header="DB Instance"
                                 Binding="{Binding Identifier}"
                                 SortMemberPath="Identifier"
-                                Width="*"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Engine"
@@ -273,7 +273,7 @@
                                 Header="Name"
                                 Binding="{Binding Name}"
                                 SortMemberPath="Name"
-                                Width="*"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Type"

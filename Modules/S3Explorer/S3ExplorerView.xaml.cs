@@ -307,6 +307,10 @@ S3TreeView_SelectedItemChanged(
 
             S3FilesGrid.ItemsSource =
                 _s3Files;
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (Exception ex)
         {
@@ -430,6 +434,10 @@ RunSearchAsync(
 
             S3FilesGrid.ItemsSource =
                 _s3Files;
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (
     OperationCanceledException)
@@ -540,6 +548,10 @@ RefreshCurrentFolder()
             _s3Files.Add(
                 file);
         }
+
+        Dispatcher.BeginInvoke(
+            new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private async Task

@@ -80,7 +80,7 @@
                         Header="State Machine"
                         Binding="{Binding Name}"
                         SortMemberPath="Name"
-                        Width="*"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Type"
