@@ -98,6 +98,7 @@
                     CanUserAddRows="False"
                     CanUserDeleteRows="False"
                     HeadersVisibility="Column"
+                    HorizontalScrollBarVisibility="Auto"
                     MouseDoubleClick="MessagesGrid_DoubleClick">
 
                     <DataGrid.Columns>

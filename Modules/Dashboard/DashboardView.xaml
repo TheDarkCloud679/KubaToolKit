@@ -124,6 +124,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
+                        HorizontalScrollBarVisibility="Auto"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
                         MouseDoubleClick="RdsGrid_MouseDoubleClick">
@@ -262,6 +263,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
+                        HorizontalScrollBarVisibility="Auto"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
                         MouseDoubleClick="Ec2Grid_MouseDoubleClick">

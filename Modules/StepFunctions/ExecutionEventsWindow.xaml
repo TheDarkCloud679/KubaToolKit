@@ -73,6 +73,7 @@
                 CanUserDeleteRows="False"
                 CanUserSortColumns="False"
                 HeadersVisibility="Column"
+                HorizontalScrollBarVisibility="Auto"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
                 VirtualizingPanel.ScrollUnit="Pixel"
