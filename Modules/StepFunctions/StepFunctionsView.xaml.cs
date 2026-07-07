@@ -114,6 +114,18 @@ public partial class StepFunctionsView
             return;
         }
 
+        // Les state machines EXPRESS ne conservent pas leurs exécutions
+        // côté Step Functions (ListExecutions lève StateMachineTypeNotSupportedException) ;
+        // leur historique n'est consultable que via CloudWatch Logs.
+        if (string.Equals(stateMachine.Type, "EXPRESS", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(
+                "Cette state machine est de type EXPRESS : Step Functions ne conserve pas la liste de ses exécutions. Consultez ses logs via CloudWatch Logs.",
+                "Non disponible pour EXPRESS");
+
+            return;
+        }
+
         var window =
             new ExecutionsWindow(
                 _currentProfile,

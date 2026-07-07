@@ -1,3 +1,4 @@
+using Amazon.StepFunctions.Model;
 using KubaToolKit.Modules.StepFunctions.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -63,6 +64,17 @@ public partial class ExecutionsWindow
         }
         catch (OperationCanceledException)
         {
+        }
+        catch (StateMachineTypeNotSupportedException)
+        {
+            // State machine EXPRESS : Step Functions ne conserve pas la
+            // liste de ses exécutions (normalement filtré en amont dans
+            // StepFunctionsView, gardé ici par sécurité).
+            MessageBox.Show(
+                "Cette state machine est de type EXPRESS : Step Functions ne conserve pas la liste de ses exécutions. Consultez ses logs via CloudWatch Logs.",
+                "Non disponible pour EXPRESS");
+
+            Close();
         }
         catch (Exception ex)
         {
