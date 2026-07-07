@@ -2,8 +2,10 @@ using Amazon.CloudWatch.Model;
 using KubaToolKit.Modules.Dashboard.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -24,6 +26,12 @@ public partial class DashboardView
     // Hauteur de la section RDS mémorisée avant repli, pour la restaurer
     // (y compris si l'utilisateur l'a redimensionnée via le splitter).
     private GridLength _rdsExpandedHeight = new(280);
+
+    private DataGridColumn? _rdsSortColumn;
+    private ListSortDirection _rdsSortDirection = ListSortDirection.Ascending;
+
+    private DataGridColumn? _ec2SortColumn;
+    private ListSortDirection _ec2SortDirection = ListSortDirection.Ascending;
 
     public DashboardView()
     {
@@ -196,6 +204,25 @@ public partial class DashboardView
     }
 
     private void
+    RdsGrid_MouseDoubleClick(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+            is not { } header)
+        {
+            return;
+        }
+
+        SortByColumn(
+            _rdsMetrics,
+            RdsGrid.Columns,
+            header.Column,
+            ref _rdsSortColumn,
+            ref _rdsSortDirection);
+    }
+
+    private void
     CpuMetric_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e)
@@ -290,6 +317,19 @@ public partial class DashboardView
         object sender,
         MouseButtonEventArgs e)
     {
+        if (FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+            is { } header)
+        {
+            SortByColumn(
+                _ec2Metrics,
+                Ec2Grid.Columns,
+                header.Column,
+                ref _ec2SortColumn,
+                ref _ec2SortDirection);
+
+            return;
+        }
+
         if (Ec2Grid.SelectedItem is not Ec2MetricItem item
             || string.IsNullOrWhiteSpace(_currentProfile))
         {
@@ -342,5 +382,66 @@ public partial class DashboardView
             Window.GetWindow(this);
 
         window.Show();
+    }
+
+    // Tri manuel (au lieu du tri intégré du DataGrid) car on veut que ça se
+    // déclenche au double-clic sur l'en-tête, pas au simple clic ; on
+    // réordonne donc directement la collection au lieu de passer par
+    // CanUserSortColumns/ICollectionView.
+    private static void
+    SortByColumn<T>(
+        ObservableCollection<T> items,
+        IEnumerable<DataGridColumn> columns,
+        DataGridColumn? column,
+        ref DataGridColumn? currentColumn,
+        ref ListSortDirection currentDirection)
+    {
+        if (column?.SortMemberPath is not { } propertyName
+            || typeof(T).GetProperty(propertyName) is not { } property)
+        {
+            return;
+        }
+
+        currentDirection =
+            currentColumn == column
+            && currentDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+
+        currentColumn = column;
+
+        var ordered =
+            currentDirection == ListSortDirection.Ascending
+                ? items.OrderBy(x => property.GetValue(x))
+                : items.OrderByDescending(x => property.GetValue(x));
+
+        var sorted = ordered.ToList();
+
+        items.Clear();
+
+        foreach (var item in sorted)
+        {
+            items.Add(item);
+        }
+
+        foreach (var col in columns)
+        {
+            col.SortDirection = null;
+        }
+
+        column.SortDirection = currentDirection;
+    }
+
+    private static T?
+    FindAncestor<T>(
+        DependencyObject? current)
+        where T : DependencyObject
+    {
+        while (current != null && current is not T)
+        {
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return current as T;
     }
 }
