@@ -11,5 +11,6 @@ public static class ToolModuleRegistry
             new Modules.CloudWatchLogs.CloudWatchLogsModule(),
             new Modules.S3Explorer.S3ExplorerModule(),
             new Modules.Sqs.SqsModule(),
+            new Modules.StepFunctions.StepFunctionsModule(),
         };
 }

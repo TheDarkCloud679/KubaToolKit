@@ -4,6 +4,7 @@ using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.Dashboard;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
+using KubaToolKit.Modules.StepFunctions;
 using KubaToolKit.Shared.Behaviors;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
@@ -24,6 +25,7 @@ public partial class MainWindow
     private readonly CloudWatchLogsView _cloudWatchView;
     private readonly S3ExplorerView _s3View;
     private readonly SqsView _sqsView;
+    private readonly StepFunctionsView _stepFunctionsView;
 
     private bool _windowLoaded = false;
     private bool _editingSecondHourDigit = false;
@@ -50,6 +52,7 @@ public partial class MainWindow
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
+        _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
 
         foreach (var module in _modules)
         {
@@ -199,6 +202,10 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             await _dashboardView.OnProfileChanged(profile);
         }
+        else if (StepFunctionsModeRadio?.IsChecked == true)
+        {
+            await _stepFunctionsView.OnProfileChanged(profile);
+        }
         else
         {
             await LoadCloudWatchLogGroupsAsync(profile);
@@ -274,6 +281,22 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 try
                 {
                     await _dashboardView.RefreshAsync();
+                }
+                finally
+                {
+                    SearchButton.IsEnabled = true;
+                }
+
+                return;
+            }
+
+            if (StepFunctionsModeRadio?.IsChecked == true)
+            {
+                SearchButton.IsEnabled = false;
+
+                try
+                {
+                    await _stepFunctionsView.RefreshAsync();
                 }
                 finally
                 {
@@ -972,11 +995,16 @@ FormatTimeTextBox(
                 ?.IsChecked
             == true;
 
+        bool isStepFunctions =
+            StepFunctionsModeRadio
+                ?.IsChecked
+            == true;
+
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
 
         _cloudWatchView.Visibility =
-            !isS3 && !isSqs && !isDashboard
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -985,6 +1013,9 @@ FormatTimeTextBox(
 
         _sqsView.Visibility =
             isSqs ? Visibility.Visible : Visibility.Collapsed;
+
+        _stepFunctionsView.Visibility =
+            isStepFunctions ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {
@@ -999,6 +1030,11 @@ FormatTimeTextBox(
         else if (isDashboard)
         {
             await _dashboardView.OnProfileChanged(
+                ProfileCombo.SelectedItem?.ToString());
+        }
+        else if (isStepFunctions)
+        {
+            await _stepFunctionsView.OnProfileChanged(
                 ProfileCombo.SelectedItem?.ToString());
         }
     }

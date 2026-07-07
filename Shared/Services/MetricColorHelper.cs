@@ -50,14 +50,16 @@ public static class MetricColorHelper
 
         Color? color = normalized switch
         {
-            "available" or "running" => SuccessColor,
+            "available" or "running" or "succeeded" => SuccessColor,
 
             "stopped"
                 or "terminated"
                 or "failed"
                 or "incompatible-restore"
                 or "storage-full"
-                or "incompatible-parameters" => DangerColor,
+                or "incompatible-parameters"
+                or "timed_out"
+                or "aborted" => DangerColor,
 
             "starting"
                 or "stopping"
@@ -68,7 +70,8 @@ public static class MetricColorHelper
                 or "rebooting"
                 or "upgrading"
                 or "maintenance"
-                or "configuring-enhanced-monitoring" => WarningColor,
+                or "configuring-enhanced-monitoring"
+                or "pending_redrive" => WarningColor,
 
             _ => null
         };
