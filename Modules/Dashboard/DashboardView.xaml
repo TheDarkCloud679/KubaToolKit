@@ -198,6 +198,18 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+
+                            <DataGridTextColumn
+                                Header="Auto-Start"
+                                Binding="{Binding AutoStart}"
+                                SortMemberPath="AutoStart"
+                                Width="100"/>
+
+                            <DataGridTextColumn
+                                Header="Auto-Stop"
+                                Binding="{Binding AutoStop}"
+                                SortMemberPath="AutoStop"
+                                Width="100"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
