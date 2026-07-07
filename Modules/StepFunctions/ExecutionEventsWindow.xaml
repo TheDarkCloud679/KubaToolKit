@@ -32,7 +32,7 @@
                     Foreground="{StaticResource TextPrimaryBrush}"/>
 
                 <TextBlock
-                    Text="(double-click an event to view its formatted request/details)"
+                    Text="(double-click an event to view its formatted request/details, or a header to sort)"
                     FontSize="11"
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"
@@ -71,6 +71,7 @@
                 IsReadOnly="True"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
+                CanUserSortColumns="False"
                 HeadersVisibility="Column"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
@@ -82,26 +83,31 @@
                     <DataGridTextColumn
                         Header="ID"
                         Binding="{Binding Id}"
+                        SortMemberPath="Id"
                         Width="60"/>
 
                     <DataGridTextColumn
                         Header="Type"
                         Binding="{Binding Type}"
+                        SortMemberPath="Type"
                         Width="220"/>
 
                     <DataGridTextColumn
                         Header="Step"
                         Binding="{Binding Step}"
+                        SortMemberPath="Step"
                         Width="200"/>
 
                     <DataGridTextColumn
                         Header="Resource"
                         Binding="{Binding Resource}"
+                        SortMemberPath="Resource"
                         Width="*"/>
 
                     <DataGridTextColumn
                         Header="Timestamp"
                         Binding="{Binding TimestampDisplay}"
+                        SortMemberPath="Timestamp"
                         Width="180"/>
                 </DataGrid.Columns>
             </DataGrid>

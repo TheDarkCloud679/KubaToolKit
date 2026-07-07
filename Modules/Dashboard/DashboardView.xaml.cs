@@ -208,13 +208,13 @@ public partial class DashboardView
         object sender,
         MouseButtonEventArgs e)
     {
-        if (FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+        if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
             is not { } header)
         {
             return;
         }
 
-        SortByColumn(
+        DataGridSortHelper.SortByColumn(
             _rdsMetrics,
             RdsGrid.Columns,
             header.Column,
@@ -317,10 +317,10 @@ public partial class DashboardView
         object sender,
         MouseButtonEventArgs e)
     {
-        if (FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+        if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
             is { } header)
         {
-            SortByColumn(
+            DataGridSortHelper.SortByColumn(
                 _ec2Metrics,
                 Ec2Grid.Columns,
                 header.Column,
@@ -384,64 +384,4 @@ public partial class DashboardView
         window.Show();
     }
 
-    // Tri manuel (au lieu du tri intégré du DataGrid) car on veut que ça se
-    // déclenche au double-clic sur l'en-tête, pas au simple clic ; on
-    // réordonne donc directement la collection au lieu de passer par
-    // CanUserSortColumns/ICollectionView.
-    private static void
-    SortByColumn<T>(
-        ObservableCollection<T> items,
-        IEnumerable<DataGridColumn> columns,
-        DataGridColumn? column,
-        ref DataGridColumn? currentColumn,
-        ref ListSortDirection currentDirection)
-    {
-        if (column?.SortMemberPath is not { } propertyName
-            || typeof(T).GetProperty(propertyName) is not { } property)
-        {
-            return;
-        }
-
-        currentDirection =
-            currentColumn == column
-            && currentDirection == ListSortDirection.Ascending
-                ? ListSortDirection.Descending
-                : ListSortDirection.Ascending;
-
-        currentColumn = column;
-
-        var ordered =
-            currentDirection == ListSortDirection.Ascending
-                ? items.OrderBy(x => property.GetValue(x))
-                : items.OrderByDescending(x => property.GetValue(x));
-
-        var sorted = ordered.ToList();
-
-        items.Clear();
-
-        foreach (var item in sorted)
-        {
-            items.Add(item);
-        }
-
-        foreach (var col in columns)
-        {
-            col.SortDirection = null;
-        }
-
-        column.SortDirection = currentDirection;
-    }
-
-    private static T?
-    FindAncestor<T>(
-        DependencyObject? current)
-        where T : DependencyObject
-    {
-        while (current != null && current is not T)
-        {
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return current as T;
-    }
 }
