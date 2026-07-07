@@ -22,6 +22,13 @@ public partial class CloudWatchLogsView
     private string? _currentProfile;
     private string _currentSearchText = "";
 
+    private const double QueryEditorBaseHeight = 120;
+    private const double QueryEditorLineHeight = 20;
+    private const double QueryEditorMaxHeight = 420;
+    private const double LogGroupsBaseHeight = 300;
+    private const double LogGroupsMinHeight = 100;
+    private double _queryEditorCurrentHeight = QueryEditorBaseHeight;
+
     public CloudWatchLogsView()
     {
         InitializeComponent();
@@ -403,6 +410,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch
@@ -417,6 +425,51 @@ SearchAllLogsCheckBox_Changed(
     {
         DebugPanel.Visibility =
             Visibility.Collapsed;
+
+        // Rendre à Log Groups l'espace qu'on lui avait emprunté.
+        LogGroupsRow.Height =
+            new GridLength(LogGroupsBaseHeight);
+
+        QueryEditorTextBox.Height =
+            QueryEditorBaseHeight;
+
+        _queryEditorCurrentHeight =
+            QueryEditorBaseHeight;
+    }
+
+    /// Agrandit l'éditeur de requête pour afficher toutes les lignes
+    /// pré-remplies sans scroll interne (dans une limite raisonnable), en
+    /// empruntant l'espace nécessaire au panneau Log Groups plutôt qu'aux
+    /// résultats.
+    private void
+    ResizeQueryEditorToFitContent()
+    {
+        int lineCount =
+            Math.Max(
+                1,
+                QueryEditorTextBox.Document.LineCount);
+
+        double desiredHeight =
+            Math.Clamp(
+                lineCount * QueryEditorLineHeight + 16,
+                QueryEditorBaseHeight,
+                QueryEditorMaxHeight);
+
+        QueryEditorTextBox.Height =
+            desiredHeight;
+
+        double extraNeeded =
+            desiredHeight
+            - QueryEditorBaseHeight;
+
+        LogGroupsRow.Height =
+            new GridLength(
+                Math.Max(
+                    LogGroupsMinHeight,
+                    LogGroupsBaseHeight - extraNeeded));
+
+        _queryEditorCurrentHeight =
+            desiredHeight;
     }
 
     private void
@@ -434,6 +487,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch (Exception ex)
@@ -525,6 +579,7 @@ SearchAllLogsCheckBox_Changed(
             Dispatcher.InvokeAsync(() =>
             {
                 ApplyCloudWatchSyntaxHighlighting();
+                ResizeQueryEditorToFitContent();
             });
         }
         catch

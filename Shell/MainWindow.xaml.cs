@@ -2,6 +2,7 @@ using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Infrastructure;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.S3Explorer;
+using KubaToolKit.Modules.Sqs;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
 using System.Windows;
@@ -19,6 +20,7 @@ public partial class MainWindow
     private readonly IReadOnlyList<IToolModule> _modules = ToolModuleRegistry.CreateModules();
     private readonly CloudWatchLogsView _cloudWatchView;
     private readonly S3ExplorerView _s3View;
+    private readonly SqsView _sqsView;
 
     private bool _windowLoaded = false;
     private bool _editingSecondHourDigit = false;
@@ -36,6 +38,7 @@ public partial class MainWindow
 
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
+        _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
 
         foreach (var module in _modules)
         {
@@ -177,6 +180,10 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             await _s3View.OnProfileChanged(profile);
         }
+        else if (SqsModeRadio?.IsChecked == true)
+        {
+            await _sqsView.OnProfileChanged(profile);
+        }
         else
         {
             await LoadCloudWatchLogGroupsAsync(profile);
@@ -220,6 +227,22 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 try
                 {
                     await _s3View.RunSearchAsync(SearchTextBox.Text);
+                }
+                finally
+                {
+                    SearchButton.IsEnabled = true;
+                }
+
+                return;
+            }
+
+            if (SqsModeRadio?.IsChecked == true)
+            {
+                SearchButton.IsEnabled = false;
+
+                try
+                {
+                    await _sqsView.RefreshAsync();
                 }
                 finally
                 {
@@ -908,15 +931,30 @@ FormatTimeTextBox(
                 ?.IsChecked
             == true;
 
+        bool isSqs =
+            SqsModeRadio
+                ?.IsChecked
+            == true;
+
         _cloudWatchView.Visibility =
-            isS3 ? Visibility.Collapsed : Visibility.Visible;
+            !isS3 && !isSqs
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         _s3View.Visibility =
             isS3 ? Visibility.Visible : Visibility.Collapsed;
 
+        _sqsView.Visibility =
+            isSqs ? Visibility.Visible : Visibility.Collapsed;
+
         if (isS3)
         {
             await _s3View.OnProfileChanged(
+                ProfileCombo.SelectedItem?.ToString());
+        }
+        else if (isSqs)
+        {
+            await _sqsView.OnProfileChanged(
                 ProfileCombo.SelectedItem?.ToString());
         }
     }

@@ -103,6 +103,14 @@
                             Checked="ModeRadio_Checked"
                             VerticalAlignment="Center"
                             Margin="0,0,20,0"/>
+
+                        <RadioButton
+                            x:Name="SqsModeRadio"
+                            Content="SQS"
+                            GroupName="Mode"
+                            Checked="ModeRadio_Checked"
+                            VerticalAlignment="Center"
+                            Margin="0,0,20,0"/>
                     </WrapPanel>
                 </StackPanel>
 
