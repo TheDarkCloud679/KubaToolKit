@@ -33,7 +33,14 @@ public partial class MainWindow
     private DateTime? _startRangeDate;
     private bool _updatingDate = false;
     private DatePicker? _activeDatePicker;
-    private const double ScrollSpeed = 22;
+
+    // Pixels à défiler pour un "cran" standard de molette (delta = 120).
+    // La vitesse réelle appliquée est proportionnelle à e.Delta, pas un
+    // saut fixe par évènement : indispensable pour les souris/trackpads à
+    // défilement fluide qui envoient beaucoup de petits deltas par
+    // mouvement (sinon chacun d'eux sautait du même montant fixe, ce qui
+    // donnait une impression de scroll bien trop rapide).
+    private const double PixelsPerNotch = 9;
 
     public MainWindow()
     {
@@ -1032,7 +1039,7 @@ MainWindow_PreviewMouseWheel(
 
         // Certains ScrollViewer (ex: popup de ComboBox) gèrent eux-mêmes
         // leur vitesse de défilement via ScrollSpeedBehavior ; on ne doit
-        // pas leur imposer le ScrollSpeed générique par-dessus.
+        // pas leur imposer la vitesse générique par-dessus.
         if (ScrollSpeedBehavior.GetLinesPerNotch(currentScroll) > 0)
         {
             return;
@@ -1048,10 +1055,11 @@ MainWindow_PreviewMouseWheel(
             currentScroll.VerticalOffset >=
             currentScroll.ScrollableHeight;
 
+        // Proportionnel à e.Delta (et non un saut fixe par évènement) :
+        // un demi-cran ne doit déplacer qu'à moitié moins qu'un cran plein.
         double delta =
-            scrollingUp
-            ? -ScrollSpeed
-            : ScrollSpeed;
+            -e.Delta / 120.0
+            * PixelsPerNotch;
 
         // Scroll interne normal
         if ((!scrollingUp && !atBottom)
