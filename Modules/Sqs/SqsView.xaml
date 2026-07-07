@@ -26,7 +26,7 @@
                     VerticalAlignment="Center"/>
 
                 <TextBlock
-                    Text="(consultation seule, aucun message n'est supprimé)"
+                    Text="(Read Only)"
                     FontSize="11"
                     Foreground="{StaticResource TextSecondaryBrush}"
                     Margin="10,0,0,0"
@@ -67,7 +67,8 @@
                 CanUserDeleteRows="False"
                 HeadersVisibility="Column"
                 SelectionMode="Single"
-                SelectionUnit="FullRow">
+                SelectionUnit="FullRow"
+                RowHeight="44">
 
                 <DataGrid.Columns>
                     <DataGridTextColumn
@@ -108,6 +109,7 @@
                                     Content="Search Message"
                                     Width="140"
                                     HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
                                     Click="SearchMessage_Click"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
