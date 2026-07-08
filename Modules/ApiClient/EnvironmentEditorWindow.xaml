@@ -3,10 +3,10 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Edit Environment"
-    Width="600"
-    Height="520"
-    MinWidth="420"
-    MinHeight="320"
+    Width="860"
+    Height="560"
+    MinWidth="640"
+    MinHeight="380"
     WindowStartupLocation="CenterOwner"
     Background="{StaticResource WindowBackgroundBrush}">
 
@@ -62,7 +62,7 @@
                 CanUserDeleteRows="True"
                 HeadersVisibility="Column"
                 HorizontalScrollBarVisibility="Auto"
-                RowHeight="32">
+                RowHeight="38">
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn
                         Header="On"
@@ -73,13 +73,29 @@
                         Header="Key"
                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                        Width="220"/>
+                        Width="2*"
+                        MinWidth="180">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <DataGridTextColumn
                         Header="Value"
                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                        Width="*"/>
+                        Width="3*"
+                        MinWidth="240">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
