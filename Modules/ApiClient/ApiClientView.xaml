@@ -95,9 +95,9 @@
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MaxHeight="320"/>
+                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MinHeight="60"/>
                 <RowDefinition Height="6"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition x:Name="ResponseRow" Height="*" MinHeight="120"/>
             </Grid.RowDefinitions>
 
             <!-- Method / URL / Environment / Send -->
