@@ -14,20 +14,148 @@ public partial class ApiClientView
     private readonly ApiClientService _apiClientService = new();
     private readonly CollectionStorageService _collectionStorage = new();
     private readonly ObservableCollection<HeaderItem> _headers = new();
+    private readonly ObservableCollection<HeaderItem> _params = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
+    private bool _syncingUrlAndParams;
+    private bool _collectionsSortDescending;
 
     public ApiClientView()
     {
         InitializeComponent();
 
         HeadersGrid.ItemsSource = _headers;
+        ParamsGrid.ItemsSource = _params;
         CollectionsTreeView.ItemsSource = _collections;
 
         _headers.Add(
             new HeaderItem { Key = "Content-Type", Value = "application/json" });
 
+        UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
+
         LoadCollectionsAndEnvironments();
+    }
+
+    private void
+    CollectionsHeader_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2)
+        {
+            return;
+        }
+
+        _collectionsSortDescending = !_collectionsSortDescending;
+
+        SortNodes(_collections, _collectionsSortDescending);
+    }
+
+    private static void
+    SortNodes(
+        ObservableCollection<CollectionNode> nodes,
+        bool descending)
+    {
+        var sorted =
+            descending
+                ? nodes.OrderByDescending(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                : nodes.OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+        nodes.Clear();
+
+        foreach (var node in sorted)
+        {
+            nodes.Add(node);
+
+            SortNodes(node.Children, descending);
+        }
+    }
+
+    /// Reconstruit la grille Params à partir de la chaîne de requête de
+    /// l'URL (Postman : les deux vues restent synchronisées).
+    private void
+    SyncParamsFromUrl()
+    {
+        if (_syncingUrlAndParams)
+        {
+            return;
+        }
+
+        _syncingUrlAndParams = true;
+
+        try
+        {
+            _params.Clear();
+
+            var url = UrlTextBox.Text;
+            var queryIndex = url.IndexOf('?');
+
+            if (queryIndex < 0 || queryIndex == url.Length - 1)
+            {
+                return;
+            }
+
+            foreach (var pair in url[(queryIndex + 1)..]
+                         .Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split('=', 2);
+
+                _params.Add(
+                    new HeaderItem
+                    {
+                        Enabled = true,
+                        Key = Uri.UnescapeDataString(parts[0]),
+                        Value = parts.Length > 1 ? Uri.UnescapeDataString(parts[1]) : ""
+                    });
+            }
+        }
+        finally
+        {
+            _syncingUrlAndParams = false;
+        }
+    }
+
+    /// Reconstruit la chaîne de requête de l'URL à partir de la grille
+    /// Params (lignes activées et avec une clé non vide seulement).
+    private void
+    SyncUrlFromParams()
+    {
+        if (_syncingUrlAndParams)
+        {
+            return;
+        }
+
+        _syncingUrlAndParams = true;
+
+        try
+        {
+            var baseUrl = UrlTextBox.Text.Split('?')[0];
+
+            var enabledParams =
+                _params
+                    .Where(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key))
+                    .ToList();
+
+            UrlTextBox.Text =
+                enabledParams.Count == 0
+                    ? baseUrl
+                    : $"{baseUrl}?{string.Join(
+                        "&",
+                        enabledParams.Select(p =>
+                            $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value ?? "")}"))}";
+        }
+        finally
+        {
+            _syncingUrlAndParams = false;
+        }
+    }
+
+    private void
+    ParamsGrid_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SyncUrlFromParams();
     }
 
     private void
@@ -131,6 +259,7 @@ public partial class ApiClientView
             }
         }
 
+        // Déclenche TextChanged -> SyncParamsFromUrl() automatiquement.
         UrlTextBox.Text = node.Url;
 
         _headers.Clear();
@@ -213,10 +342,14 @@ public partial class ApiClientView
             (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string
             ?? "GET";
 
-        // Le DataGrid garde une ligne d'édition en cours (vide) tant
-        // qu'elle n'a pas perdu le focus ; on force sa validation pour
-        // qu'elle soit bien incluse dans _headers.
+        // Les DataGrid gardent une ligne d'édition en cours (vide) tant
+        // qu'elles n'ont pas perdu le focus ; on force leur validation
+        // pour qu'elle soit bien incluse dans _headers/_params.
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        url = UrlTextBox.Text.Trim();
 
         try
         {
