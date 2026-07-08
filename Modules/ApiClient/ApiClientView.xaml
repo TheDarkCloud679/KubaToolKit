@@ -1,0 +1,289 @@
+<UserControl
+    x:Class="KubaToolKit.Modules.ApiClient.ApiClientView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition x:Name="RequestConfigRow" Height="320"/>
+            <RowDefinition Height="6"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Method / URL / Send -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="110"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox
+                x:Name="MethodCombo"
+                Grid.Column="0"
+                Margin="0,0,8,0"
+                SelectedIndex="0">
+                <ComboBoxItem Content="GET"/>
+                <ComboBoxItem Content="POST"/>
+                <ComboBoxItem Content="PUT"/>
+                <ComboBoxItem Content="PATCH"/>
+                <ComboBoxItem Content="DELETE"/>
+                <ComboBoxItem Content="HEAD"/>
+                <ComboBoxItem Content="OPTIONS"/>
+            </ComboBox>
+
+            <TextBox
+                x:Name="UrlTextBox"
+                Grid.Column="1"
+                VerticalContentAlignment="Center"
+                Text="https://"
+                KeyDown="UrlTextBox_KeyDown"/>
+
+            <Button
+                x:Name="SendButton"
+                Grid.Column="2"
+                Margin="8,0,0,0"
+                Style="{StaticResource AccentButtonStyle}"
+                Content="Send"
+                Click="SendButton_Click"/>
+        </Grid>
+
+        <!-- Request config: Auth / Headers / Body -->
+        <Border
+            Grid.Row="1"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="12">
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <!-- Auth -->
+                    <Expander
+                        Header="Auth"
+                        IsExpanded="False"
+                        Margin="0,0,0,10">
+                        <StackPanel Margin="4,10,4,4">
+                            <ComboBox
+                                x:Name="AuthTypeCombo"
+                                Width="200"
+                                HorizontalAlignment="Left"
+                                SelectedIndex="0"
+                                SelectionChanged="AuthTypeCombo_SelectionChanged">
+                                <ComboBoxItem Content="No Auth"/>
+                                <ComboBoxItem Content="Bearer Token"/>
+                                <ComboBoxItem Content="Basic Auth"/>
+                                <ComboBoxItem Content="API Key"/>
+                            </ComboBox>
+
+                            <StackPanel
+                                x:Name="BearerAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Token"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="BearerTokenTextBox"/>
+                            </StackPanel>
+
+                            <StackPanel
+                                x:Name="BasicAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Username"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="BasicUsernameTextBox" Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Text="Password"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <PasswordBox x:Name="BasicPasswordBox"/>
+                            </StackPanel>
+
+                            <StackPanel
+                                x:Name="ApiKeyAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Header Name"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox
+                                    x:Name="ApiKeyNameTextBox"
+                                    Text="X-API-Key"
+                                    Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Text="Value"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="ApiKeyValueTextBox"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <!-- Headers -->
+                    <Expander
+                        Header="Headers"
+                        IsExpanded="True"
+                        Margin="0,0,0,10">
+                        <DataGrid
+                            x:Name="HeadersGrid"
+                            Margin="0,10,0,0"
+                            AutoGenerateColumns="False"
+                            CanUserAddRows="True"
+                            CanUserDeleteRows="True"
+                            HeadersVisibility="Column"
+                            HorizontalScrollBarVisibility="Auto"
+                            MaxHeight="220"
+                            RowHeight="32">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn
+                                    Header="On"
+                                    Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                    Width="Auto"/>
+
+                                <DataGridTextColumn
+                                    Header="Key"
+                                    Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                    Width="220"/>
+
+                                <DataGridTextColumn
+                                    Header="Value"
+                                    Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                    Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Expander>
+
+                    <!-- Body -->
+                    <Expander
+                        Header="Body"
+                        IsExpanded="True">
+                        <TextBox
+                            x:Name="BodyTextBox"
+                            Margin="0,10,0,0"
+                            AcceptsReturn="True"
+                            AcceptsTab="True"
+                            TextWrapping="NoWrap"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Auto"
+                            FontFamily="Cascadia Code, Consolas"
+                            FontSize="13"
+                            MinHeight="150"
+                            MaxHeight="300"/>
+                    </Expander>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <GridSplitter
+            Grid.Row="2"
+            Height="6"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            ResizeBehavior="PreviousAndNext"
+            ResizeDirection="Rows"/>
+
+        <!-- Response -->
+        <Border
+            Grid.Row="3"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="12">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock
+                        Text="Response"
+                        FontWeight="Bold"
+                        FontSize="13"
+                        Foreground="{StaticResource TextPrimaryBrush}"
+                        VerticalAlignment="Center"/>
+
+                    <Border
+                        x:Name="StatusBadge"
+                        Margin="10,0,0,0"
+                        Padding="8,3"
+                        CornerRadius="4"
+                        Background="{StaticResource BorderBrush}"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            x:Name="StatusTextBlock"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </Border>
+
+                    <TextBlock
+                        x:Name="TimingTextBlock"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                    <ProgressBar
+                        x:Name="SendProgressBar"
+                        Width="140"
+                        Margin="10,0,0,0"
+                        IsIndeterminate="True"
+                        Visibility="Collapsed"
+                        VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Expander
+                    Grid.Row="1"
+                    Header="Response Headers"
+                    IsExpanded="False"
+                    Margin="0,0,0,10">
+                    <TextBox
+                        x:Name="ResponseHeadersTextBox"
+                        Margin="0,10,0,0"
+                        IsReadOnly="True"
+                        TextWrapping="NoWrap"
+                        MaxHeight="150"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Auto"
+                        FontFamily="Cascadia Code, Consolas"
+                        FontSize="12"/>
+                </Expander>
+
+                <avalonedit:TextEditor
+                    x:Name="ResponseBodyEditor"
+                    Grid.Row="2"
+                    FontFamily="Cascadia Code, Consolas"
+                    FontSize="13"
+                    ShowLineNumbers="True"
+                    IsReadOnly="True"
+                    WordWrap="False"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto"
+                    Padding="8"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

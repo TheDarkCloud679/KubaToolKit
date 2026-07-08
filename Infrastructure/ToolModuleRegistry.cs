@@ -12,5 +12,6 @@ public static class ToolModuleRegistry
             new Modules.S3Explorer.S3ExplorerModule(),
             new Modules.Sqs.SqsModule(),
             new Modules.StepFunctions.StepFunctionsModule(),
+            new Modules.ApiClient.ApiClientModule(),
         };
 }

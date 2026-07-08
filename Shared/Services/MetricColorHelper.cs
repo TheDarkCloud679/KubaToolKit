@@ -88,6 +88,32 @@ public static class MetricColorHelper
             opacity);
     }
 
+    /// Colore un code de statut HTTP : vert 2xx, orange 3xx, rouge 4xx/5xx.
+    public static Brush?
+    GetHttpStatusBrush(
+        int statusCode,
+        double opacity = 0.20)
+    {
+        Color? color = statusCode switch
+        {
+            >= 200 and < 300 => SuccessColor,
+            >= 300 and < 400 => WarningColor,
+            >= 400 => DangerColor,
+            _ => null
+        };
+
+        if (color == null)
+        {
+            return null;
+        }
+
+        return ToBrush(
+            color.Value.R,
+            color.Value.G,
+            color.Value.B,
+            opacity);
+    }
+
     private static Brush
     ToBrush(
         byte r,
