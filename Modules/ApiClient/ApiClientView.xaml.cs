@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -15,10 +16,15 @@ public partial class ApiClientView
     private readonly CollectionStorageService _collectionStorage = new();
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
+    private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
+    private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
+    private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
     private bool _syncingUrlAndParams;
     private bool _collectionsSortDescending;
+    private bool _showAutoHeaders = true;
+    private string? _binaryFilePath;
 
     public ApiClientView()
     {
@@ -26,14 +32,278 @@ public partial class ApiClientView
 
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
+        AutoHeadersGrid.ItemsSource = _autoHeaders;
+        BodyFormGrid.ItemsSource = _bodyFormData;
         CollectionsTreeView.ItemsSource = _collections;
 
-        _headers.Add(
-            new HeaderItem { Key = "Content-Type", Value = "application/json" });
+        _headers.CollectionChanged += (_, __) => RefreshAutoHeaders();
+        _bodyFormData.CollectionChanged += (_, __) => RefreshAutoHeaders();
+        _bodyUrlEncoded.CollectionChanged += (_, __) => RefreshAutoHeaders();
 
         UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
+        UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
         LoadCollectionsAndEnvironments();
+
+        RefreshAutoHeaders();
+    }
+
+    // Utilise des accès null-conditionnels : lors du parsing XAML initial,
+    // le Checked du premier RadioButton coché peut se déclencher avant que
+    // ses frères déclarés plus loin dans le fichier (ex. BodyGraphQlRadio)
+    // n'existent encore.
+    private string
+    GetSelectedBodyMode()
+    {
+        if (BodyNoneRadio?.IsChecked == true) return "none";
+        if (BodyFormDataRadio?.IsChecked == true) return "formdata";
+        if (BodyUrlEncodedRadio?.IsChecked == true) return "urlencoded";
+        if (BodyBinaryRadio?.IsChecked == true) return "binary";
+        if (BodyGraphQlRadio?.IsChecked == true) return "graphql";
+        return "raw";
+    }
+
+    private string
+    GetRawContentType() =>
+        ((RawContentTypeCombo?.SelectedItem as ComboBoxItem)?.Content as string) switch
+        {
+            "Text" => "text/plain",
+            "JavaScript" => "application/javascript",
+            "HTML" => "text/html",
+            "XML" => "application/xml",
+            _ => "application/json"
+        };
+
+    private void
+    BodyMode_Checked(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (BodyNonePanel == null)
+        {
+            return;
+        }
+
+        var mode = GetSelectedBodyMode();
+
+        BodyNonePanel.Visibility =
+            mode == "none" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyFormPanel.Visibility =
+            mode is "formdata" or "urlencoded" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyRawPanel.Visibility =
+            mode == "raw" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyBinaryPanel.Visibility =
+            mode == "binary" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyGraphQlPanel.Visibility =
+            mode == "graphql" ? Visibility.Visible : Visibility.Collapsed;
+
+        if (mode == "formdata")
+        {
+            BodyFormGrid.ItemsSource = _bodyFormData;
+        }
+        else if (mode == "urlencoded")
+        {
+            BodyFormGrid.ItemsSource = _bodyUrlEncoded;
+        }
+
+        RefreshAutoHeaders();
+    }
+
+    private void
+    AddBodyFormRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        (GetSelectedBodyMode() == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+            .Add(new HeaderItem());
+    }
+
+    private void
+    SelectBinaryFile_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog();
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _binaryFilePath = dialog.FileName;
+        BinaryFilePathText.Text = dialog.FileName;
+
+        RefreshAutoHeaders();
+    }
+
+    private void
+    RawContentTypeCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    GraphQlQueryTextBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    AddParamRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _params.Add(new HeaderItem());
+    }
+
+    private void
+    AddHeaderRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _headers.Add(new HeaderItem());
+    }
+
+    private void
+    HeadersGrid_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    MethodCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    BodyTextBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    ToggleAutoHeaders_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        _showAutoHeaders = !_showAutoHeaders;
+
+        AutoHeadersGrid.Visibility =
+            _showAutoHeaders ? Visibility.Visible : Visibility.Collapsed;
+
+        ToggleAutoHeadersText.Text =
+            _showAutoHeaders
+                ? "Masquer les en-têtes générés automatiquement"
+                : "Afficher les en-têtes générés automatiquement";
+    }
+
+    /// Aperçu des en-têtes que KubaToolKit ajoute lui-même à l'envoi
+    /// (User-Agent, Accept, Accept-Encoding via HttpClient, Host,
+    /// Content-Length) quand l'utilisateur ne les a pas déjà définis
+    /// explicitement dans la grille Headers.
+    private void
+    RefreshAutoHeaders()
+    {
+        if (HeadersGrid == null)
+        {
+            return;
+        }
+
+        _autoHeaders.Clear();
+
+        bool Has(string key) =>
+            _headers.Any(h =>
+                h.Enabled
+                && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
+
+        var method =
+            (MethodCombo?.SelectedItem as ComboBoxItem)?.Content as string
+            ?? "GET";
+
+        var mode = GetSelectedBodyMode();
+
+        bool hasBody =
+            ApiClientService.AllowsBody(method)
+            && mode switch
+            {
+                "none" => false,
+                "formdata" => _bodyFormData.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key)),
+                "urlencoded" => _bodyUrlEncoded.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key)),
+                "binary" => !string.IsNullOrWhiteSpace(_binaryFilePath),
+                "graphql" => !string.IsNullOrWhiteSpace(GraphQlQueryTextBox?.Text),
+                _ => !string.IsNullOrEmpty(BodyTextBox?.Text)
+            };
+
+        if (hasBody && !Has("Content-Type"))
+        {
+            var contentType = mode switch
+            {
+                "formdata" => "multipart/form-data; boundary=<calculé à l'envoi>",
+                "urlencoded" => "application/x-www-form-urlencoded",
+                "binary" => "application/octet-stream",
+                "graphql" => "application/json",
+                _ => GetRawContentType()
+            };
+
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Content-Type", Value = contentType });
+        }
+
+        if (hasBody)
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Content-Length", Value = "<calculé à l'envoi>" });
+        }
+
+        if (!Has("Host"))
+        {
+            var host =
+                Uri.TryCreate(UrlTextBox?.Text, UriKind.Absolute, out var uri)
+                    ? uri.Host
+                    : null;
+
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Host", Value = host ?? "<calculé à l'envoi>" });
+        }
+
+        if (!Has("User-Agent"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "User-Agent", Value = "KubaToolKit/1.0" });
+        }
+
+        if (!Has("Accept"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Accept", Value = "*/*" });
+        }
+
+        if (!Has("Accept-Encoding"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Accept-Encoding", Value = "gzip, deflate, br" });
+        }
+
+        if (!Has("Connection"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Connection", Value = "keep-alive" });
+        }
     }
 
     private void
@@ -312,6 +582,337 @@ public partial class ApiClientView
         }
 
         BodyTextBox.Text = node.Body;
+
+        _bodyFormData.Clear();
+        _bodyUrlEncoded.Clear();
+        _binaryFilePath = null;
+        BinaryFilePathText.Text = "Aucun fichier sélectionné";
+        GraphQlQueryTextBox.Text = "";
+        GraphQlVariablesTextBox.Text = "";
+
+        switch (node.BodyMode)
+        {
+            case "none":
+                BodyNoneRadio.IsChecked = true;
+                break;
+
+            case "formdata":
+                foreach (var field in node.BodyFormData) _bodyFormData.Add(field);
+                BodyFormDataRadio.IsChecked = true;
+                break;
+
+            case "urlencoded":
+                foreach (var field in node.BodyFormData) _bodyUrlEncoded.Add(field);
+                BodyUrlEncodedRadio.IsChecked = true;
+                break;
+
+            default:
+                BodyRawRadio.IsChecked = true;
+                break;
+        }
+    }
+
+    /// Un clic droit ne sélectionne pas le TreeViewItem visé par défaut en
+    /// WPF : sans ça, le menu contextuel agirait sur l'élément sélectionné
+    /// précédemment plutôt que celui sous le curseur.
+    private void
+    CollectionsTreeView_PreviewMouseRightButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (DataGridSortHelper.FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject)
+            is { } item)
+        {
+            item.IsSelected = true;
+            item.Focus();
+        }
+    }
+
+    private void
+    CollectionsContextMenu_Opened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var node = CollectionsTreeView.SelectedItem as CollectionNode;
+        var isRequest = node?.IsRequest == true;
+        var isFolder = node != null && !isRequest;
+
+        AddRequestMenuItem.IsEnabled = isFolder;
+        AddFolderMenuItem.IsEnabled = isFolder;
+        UpdateRequestMenuItem.IsEnabled = isRequest;
+        RenameMenuItem.IsEnabled = node != null;
+        DeleteMenuItem.IsEnabled = node != null;
+    }
+
+    private void
+    NewCollection_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouvelle collection",
+                "Nom de la collection :",
+                "Ma collection");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _collectionStorage.CreateCollection(name);
+            LoadCollectionsAndEnvironments();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Collection creation error");
+        }
+    }
+
+    private void
+    AddFolder_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouveau dossier",
+                "Nom du dossier :",
+                "Nouveau dossier");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        target.Children.Add(
+            new CollectionNode { Name = name, IsRequest = false, Parent = target });
+
+        SaveCollectionOf(target);
+    }
+
+    private void
+    AddRequestToCollection_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouvelle requête",
+                "Nom de la requête :",
+                "Nouvelle requête");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        var mode = GetSelectedBodyMode();
+
+        var newNode =
+            new CollectionNode
+            {
+                Name = name,
+                IsRequest = true,
+                Parent = target,
+                Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET",
+                Url = UrlTextBox.Text.Trim(),
+
+                Headers =
+                    _headers
+                        .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                        .ToList(),
+
+                Body = BodyTextBox.Text,
+                BodyMode = mode,
+
+                BodyFormData =
+                    (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                        .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                        .ToList()
+            };
+
+        target.Children.Add(newNode);
+
+        SaveCollectionOf(target);
+    }
+
+    private void
+    UpdateRequestFromEditor_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || !node.IsRequest)
+        {
+            return;
+        }
+
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        var mode = GetSelectedBodyMode();
+
+        node.Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET";
+        node.Url = UrlTextBox.Text.Trim();
+
+        node.Headers =
+            _headers
+                .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                .ToList();
+
+        node.Body = BodyTextBox.Text;
+        node.BodyMode = mode;
+
+        node.BodyFormData =
+            (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                .ToList();
+
+        // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
+        RefreshNodeDisplay(node);
+
+        SaveCollectionOf(node);
+    }
+
+    private void
+    RenameNode_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Renommer",
+                "Nouveau nom :",
+                node.Name);
+
+        if (name == null)
+        {
+            return;
+        }
+
+        node.Name = name;
+
+        RefreshNodeDisplay(node);
+
+        SaveCollectionOf(node);
+    }
+
+    private void
+    DeleteNode_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node)
+        {
+            return;
+        }
+
+        if (node.Parent == null)
+        {
+            if (MessageBox.Show(
+                    $"Supprimer définitivement la collection \"{node.Name}\" (fichier inclus) ?",
+                    "Supprimer la collection",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning)
+                != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                _collectionStorage.DeleteCollectionFile(node.FilePath ?? "");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Delete error");
+                return;
+            }
+
+            _collections.Remove(node);
+            return;
+        }
+
+        if (MessageBox.Show(
+                $"Supprimer \"{node.Name}\" ?",
+                "Supprimer",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning)
+            != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var parent = node.Parent;
+
+        parent.Children.Remove(node);
+
+        SaveCollectionOf(parent);
+    }
+
+    /// CollectionNode n'implémente pas INotifyPropertyChanged : le retirer
+    /// puis le réinsérer au même endroit force le TreeView à régénérer son
+    /// conteneur et donc relire DisplayText/Name à jour (même trick que
+    /// SortNodes pour le tri).
+    private void
+    RefreshNodeDisplay(
+        CollectionNode node)
+    {
+        var siblings = node.Parent?.Children ?? _collections;
+        var index = siblings.IndexOf(node);
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        siblings.RemoveAt(index);
+        siblings.Insert(index, node);
+    }
+
+    private void
+    SaveCollectionOf(
+        CollectionNode node)
+    {
+        try
+        {
+            _collectionStorage.SaveCollection(node.GetRoot());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Collection save error");
+        }
     }
 
     private void
@@ -386,9 +987,10 @@ public partial class ApiClientView
 
         // Les DataGrid gardent une ligne d'édition en cours (vide) tant
         // qu'elles n'ont pas perdu le focus ; on force leur validation
-        // pour qu'elle soit bien incluse dans _headers/_params.
+        // pour qu'elle soit bien incluse dans _headers/_params/le body.
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SyncUrlFromParams();
 
         url = UrlTextBox.Text.Trim();
@@ -408,12 +1010,25 @@ public partial class ApiClientView
             var variables =
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
 
+            var requestBody =
+                new RequestBody
+                {
+                    Mode = GetSelectedBodyMode(),
+                    Raw = BodyTextBox.Text,
+                    RawContentType = GetRawContentType(),
+                    FormData = _bodyFormData.ToList(),
+                    UrlEncoded = _bodyUrlEncoded.ToList(),
+                    BinaryFilePath = _binaryFilePath,
+                    GraphQlQuery = GraphQlQueryTextBox.Text,
+                    GraphQlVariables = GraphQlVariablesTextBox.Text
+                };
+
             var result =
                 await _apiClientService.SendAsync(
                     method,
                     url,
                     _headers.ToList(),
-                    BodyTextBox.Text,
+                    requestBody,
                     auth,
                     variables,
                     _sendCancellation.Token);

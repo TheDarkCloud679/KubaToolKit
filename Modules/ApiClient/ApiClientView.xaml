@@ -32,6 +32,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBlock
@@ -51,12 +52,22 @@
                         Height="28"
                         Padding="0"
                         Margin="4,0,0,0"
+                        ToolTip="Nouvelle collection"
+                        Content="+"
+                        Click="NewCollection_Click"/>
+
+                    <Button
+                        Grid.Column="2"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Margin="4,0,0,0"
                         ToolTip="Ouvrir le dossier des collections/environnements"
                         Content="📂"
                         Click="OpenCollectionsFolder_Click"/>
 
                     <Button
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Width="28"
                         Height="28"
                         Padding="0"
@@ -71,7 +82,8 @@
                     Grid.Row="1"
                     BorderThickness="0"
                     Background="Transparent"
-                    MouseDoubleClick="CollectionsTreeView_MouseDoubleClick">
+                    MouseDoubleClick="CollectionsTreeView_MouseDoubleClick"
+                    PreviewMouseRightButtonDown="CollectionsTreeView_PreviewMouseRightButtonDown">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock
@@ -79,6 +91,32 @@
                                 TextTrimming="CharacterEllipsis"/>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
+                    <TreeView.ContextMenu>
+                        <ContextMenu Opened="CollectionsContextMenu_Opened">
+                            <MenuItem
+                                x:Name="AddRequestMenuItem"
+                                Header="Nouvelle requête (depuis l'éditeur)"
+                                Click="AddRequestToCollection_Click"/>
+                            <MenuItem
+                                x:Name="AddFolderMenuItem"
+                                Header="Nouveau dossier"
+                                Click="AddFolder_Click"/>
+                            <Separator/>
+                            <MenuItem
+                                x:Name="UpdateRequestMenuItem"
+                                Header="Mettre à jour depuis l'éditeur"
+                                Click="UpdateRequestFromEditor_Click"/>
+                            <MenuItem
+                                x:Name="RenameMenuItem"
+                                Header="Renommer"
+                                Click="RenameNode_Click"/>
+                            <Separator/>
+                            <MenuItem
+                                x:Name="DeleteMenuItem"
+                                Header="Supprimer"
+                                Click="DeleteNode_Click"/>
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
                 </TreeView>
             </Grid>
         </Border>
@@ -95,9 +133,9 @@
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MaxHeight="320"/>
+                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MinHeight="60"/>
                 <RowDefinition Height="6"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition x:Name="ResponseRow" Height="*" MinHeight="120"/>
             </Grid.RowDefinitions>
 
             <!-- Method / URL / Environment / Send -->
@@ -116,7 +154,8 @@
                     x:Name="MethodCombo"
                     Grid.Column="0"
                     Margin="0,0,8,0"
-                    SelectedIndex="0">
+                    SelectedIndex="0"
+                    SelectionChanged="MethodCombo_SelectionChanged">
                     <ComboBoxItem Content="GET"/>
                     <ComboBoxItem Content="POST"/>
                     <ComboBoxItem Content="PUT"/>
@@ -197,52 +236,63 @@
                             Header="Params"
                             IsExpanded="False"
                             Margin="0,0,0,10">
-                            <DataGrid
-                                x:Name="ParamsGrid"
-                                Margin="0,10,0,0"
-                                AutoGenerateColumns="False"
-                                CanUserAddRows="True"
-                                CanUserDeleteRows="True"
-                                HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                MaxHeight="180"
-                                RowHeight="38"
-                                LostFocus="ParamsGrid_LostFocus">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn
-                                        Header="On"
-                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="Auto"/>
+                            <StackPanel Margin="0,10,0,0">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Ajouter une ligne"
+                                    Content="+"
+                                    Click="AddParamRow_Click"/>
 
-                                    <DataGridTextColumn
-                                        Header="Key"
-                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="2*"
-                                        MinWidth="160">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Key}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                <DataGrid
+                                    x:Name="ParamsGrid"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="True"
+                                    CanUserDeleteRows="True"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="180"
+                                    RowHeight="38"
+                                    LostFocus="ParamsGrid_LostFocus">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn
+                                            Header="On"
+                                            Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="Auto"/>
 
-                                    <DataGridTextColumn
-                                        Header="Value"
-                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="3*"
-                                        MinWidth="200">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Value}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="2*"
+                                            MinWidth="160">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="3*"
+                                            MinWidth="200">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
                         </Expander>
 
                         <!-- Auth -->
@@ -321,69 +371,319 @@
                             Header="Headers"
                             IsExpanded="False"
                             Margin="0,0,0,10">
-                            <DataGrid
-                                x:Name="HeadersGrid"
-                                Margin="0,10,0,0"
-                                AutoGenerateColumns="False"
-                                CanUserAddRows="True"
-                                CanUserDeleteRows="True"
-                                HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                MaxHeight="220"
-                                RowHeight="38">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn
-                                        Header="On"
-                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="Auto"/>
+                            <StackPanel Margin="0,10,0,0">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Ajouter une ligne"
+                                    Content="+"
+                                    Click="AddHeaderRow_Click"/>
 
-                                    <DataGridTextColumn
-                                        Header="Key"
-                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="2*"
-                                        MinWidth="160">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Key}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                <DataGrid
+                                    x:Name="HeadersGrid"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="True"
+                                    CanUserDeleteRows="True"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="220"
+                                    RowHeight="38"
+                                    LostFocus="HeadersGrid_LostFocus">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn
+                                            Header="On"
+                                            Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="Auto"/>
 
-                                    <DataGridTextColumn
-                                        Header="Value"
-                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="3*"
-                                        MinWidth="200">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Value}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="2*"
+                                            MinWidth="160">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="3*"
+                                            MinWidth="200">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock
+                                    x:Name="ToggleAutoHeadersText"
+                                    Margin="0,10,0,6"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Cursor="Hand"
+                                    Text="Masquer les en-têtes générés automatiquement"
+                                    MouseLeftButtonDown="ToggleAutoHeaders_MouseLeftButtonDown"/>
+
+                                <DataGrid
+                                    x:Name="AutoHeadersGrid"
+                                    IsReadOnly="True"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="False"
+                                    CanUserDeleteRows="False"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="200"
+                                    RowHeight="34"
+                                    Opacity="0.7"
+                                    ToolTip="En-têtes ajoutés automatiquement par KubaToolKit à l'envoi ; non modifiables ici.">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key}"
+                                            Width="2*"
+                                            MinWidth="160"/>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value}"
+                                            Width="3*"
+                                            MinWidth="200"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
                         </Expander>
 
                         <!-- Body -->
                         <Expander
                             Header="Body"
                             IsExpanded="False">
-                            <TextBox
-                                x:Name="BodyTextBox"
-                                Margin="0,10,0,0"
-                                AcceptsReturn="True"
-                                AcceptsTab="True"
-                                TextWrapping="NoWrap"
-                                VerticalScrollBarVisibility="Auto"
-                                HorizontalScrollBarVisibility="Auto"
-                                FontFamily="Cascadia Code, Consolas"
-                                FontSize="13"
-                                MinHeight="150"
-                                MaxHeight="300"/>
+                            <StackPanel Margin="0,10,0,0">
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <RadioButton
+                                        x:Name="BodyNoneRadio"
+                                        Content="none"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyFormDataRadio"
+                                        Content="form-data"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyUrlEncodedRadio"
+                                        Content="x-www-form-urlencoded"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyRawRadio"
+                                        Content="raw"
+                                        GroupName="BodyMode"
+                                        IsChecked="True"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyBinaryRadio"
+                                        Content="binary"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyGraphQlRadio"
+                                        Content="GraphQL"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- none -->
+                                <TextBlock
+                                    x:Name="BodyNonePanel"
+                                    Text="Cette requête n'a pas de body."
+                                    FontStyle="Italic"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Visibility="Collapsed"/>
+
+                                <!-- form-data / x-www-form-urlencoded (même grille, collection réassignée selon le mode) -->
+                                <StackPanel
+                                    x:Name="BodyFormPanel"
+                                    Visibility="Collapsed">
+                                    <Button
+                                        HorizontalAlignment="Right"
+                                        Width="26"
+                                        Height="26"
+                                        Padding="0"
+                                        Margin="0,0,0,6"
+                                        ToolTip="Ajouter une ligne"
+                                        Content="+"
+                                        Click="AddBodyFormRow_Click"/>
+
+                                    <DataGrid
+                                        x:Name="BodyFormGrid"
+                                        AutoGenerateColumns="False"
+                                        CanUserAddRows="True"
+                                        CanUserDeleteRows="True"
+                                        HeadersVisibility="Column"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        MaxHeight="220"
+                                        RowHeight="38">
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn
+                                                Header="On"
+                                                Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                                Width="Auto"/>
+
+                                            <DataGridTextColumn
+                                                Header="Key"
+                                                Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="2*"
+                                                MinWidth="160">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn
+                                                Header="Value"
+                                                Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="3*"
+                                                MinWidth="200">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+
+                                <!-- raw -->
+                                <StackPanel x:Name="BodyRawPanel">
+                                    <ComboBox
+                                        x:Name="RawContentTypeCombo"
+                                        Width="140"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,0,0,8"
+                                        SelectedIndex="1"
+                                        SelectionChanged="RawContentTypeCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Text"/>
+                                        <ComboBoxItem Content="JSON"/>
+                                        <ComboBoxItem Content="JavaScript"/>
+                                        <ComboBoxItem Content="HTML"/>
+                                        <ComboBoxItem Content="XML"/>
+                                    </ComboBox>
+
+                                    <TextBox
+                                        x:Name="BodyTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="150"
+                                        MaxHeight="300"
+                                        TextChanged="BodyTextBox_TextChanged"/>
+                                </StackPanel>
+
+                                <!-- binary -->
+                                <StackPanel
+                                    x:Name="BodyBinaryPanel"
+                                    Orientation="Horizontal"
+                                    Visibility="Collapsed">
+                                    <Button
+                                        Padding="10,6"
+                                        Margin="0,0,10,0"
+                                        Content="Sélectionner un fichier"
+                                        Click="SelectBinaryFile_Click"/>
+
+                                    <TextBlock
+                                        x:Name="BinaryFilePathText"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        TextTrimming="CharacterEllipsis"
+                                        Text="Aucun fichier sélectionné"/>
+                                </StackPanel>
+
+                                <!-- GraphQL -->
+                                <StackPanel
+                                    x:Name="BodyGraphQlPanel"
+                                    Visibility="Collapsed">
+                                    <TextBlock
+                                        Text="Query"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        Margin="0,0,0,4"/>
+
+                                    <TextBox
+                                        x:Name="GraphQlQueryTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="120"
+                                        MaxHeight="200"
+                                        Margin="0,0,0,10"
+                                        TextChanged="GraphQlQueryTextBox_TextChanged"/>
+
+                                    <TextBlock
+                                        Text="Variables (JSON)"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        Margin="0,0,0,4"/>
+
+                                    <TextBox
+                                        x:Name="GraphQlVariablesTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="80"
+                                        MaxHeight="150"/>
+                                </StackPanel>
+
+                            </StackPanel>
                         </Expander>
 
                     </StackPanel>
