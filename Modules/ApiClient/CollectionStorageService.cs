@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ApiClient.Models;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 
@@ -113,11 +114,11 @@ public class CollectionStorageService
         return roots;
     }
 
-    private List<CollectionNode>
+    private ObservableCollection<CollectionNode>
     BuildNodes(
         List<PostmanItem>? items)
     {
-        var nodes = new List<CollectionNode>();
+        var nodes = new ObservableCollection<CollectionNode>();
 
         if (items == null)
         {
