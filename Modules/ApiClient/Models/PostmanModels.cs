@@ -73,6 +73,24 @@ public class PostmanBody
 
     [JsonPropertyName("raw")]
     public string? Raw { get; set; }
+
+    [JsonPropertyName("urlencoded")]
+    public List<PostmanFormParam>? UrlEncoded { get; set; }
+
+    [JsonPropertyName("formdata")]
+    public List<PostmanFormParam>? FormData { get; set; }
+}
+
+public class PostmanFormParam
+{
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+
+    [JsonPropertyName("disabled")]
+    public bool Disabled { get; set; }
 }
 
 public class PostmanEnvironment

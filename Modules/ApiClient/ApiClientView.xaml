@@ -433,19 +433,219 @@
                         <Expander
                             Header="Body"
                             IsExpanded="False">
-                            <TextBox
-                                x:Name="BodyTextBox"
-                                Margin="0,10,0,0"
-                                AcceptsReturn="True"
-                                AcceptsTab="True"
-                                TextWrapping="NoWrap"
-                                VerticalScrollBarVisibility="Auto"
-                                HorizontalScrollBarVisibility="Auto"
-                                FontFamily="Cascadia Code, Consolas"
-                                FontSize="13"
-                                MinHeight="150"
-                                MaxHeight="300"
-                                TextChanged="BodyTextBox_TextChanged"/>
+                            <StackPanel Margin="0,10,0,0">
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <RadioButton
+                                        x:Name="BodyNoneRadio"
+                                        Content="none"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyFormDataRadio"
+                                        Content="form-data"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyUrlEncodedRadio"
+                                        Content="x-www-form-urlencoded"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyRawRadio"
+                                        Content="raw"
+                                        GroupName="BodyMode"
+                                        IsChecked="True"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyBinaryRadio"
+                                        Content="binary"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0"/>
+
+                                    <RadioButton
+                                        x:Name="BodyGraphQlRadio"
+                                        Content="GraphQL"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- none -->
+                                <TextBlock
+                                    x:Name="BodyNonePanel"
+                                    Text="Cette requête n'a pas de body."
+                                    FontStyle="Italic"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Visibility="Collapsed"/>
+
+                                <!-- form-data / x-www-form-urlencoded (même grille, collection réassignée selon le mode) -->
+                                <StackPanel
+                                    x:Name="BodyFormPanel"
+                                    Visibility="Collapsed">
+                                    <Button
+                                        HorizontalAlignment="Right"
+                                        Width="26"
+                                        Height="26"
+                                        Padding="0"
+                                        Margin="0,0,0,6"
+                                        ToolTip="Ajouter une ligne"
+                                        Content="+"
+                                        Click="AddBodyFormRow_Click"/>
+
+                                    <DataGrid
+                                        x:Name="BodyFormGrid"
+                                        AutoGenerateColumns="False"
+                                        CanUserAddRows="True"
+                                        CanUserDeleteRows="True"
+                                        HeadersVisibility="Column"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        MaxHeight="220"
+                                        RowHeight="38">
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn
+                                                Header="On"
+                                                Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                                Width="Auto"/>
+
+                                            <DataGridTextColumn
+                                                Header="Key"
+                                                Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="2*"
+                                                MinWidth="160">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn
+                                                Header="Value"
+                                                Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="3*"
+                                                MinWidth="200">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+
+                                <!-- raw -->
+                                <StackPanel x:Name="BodyRawPanel">
+                                    <ComboBox
+                                        x:Name="RawContentTypeCombo"
+                                        Width="140"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,0,0,8"
+                                        SelectedIndex="1"
+                                        SelectionChanged="RawContentTypeCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Text"/>
+                                        <ComboBoxItem Content="JSON"/>
+                                        <ComboBoxItem Content="JavaScript"/>
+                                        <ComboBoxItem Content="HTML"/>
+                                        <ComboBoxItem Content="XML"/>
+                                    </ComboBox>
+
+                                    <TextBox
+                                        x:Name="BodyTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="150"
+                                        MaxHeight="300"
+                                        TextChanged="BodyTextBox_TextChanged"/>
+                                </StackPanel>
+
+                                <!-- binary -->
+                                <StackPanel
+                                    x:Name="BodyBinaryPanel"
+                                    Orientation="Horizontal"
+                                    Visibility="Collapsed">
+                                    <Button
+                                        Padding="10,6"
+                                        Margin="0,0,10,0"
+                                        Content="Sélectionner un fichier"
+                                        Click="SelectBinaryFile_Click"/>
+
+                                    <TextBlock
+                                        x:Name="BinaryFilePathText"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        TextTrimming="CharacterEllipsis"
+                                        Text="Aucun fichier sélectionné"/>
+                                </StackPanel>
+
+                                <!-- GraphQL -->
+                                <StackPanel
+                                    x:Name="BodyGraphQlPanel"
+                                    Visibility="Collapsed">
+                                    <TextBlock
+                                        Text="Query"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        Margin="0,0,0,4"/>
+
+                                    <TextBox
+                                        x:Name="GraphQlQueryTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="120"
+                                        MaxHeight="200"
+                                        Margin="0,0,0,10"
+                                        TextChanged="GraphQlQueryTextBox_TextChanged"/>
+
+                                    <TextBlock
+                                        Text="Variables (JSON)"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        Margin="0,0,0,4"/>
+
+                                    <TextBox
+                                        x:Name="GraphQlVariablesTextBox"
+                                        AcceptsReturn="True"
+                                        AcceptsTab="True"
+                                        TextWrapping="NoWrap"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Code, Consolas"
+                                        FontSize="13"
+                                        MinHeight="80"
+                                        MaxHeight="150"/>
+                                </StackPanel>
+
+                            </StackPanel>
                         </Expander>
 
                     </StackPanel>

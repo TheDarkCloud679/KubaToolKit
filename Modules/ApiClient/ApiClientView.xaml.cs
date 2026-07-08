@@ -16,11 +16,14 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
+    private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
+    private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
     private bool _syncingUrlAndParams;
     private bool _collectionsSortDescending;
     private bool _showAutoHeaders = true;
+    private string? _binaryFilePath;
 
     public ApiClientView()
     {
@@ -29,18 +32,126 @@ public partial class ApiClientView
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
+        BodyFormGrid.ItemsSource = _bodyFormData;
         CollectionsTreeView.ItemsSource = _collections;
 
-        _headers.Add(
-            new HeaderItem { Key = "Content-Type", Value = "application/json" });
-
         _headers.CollectionChanged += (_, __) => RefreshAutoHeaders();
+        _bodyFormData.CollectionChanged += (_, __) => RefreshAutoHeaders();
+        _bodyUrlEncoded.CollectionChanged += (_, __) => RefreshAutoHeaders();
 
         UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
         UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
         LoadCollectionsAndEnvironments();
 
+        RefreshAutoHeaders();
+    }
+
+    // Utilise des accès null-conditionnels : lors du parsing XAML initial,
+    // le Checked du premier RadioButton coché peut se déclencher avant que
+    // ses frères déclarés plus loin dans le fichier (ex. BodyGraphQlRadio)
+    // n'existent encore.
+    private string
+    GetSelectedBodyMode()
+    {
+        if (BodyNoneRadio?.IsChecked == true) return "none";
+        if (BodyFormDataRadio?.IsChecked == true) return "formdata";
+        if (BodyUrlEncodedRadio?.IsChecked == true) return "urlencoded";
+        if (BodyBinaryRadio?.IsChecked == true) return "binary";
+        if (BodyGraphQlRadio?.IsChecked == true) return "graphql";
+        return "raw";
+    }
+
+    private string
+    GetRawContentType() =>
+        ((RawContentTypeCombo?.SelectedItem as ComboBoxItem)?.Content as string) switch
+        {
+            "Text" => "text/plain",
+            "JavaScript" => "application/javascript",
+            "HTML" => "text/html",
+            "XML" => "application/xml",
+            _ => "application/json"
+        };
+
+    private void
+    BodyMode_Checked(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (BodyNonePanel == null)
+        {
+            return;
+        }
+
+        var mode = GetSelectedBodyMode();
+
+        BodyNonePanel.Visibility =
+            mode == "none" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyFormPanel.Visibility =
+            mode is "formdata" or "urlencoded" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyRawPanel.Visibility =
+            mode == "raw" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyBinaryPanel.Visibility =
+            mode == "binary" ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyGraphQlPanel.Visibility =
+            mode == "graphql" ? Visibility.Visible : Visibility.Collapsed;
+
+        if (mode == "formdata")
+        {
+            BodyFormGrid.ItemsSource = _bodyFormData;
+        }
+        else if (mode == "urlencoded")
+        {
+            BodyFormGrid.ItemsSource = _bodyUrlEncoded;
+        }
+
+        RefreshAutoHeaders();
+    }
+
+    private void
+    AddBodyFormRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        (GetSelectedBodyMode() == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+            .Add(new HeaderItem());
+    }
+
+    private void
+    SelectBinaryFile_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog();
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _binaryFilePath = dialog.FileName;
+        BinaryFilePathText.Text = dialog.FileName;
+
+        RefreshAutoHeaders();
+    }
+
+    private void
+    RawContentTypeCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    GraphQlQueryTextBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
         RefreshAutoHeaders();
     }
 
@@ -123,14 +234,33 @@ public partial class ApiClientView
             (MethodCombo?.SelectedItem as ComboBoxItem)?.Content as string
             ?? "GET";
 
+        var mode = GetSelectedBodyMode();
+
         bool hasBody =
-            !string.IsNullOrEmpty(BodyTextBox?.Text)
-            && ApiClientService.AllowsBody(method);
+            ApiClientService.AllowsBody(method)
+            && mode switch
+            {
+                "none" => false,
+                "formdata" => _bodyFormData.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key)),
+                "urlencoded" => _bodyUrlEncoded.Any(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key)),
+                "binary" => !string.IsNullOrWhiteSpace(_binaryFilePath),
+                "graphql" => !string.IsNullOrWhiteSpace(GraphQlQueryTextBox?.Text),
+                _ => !string.IsNullOrEmpty(BodyTextBox?.Text)
+            };
 
         if (hasBody && !Has("Content-Type"))
         {
+            var contentType = mode switch
+            {
+                "formdata" => "multipart/form-data; boundary=<calculé à l'envoi>",
+                "urlencoded" => "application/x-www-form-urlencoded",
+                "binary" => "application/octet-stream",
+                "graphql" => "application/json",
+                _ => GetRawContentType()
+            };
+
             _autoHeaders.Add(
-                new HeaderItem { Key = "Content-Type", Value = "application/json" });
+                new HeaderItem { Key = "Content-Type", Value = contentType });
         }
 
         if (hasBody)
@@ -451,6 +581,34 @@ public partial class ApiClientView
         }
 
         BodyTextBox.Text = node.Body;
+
+        _bodyFormData.Clear();
+        _bodyUrlEncoded.Clear();
+        _binaryFilePath = null;
+        BinaryFilePathText.Text = "Aucun fichier sélectionné";
+        GraphQlQueryTextBox.Text = "";
+        GraphQlVariablesTextBox.Text = "";
+
+        switch (node.BodyMode)
+        {
+            case "none":
+                BodyNoneRadio.IsChecked = true;
+                break;
+
+            case "formdata":
+                foreach (var field in node.BodyFormData) _bodyFormData.Add(field);
+                BodyFormDataRadio.IsChecked = true;
+                break;
+
+            case "urlencoded":
+                foreach (var field in node.BodyFormData) _bodyUrlEncoded.Add(field);
+                BodyUrlEncodedRadio.IsChecked = true;
+                break;
+
+            default:
+                BodyRawRadio.IsChecked = true;
+                break;
+        }
     }
 
     private void
@@ -525,9 +683,10 @@ public partial class ApiClientView
 
         // Les DataGrid gardent une ligne d'édition en cours (vide) tant
         // qu'elles n'ont pas perdu le focus ; on force leur validation
-        // pour qu'elle soit bien incluse dans _headers/_params.
+        // pour qu'elle soit bien incluse dans _headers/_params/le body.
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SyncUrlFromParams();
 
         url = UrlTextBox.Text.Trim();
@@ -547,12 +706,25 @@ public partial class ApiClientView
             var variables =
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
 
+            var requestBody =
+                new RequestBody
+                {
+                    Mode = GetSelectedBodyMode(),
+                    Raw = BodyTextBox.Text,
+                    RawContentType = GetRawContentType(),
+                    FormData = _bodyFormData.ToList(),
+                    UrlEncoded = _bodyUrlEncoded.ToList(),
+                    BinaryFilePath = _binaryFilePath,
+                    GraphQlQuery = GraphQlQueryTextBox.Text,
+                    GraphQlVariables = GraphQlVariablesTextBox.Text
+                };
+
             var result =
                 await _apiClientService.SendAsync(
                     method,
                     url,
                     _headers.ToList(),
-                    BodyTextBox.Text,
+                    requestBody,
                     auth,
                     variables,
                     _sendCancellation.Token);

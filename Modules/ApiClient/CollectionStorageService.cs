@@ -130,6 +130,48 @@ public class CollectionStorageService
         {
             if (item.Request != null)
             {
+                var body = item.Request.Body;
+
+                var bodyMode =
+                    body == null
+                        ? "none"
+                        : body.Mode switch
+                        {
+                            "urlencoded" => "urlencoded",
+                            "formdata" => "formdata",
+                            _ => "raw"
+                        };
+
+                var bodyFormData =
+                    bodyMode switch
+                    {
+                        "urlencoded" =>
+                            body?.UrlEncoded?
+                                .Where(p => !p.Disabled)
+                                .Select(p => new HeaderItem
+                                {
+                                    Enabled = true,
+                                    Key = p.Key,
+                                    Value = p.Value
+                                })
+                                .ToList()
+                            ?? new List<HeaderItem>(),
+
+                        "formdata" =>
+                            body?.FormData?
+                                .Where(p => !p.Disabled)
+                                .Select(p => new HeaderItem
+                                {
+                                    Enabled = true,
+                                    Key = p.Key,
+                                    Value = p.Value
+                                })
+                                .ToList()
+                            ?? new List<HeaderItem>(),
+
+                        _ => new List<HeaderItem>()
+                    };
+
                 nodes.Add(
                     new CollectionNode
                     {
@@ -150,7 +192,9 @@ public class CollectionStorageService
                                 .ToList()
                             ?? new List<HeaderItem>(),
 
-                        Body = item.Request.Body?.Raw ?? ""
+                        Body = body?.Raw ?? "",
+                        BodyMode = bodyMode,
+                        BodyFormData = bodyFormData
                     });
             }
             else if (item.Item != null)
