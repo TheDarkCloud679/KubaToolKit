@@ -1053,17 +1053,17 @@ FormatTimeTextBox(
         ProfilePatternSearchRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
 
-        // La ligne de dates ne sert qu'à CloudWatch désormais : le bouton
-        // d'action qu'elle hébergeait sinon (juste pour lui, sur sa propre
-        // ligne) est déplacé sur la ligne Profile/Search pour les autres
-        // modules, afin de ne pas garder une ligne quasi vide.
+        // Dates/heures ne servent qu'au filtrage CloudWatch.
         DateRangeRow.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
-        // Pattern/dates ne servent qu'au filtrage CloudWatch ; Search sert
-        // aussi en S3 (recherche dans les dossiers). Les autres modules
-        // n'affichent que Profile + le bouton d'action, pour maximiser
-        // l'espace réservé aux données de chaque module.
+        // Pattern ne sert qu'au filtrage CloudWatch ; Search sert aussi en
+        // S3 (recherche dans les dossiers). Dashboard/SQS/Step Functions
+        // ont chacun leur propre bouton "Refresh" et n'utilisent ni le
+        // texte de recherche ni le bouton d'action partagé : les deux
+        // disparaissent complètement pour ces modules plutôt que
+        // d'occuper une ligne pour rien. Le bouton reste toujours sur la
+        // même ligne que Search, jamais avec les dates.
         PatternGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
@@ -1073,30 +1073,8 @@ FormatTimeTextBox(
         DateFieldsGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
-        // Dashboard/SQS/Step Functions ont chacun leur propre bouton
-        // "Refresh" (avec indicateur de chargement) et n'utilisent ni le
-        // texte de recherche ni le bouton partagé : les deux disparaissent
-        // complètement pour ces modules plutôt que d'occuper une ligne
-        // pour rien. CloudWatch garde sa disposition (bouton avec les
-        // dates) ; S3 n'a pas de dates, donc le bouton rejoint Search sur
-        // la même ligne que Profile.
-        if (isCloudWatch || isS3)
-        {
-            var targetRow = isCloudWatch ? DateRangeRow : ProfilePatternSearchRow;
-
-            if (!ReferenceEquals(SearchButton.Parent, targetRow))
-            {
-                (SearchButton.Parent as Grid)?.Children.Remove(SearchButton);
-                targetRow.Children.Add(SearchButton);
-                Grid.SetColumn(SearchButton, isCloudWatch ? 2 : 3);
-            }
-
-            SearchButton.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            SearchButton.Visibility = Visibility.Collapsed;
-        }
+        SearchButton.Visibility =
+            isCloudWatch || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {

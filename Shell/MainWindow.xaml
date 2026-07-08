@@ -208,27 +208,28 @@
                         <TextBox
                             x:Name="SearchTextBox"
                             Grid.Column="1"
-                            Margin="6,0,0,0"
-                            MaxWidth="420"
-                            HorizontalAlignment="Left"
+                            Margin="6,0,12,0"
                             VerticalContentAlignment="Center"
                             KeyDown="SearchTextBox_KeyDown"/>
                     </Grid>
+
+                    <!-- Bouton d'action partagé (Search/Refresh/Cancel selon le module) : toujours sur la même ligne que Search -->
+                    <Button
+                        x:Name="SearchButton"
+                        Grid.Column="3"
+                        Width="90"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Content="Search"
+                        Click="SearchButton_Click"/>
                 </Grid>
 
-                <!-- Ligne 2 -->
+                <!-- Ligne 2 : dates/heures, uniquement utiles en mode CloudWatch -->
                 <Grid
                     x:Name="DateRangeRow"
                     Grid.Row="3"
                     Margin="0,12,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
 
-                    <!-- Dates/heures : uniquement utiles en mode CloudWatch -->
-                    <Grid x:Name="DateFieldsGroup" Grid.Column="0">
+                    <Grid x:Name="DateFieldsGroup" HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -288,15 +289,6 @@
                             GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
                             PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
                     </Grid>
-
-                    <!-- Bouton d'action partagé (Search/Refresh/Cancel selon le module) : toujours visible -->
-                    <Button
-                        x:Name="SearchButton"
-                        Grid.Column="2"
-                        Width="90"
-                        Style="{StaticResource AccentButtonStyle}"
-                        Content="Search"
-                        Click="SearchButton_Click"/>
                 </Grid>
             </Grid>
         </Border>
