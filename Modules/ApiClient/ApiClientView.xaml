@@ -106,6 +106,7 @@
                     <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="90"/>
                 </Grid.ColumnDefinitions>
 
@@ -151,13 +152,22 @@
                     Width="28"
                     Height="28"
                     Margin="4,0,0,0"
+                    ToolTip="Modifier les variables de l'environnement sélectionné"
+                    Content="✎"
+                    Click="EditEnvironment_Click"/>
+
+                <Button
+                    Grid.Column="5"
+                    Width="28"
+                    Height="28"
+                    Margin="4,0,0,0"
                     ToolTip="Recharger les environnements"
                     Content="⟳"
                     Click="ReloadEnvironments_Click"/>
 
                 <Button
                     x:Name="SendButton"
-                    Grid.Column="5"
+                    Grid.Column="6"
                     Margin="8,0,0,0"
                     Style="{StaticResource AccentButtonStyle}"
                     Content="Send"
@@ -202,11 +212,13 @@
                                     <DataGridTextColumn
                                         Header="Key"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
                                         Width="220"/>
 
                                     <DataGridTextColumn
                                         Header="Value"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
                                         Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
@@ -307,11 +319,13 @@
                                     <DataGridTextColumn
                                         Header="Key"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
                                         Width="220"/>
 
                                     <DataGridTextColumn
                                         Header="Value"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
                                         Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>

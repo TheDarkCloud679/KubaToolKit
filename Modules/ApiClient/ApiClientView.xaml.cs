@@ -159,8 +159,12 @@ public partial class ApiClientView
     }
 
     private void
-    LoadCollectionsAndEnvironments()
+    LoadCollectionsAndEnvironments(
+        string? reselectEnvironmentName = null)
     {
+        reselectEnvironmentName ??=
+            (EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name;
+
         try
         {
             _collections.Clear();
@@ -180,7 +184,14 @@ public partial class ApiClientView
                 _collectionStorage.LoadEnvironments());
 
             EnvironmentCombo.ItemsSource = environments;
-            EnvironmentCombo.SelectedIndex = 0;
+
+            var toReselect =
+                reselectEnvironmentName != null
+                    ? environments.FirstOrDefault(env =>
+                        env.Name == reselectEnvironmentName)
+                    : null;
+
+            EnvironmentCombo.SelectedItem = toReselect ?? environments[0];
         }
         catch (Exception ex)
         {
@@ -234,6 +245,34 @@ public partial class ApiClientView
         RoutedEventArgs e)
     {
         LoadCollectionsAndEnvironments();
+    }
+
+    private void
+    EditEnvironment_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || string.IsNullOrEmpty(environment.FilePath))
+        {
+            MessageBox.Show(
+                "Sélectionner d'abord un environnement (ou en ajouter un via \"+\").",
+                "Aucun environnement sélectionné");
+
+            return;
+        }
+
+        var editor =
+            new EnvironmentEditorWindow(_collectionStorage, environment);
+
+        editor.Owner = Window.GetWindow(this);
+
+        editor.ShowDialog();
+
+        if (editor.Saved)
+        {
+            LoadCollectionsAndEnvironments(environment.Name);
+        }
     }
 
     private void
@@ -364,7 +403,7 @@ public partial class ApiClientView
             var auth = BuildAuthConfig();
 
             var variables =
-                (EnvironmentCombo.SelectedItem as EnvironmentSet)?.Variables;
+                (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
 
             var result =
                 await _apiClientService.SendAsync(
