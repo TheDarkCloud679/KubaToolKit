@@ -146,6 +146,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Profile : utile à tous les modules AWS, seule la ligne entière se masque (API Client) -->
@@ -208,6 +209,8 @@
                             x:Name="SearchTextBox"
                             Grid.Column="1"
                             Margin="6,0,0,0"
+                            MaxWidth="420"
+                            HorizontalAlignment="Left"
                             VerticalContentAlignment="Center"
                             KeyDown="SearchTextBox_KeyDown"/>
                     </Grid>
