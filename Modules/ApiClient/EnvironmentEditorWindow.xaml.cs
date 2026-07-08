@@ -83,4 +83,16 @@ public partial class EnvironmentEditorWindow
     {
         Close();
     }
+
+    private void
+    DeleteVariableRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is Button button
+            && button.DataContext is HeaderItem item)
+        {
+            _variables.Remove(item);
+        }
+    }
 }

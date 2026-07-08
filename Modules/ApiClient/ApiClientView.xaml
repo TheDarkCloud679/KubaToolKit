@@ -107,6 +107,10 @@
                                 Header="Mettre à jour depuis l'éditeur"
                                 Click="UpdateRequestFromEditor_Click"/>
                             <MenuItem
+                                x:Name="FavoriteMenuItem"
+                                Header="☆ Ajouter aux favoris"
+                                Click="ToggleFavorite_Click"/>
+                            <MenuItem
                                 x:Name="RenameMenuItem"
                                 Header="Renommer"
                                 Click="RenameNode_Click"/>
@@ -290,6 +294,20 @@
                                                 </Style>
                                             </DataGridTextColumn.ElementStyle>
                                         </DataGridTextColumn>
+
+                                        <DataGridTemplateColumn Width="34">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Width="24"
+                                                        Height="24"
+                                                        Padding="0"
+                                                        ToolTip="Supprimer cette ligne"
+                                                        Content="✕"
+                                                        Click="DeleteHeaderItemRow_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
@@ -322,7 +340,7 @@
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource TextSecondaryBrush}"
                                         Margin="0,0,0,4"/>
-                                    <TextBox x:Name="BearerTokenTextBox"/>
+                                    <TextBox x:Name="BearerTokenTextBox" TextChanged="AuthField_Changed"/>
                                 </StackPanel>
 
                                 <StackPanel
@@ -334,13 +352,13 @@
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource TextSecondaryBrush}"
                                         Margin="0,0,0,4"/>
-                                    <TextBox x:Name="BasicUsernameTextBox" Margin="0,0,0,8"/>
+                                    <TextBox x:Name="BasicUsernameTextBox" Margin="0,0,0,8" TextChanged="AuthField_Changed"/>
                                     <TextBlock
                                         Text="Password"
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource TextSecondaryBrush}"
                                         Margin="0,0,0,4"/>
-                                    <PasswordBox x:Name="BasicPasswordBox"/>
+                                    <PasswordBox x:Name="BasicPasswordBox" PasswordChanged="AuthField_Changed"/>
                                 </StackPanel>
 
                                 <StackPanel
@@ -355,13 +373,14 @@
                                     <TextBox
                                         x:Name="ApiKeyNameTextBox"
                                         Text="X-API-Key"
-                                        Margin="0,0,0,8"/>
+                                        Margin="0,0,0,8"
+                                        TextChanged="AuthField_Changed"/>
                                     <TextBlock
                                         Text="Value"
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource TextSecondaryBrush}"
                                         Margin="0,0,0,4"/>
-                                    <TextBox x:Name="ApiKeyValueTextBox"/>
+                                    <TextBox x:Name="ApiKeyValueTextBox" TextChanged="AuthField_Changed"/>
                                 </StackPanel>
                             </StackPanel>
                         </Expander>
@@ -425,6 +444,20 @@
                                                 </Style>
                                             </DataGridTextColumn.ElementStyle>
                                         </DataGridTextColumn>
+
+                                        <DataGridTemplateColumn Width="34">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Width="24"
+                                                        Height="24"
+                                                        Padding="0"
+                                                        ToolTip="Supprimer cette ligne"
+                                                        Content="✕"
+                                                        Click="DeleteHeaderItemRow_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
 
@@ -587,6 +620,20 @@
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
+
+                                            <DataGridTemplateColumn Width="34">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button
+                                                            Width="24"
+                                                            Height="24"
+                                                            Padding="0"
+                                                            ToolTip="Supprimer cette ligne"
+                                                            Content="✕"
+                                                            Click="DeleteHeaderItemRow_Click"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </StackPanel>

@@ -143,58 +143,74 @@
                     Grid.Row="2">
 
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="260"/>
-
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="180"/>
-
-                        <ColumnDefinition Width="55"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Profile -->
-                    <TextBlock
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        FontWeight="SemiBold"
-        Foreground="{StaticResource TextSecondaryBrush}"
-        Text="Profile"/>
+                    <!-- Profile : utile à tous les modules AWS, seule la ligne entière se masque (API Client) -->
+                    <Grid x:Name="ProfileGroup" Grid.Column="0" Margin="0,0,20,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="260"/>
+                        </Grid.ColumnDefinitions>
 
-                    <ComboBox
-        x:Name="ProfileCombo"
-        Grid.Column="1"
-        Margin="6,0,12,0"
-        SelectionChanged="ProfileCombo_SelectionChanged"/>
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Text="Profile"/>
 
-                    <!-- Pattern -->
-                    <TextBlock
-        Grid.Column="2"
-        VerticalAlignment="Center"
-        FontWeight="SemiBold"
-        Foreground="{StaticResource TextSecondaryBrush}"
-        Text="Pattern"/>
+                        <ComboBox
+                            x:Name="ProfileCombo"
+                            Grid.Column="1"
+                            Margin="6,0,0,0"
+                            SelectionChanged="ProfileCombo_SelectionChanged"/>
+                    </Grid>
 
-                    <ComboBox
-        x:Name="PatternCombo"
-        Grid.Column="3"
-        Margin="6,0,12,0"
-        SelectionChanged="PatternCombo_SelectionChanged"/>
+                    <!-- Pattern : uniquement utile en mode CloudWatch -->
+                    <Grid x:Name="PatternGroup" Grid.Column="1" Margin="0,0,20,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="180"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Search -->
-                    <TextBlock
-        Grid.Column="4"
-        VerticalAlignment="Center"
-        FontWeight="SemiBold"
-        Foreground="{StaticResource TextSecondaryBrush}"
-        Text="Search"/>
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Text="Pattern"/>
 
-                    <TextBox
-        x:Name="SearchTextBox"
-        Grid.Column="5"
-        Margin="6,0,0,0"
-        VerticalContentAlignment="Center"
-        KeyDown="SearchTextBox_KeyDown"/>
+                        <ComboBox
+                            x:Name="PatternCombo"
+                            Grid.Column="1"
+                            Margin="6,0,0,0"
+                            SelectionChanged="PatternCombo_SelectionChanged"/>
+                    </Grid>
+
+                    <!-- Search : utile en CloudWatch (filtre logs) et S3 (recherche dans les dossiers) -->
+                    <Grid x:Name="SearchGroup" Grid.Column="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="55"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Text="Search"/>
+
+                        <TextBox
+                            x:Name="SearchTextBox"
+                            Grid.Column="1"
+                            Margin="6,0,0,0"
+                            VerticalContentAlignment="Center"
+                            KeyDown="SearchTextBox_KeyDown"/>
+                    </Grid>
                 </Grid>
 
                 <!-- Ligne 2 -->
@@ -204,67 +220,76 @@
                     Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock
-                        Grid.Column="0"
-                        VerticalAlignment="Center"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Margin="0,0,8,0"
-                        Text="Start"/>
-                    <DatePicker
-                        x:Name="StartDatePicker"
-                        Grid.Column="1"
-                        Width="85"
-                        Tag="Date de début"
-                        VerticalContentAlignment="Center"
-                        CalendarOpened="DatePicker_CalendarOpened"/>
-                    <TextBox
-                        x:Name="StartTimeTextBox"
-                        Grid.Column="2"
-                        Width="70"
-                        Margin="8,0,0,0"
-                        VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        LostFocus="TimeTextBox_LostFocus"
-                        PreviewKeyDown="TimeTextBox_PreviewKeyDown"
-                        GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
-                        PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
-                    <TextBlock
-                        Grid.Column="3"
-                        VerticalAlignment="Center"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Margin="24,0,8,0"
-                        Text="End"/>
-                    <DatePicker
-                        x:Name="EndDatePicker"
-                        Grid.Column="4"
-                        Width="85"
-                        Tag="Date de fin"
-                        VerticalContentAlignment="Center"
-                        CalendarOpened="DatePicker_CalendarOpened"/>
-                    <TextBox
-                        x:Name="EndTimeTextBox"
-                        Grid.Column="5"
-                        Width="70"
-                        Margin="8,0,0,0"
-                        VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        LostFocus="TimeTextBox_LostFocus"
-                        PreviewKeyDown="TimeTextBox_PreviewKeyDown"
-                        GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
-                        PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
+
+                    <!-- Dates/heures : uniquement utiles en mode CloudWatch -->
+                    <Grid x:Name="DateFieldsGroup" Grid.Column="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Margin="0,0,8,0"
+                            Text="Start"/>
+                        <DatePicker
+                            x:Name="StartDatePicker"
+                            Grid.Column="1"
+                            Width="85"
+                            Tag="Date de début"
+                            VerticalContentAlignment="Center"
+                            CalendarOpened="DatePicker_CalendarOpened"/>
+                        <TextBox
+                            x:Name="StartTimeTextBox"
+                            Grid.Column="2"
+                            Width="70"
+                            Margin="8,0,0,0"
+                            VerticalContentAlignment="Center"
+                            HorizontalContentAlignment="Center"
+                            LostFocus="TimeTextBox_LostFocus"
+                            PreviewKeyDown="TimeTextBox_PreviewKeyDown"
+                            GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
+                            PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
+                        <TextBlock
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Margin="24,0,8,0"
+                            Text="End"/>
+                        <DatePicker
+                            x:Name="EndDatePicker"
+                            Grid.Column="4"
+                            Width="85"
+                            Tag="Date de fin"
+                            VerticalContentAlignment="Center"
+                            CalendarOpened="DatePicker_CalendarOpened"/>
+                        <TextBox
+                            x:Name="EndTimeTextBox"
+                            Grid.Column="5"
+                            Width="70"
+                            Margin="8,0,0,0"
+                            VerticalContentAlignment="Center"
+                            HorizontalContentAlignment="Center"
+                            LostFocus="TimeTextBox_LostFocus"
+                            PreviewKeyDown="TimeTextBox_PreviewKeyDown"
+                            GotKeyboardFocus="TimeTextBox_GotKeyboardFocus"
+                            PreviewMouseLeftButtonDown="TimeTextBox_PreviewMouseLeftButtonDown"/>
+                    </Grid>
+
+                    <!-- Bouton d'action partagé (Search/Refresh/Cancel selon le module) : toujours visible -->
                     <Button
                         x:Name="SearchButton"
-                        Grid.Column="7"
+                        Grid.Column="2"
                         Width="90"
                         Style="{StaticResource AccentButtonStyle}"
                         Content="Search"
