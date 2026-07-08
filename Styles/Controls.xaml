@@ -592,6 +592,42 @@
         </Style.Triggers>
     </Style>
 
+    <!--
+        Pour les colonnes de texte librement éditables (clé/valeur des
+        grilles Headers/Params/Environment) : une légère bordure signale
+        que la cellule se comporte comme un champ de saisie, contrairement
+        aux grilles en lecture seule qui utilisent le style par défaut
+        ci-dessus (sans bordure).
+    -->
+    <Style x:Key="EditableDataGridCellStyle" TargetType="DataGridCell">
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="2,3"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="3"
+                        Margin="{TemplateBinding Margin}"
+                        Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- =====================================================
          TREEVIEW
          ===================================================== -->

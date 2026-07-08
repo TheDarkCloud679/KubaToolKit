@@ -1049,6 +1049,12 @@ FormatTimeTextBox(
         _apiClientView.Visibility =
             isApiClient ? Visibility.Visible : Visibility.Collapsed;
 
+        ProfilePatternSearchRow.Visibility =
+            isApiClient ? Visibility.Collapsed : Visibility.Visible;
+
+        DateRangeRow.Visibility =
+            isApiClient ? Visibility.Collapsed : Visibility.Visible;
+
         if (isS3)
         {
             await _s3View.OnProfileChanged(

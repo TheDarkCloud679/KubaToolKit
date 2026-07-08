@@ -138,7 +138,9 @@
                     </WrapPanel>
                 </StackPanel>
 
-                <Grid Grid.Row="2">
+                <Grid
+                    x:Name="ProfilePatternSearchRow"
+                    Grid.Row="2">
 
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="70"/>
@@ -197,6 +199,7 @@
 
                 <!-- Ligne 2 -->
                 <Grid
+                    x:Name="DateRangeRow"
                     Grid.Row="3"
                     Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>

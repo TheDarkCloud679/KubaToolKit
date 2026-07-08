@@ -2,6 +2,7 @@ using KubaToolKit.Modules.ApiClient.Models;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -216,12 +217,18 @@ public class CollectionStorageService
                                 ? Path.GetFileNameWithoutExtension(file)
                                 : env.Name,
 
+                        FilePath = file,
+
                         Variables =
                             env.Values?
-                                .Where(v => v.Enabled)
-                                .GroupBy(v => v.Key)
-                                .ToDictionary(g => g.Key, g => g.Last().Value)
-                            ?? new Dictionary<string, string>()
+                                .Select(v => new HeaderItem
+                                {
+                                    Enabled = v.Enabled,
+                                    Key = v.Key,
+                                    Value = v.Value
+                                })
+                                .ToList()
+                            ?? new List<HeaderItem>()
                     });
             }
             catch (JsonException)
@@ -230,5 +237,54 @@ public class CollectionStorageService
         }
 
         return environments;
+    }
+
+    /// Réécrit uniquement le tableau "values" du fichier d'environnement,
+    /// en conservant tous les autres champs (id, _postman_variable_scope,
+    /// etc.) tels quels pour que le fichier reste réimportable dans
+    /// Postman.
+    public void
+    SaveEnvironment(
+        EnvironmentSet environment)
+    {
+        JsonObject root;
+
+        if (File.Exists(environment.FilePath))
+        {
+            root =
+                JsonNode.Parse(File.ReadAllText(environment.FilePath))
+                    as JsonObject
+                ?? new JsonObject();
+        }
+        else
+        {
+            root = new JsonObject();
+        }
+
+        root["name"] = environment.Name;
+
+        var values = new JsonArray();
+
+        foreach (var variable in environment.Variables)
+        {
+            if (string.IsNullOrWhiteSpace(variable.Key))
+            {
+                continue;
+            }
+
+            values.Add(
+                new JsonObject
+                {
+                    ["key"] = variable.Key,
+                    ["value"] = variable.Value,
+                    ["enabled"] = variable.Enabled
+                });
+        }
+
+        root["values"] = values;
+
+        File.WriteAllText(
+            environment.FilePath,
+            root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
     }
 }
