@@ -95,7 +95,7 @@
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="RequestConfigRow" Height="320"/>
+                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MaxHeight="320"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
@@ -195,7 +195,7 @@
                         <!-- Params -->
                         <Expander
                             Header="Params"
-                            IsExpanded="True"
+                            IsExpanded="False"
                             Margin="0,0,0,10">
                             <DataGrid
                                 x:Name="ParamsGrid"
@@ -303,7 +303,7 @@
                         <!-- Headers -->
                         <Expander
                             Header="Headers"
-                            IsExpanded="True"
+                            IsExpanded="False"
                             Margin="0,0,0,10">
                             <DataGrid
                                 x:Name="HeadersGrid"
@@ -339,7 +339,7 @@
                         <!-- Body -->
                         <Expander
                             Header="Body"
-                            IsExpanded="True">
+                            IsExpanded="False">
                             <TextBox
                                 x:Name="BodyTextBox"
                                 Margin="0,10,0,0"
