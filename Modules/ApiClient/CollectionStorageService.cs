@@ -94,7 +94,7 @@ public class CollectionStorageService
                     continue;
                 }
 
-                roots.Add(
+                var root =
                     new CollectionNode
                     {
                         Name =
@@ -102,8 +102,12 @@ public class CollectionStorageService
                                 ? Path.GetFileNameWithoutExtension(file)
                                 : collection.Info!.Name,
                         IsRequest = false,
-                        Children = BuildNodes(collection.Item)
-                    });
+                        FilePath = file
+                    };
+
+                root.Children = BuildNodes(collection.Item, root);
+
+                roots.Add(root);
             }
             catch (JsonException)
             {
@@ -117,7 +121,8 @@ public class CollectionStorageService
 
     private ObservableCollection<CollectionNode>
     BuildNodes(
-        List<PostmanItem>? items)
+        List<PostmanItem>? items,
+        CollectionNode parent)
     {
         var nodes = new ObservableCollection<CollectionNode>();
 
@@ -179,6 +184,7 @@ public class CollectionStorageService
                         IsRequest = true,
                         Method = item.Request.Method ?? "GET",
                         Url = ExtractUrl(item.Request.Url),
+                        Parent = parent,
 
                         Headers =
                             item.Request.Header?
@@ -199,13 +205,17 @@ public class CollectionStorageService
             }
             else if (item.Item != null)
             {
-                nodes.Add(
+                var folder =
                     new CollectionNode
                     {
                         Name = item.Name,
                         IsRequest = false,
-                        Children = BuildNodes(item.Item)
-                    });
+                        Parent = parent
+                    };
+
+                folder.Children = BuildNodes(item.Item, folder);
+
+                nodes.Add(folder);
             }
         }
 
@@ -330,5 +340,227 @@ public class CollectionStorageService
         File.WriteAllText(
             environment.FilePath,
             root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    /// Crée un nouveau fichier de collection Postman v2.1 vide et retourne
+    /// son chemin.
+    public string
+    CreateCollection(
+        string name)
+    {
+        EnsureFoldersExist();
+
+        var fileName = MakeUniqueFileName(SanitizeFileName(name));
+        var filePath = Path.Combine(CollectionsFolder, fileName);
+
+        var root =
+            new JsonObject
+            {
+                ["info"] = new JsonObject
+                {
+                    ["name"] = name,
+                    ["schema"] = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+                },
+                ["item"] = new JsonArray()
+            };
+
+        File.WriteAllText(
+            filePath,
+            root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        return filePath;
+    }
+
+    public void
+    DeleteCollectionFile(
+        string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    /// Réécrit le fichier de collection à partir de l'arbre en mémoire.
+    /// Ne modifie que "info.name" et "item" : les autres champs connus du
+    /// fichier ("info.schema", etc.) sont conservés tels quels, mais toute
+    /// métadonnée avancée par requête que KubaToolKit ne modélise pas
+    /// (scripts, tests, auth par requête...) est perdue au premier
+    /// ajout/suppression/renommage effectué depuis l'app.
+    public void
+    SaveCollection(
+        CollectionNode root)
+    {
+        if (string.IsNullOrEmpty(root.FilePath))
+        {
+            throw new InvalidOperationException(
+                "Cette collection n'est associée à aucun fichier.");
+        }
+
+        JsonObject fileRoot;
+
+        if (File.Exists(root.FilePath))
+        {
+            fileRoot =
+                JsonNode.Parse(File.ReadAllText(root.FilePath))
+                    as JsonObject
+                ?? new JsonObject();
+        }
+        else
+        {
+            fileRoot = new JsonObject();
+        }
+
+        var info = fileRoot["info"] as JsonObject ?? new JsonObject();
+
+        info["name"] = root.Name;
+
+        info["schema"] ??=
+            "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
+
+        fileRoot["info"] = info;
+        fileRoot["item"] = BuildItemArray(root.Children);
+
+        File.WriteAllText(
+            root.FilePath,
+            fileRoot.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static JsonArray
+    BuildItemArray(
+        IEnumerable<CollectionNode> nodes)
+    {
+        var array = new JsonArray();
+
+        foreach (var node in nodes)
+        {
+            if (node.IsRequest)
+            {
+                var request =
+                    new JsonObject
+                    {
+                        ["method"] = node.Method,
+                        ["url"] = node.Url,
+
+                        ["header"] =
+                            new JsonArray(
+                                node.Headers
+                                    .Select(h => (JsonNode)new JsonObject
+                                    {
+                                        ["key"] = h.Key,
+                                        ["value"] = h.Value,
+                                        ["disabled"] = !h.Enabled
+                                    })
+                                    .ToArray())
+                    };
+
+                var bodyNode = BuildBodyNode(node);
+
+                if (bodyNode != null)
+                {
+                    request["body"] = bodyNode;
+                }
+
+                array.Add(
+                    new JsonObject
+                    {
+                        ["name"] = node.Name,
+                        ["request"] = request
+                    });
+            }
+            else
+            {
+                array.Add(
+                    new JsonObject
+                    {
+                        ["name"] = node.Name,
+                        ["item"] = BuildItemArray(node.Children)
+                    });
+            }
+        }
+
+        return array;
+    }
+
+    private static JsonObject?
+    BuildBodyNode(
+        CollectionNode node)
+    {
+        switch (node.BodyMode)
+        {
+            case "urlencoded":
+
+                return new JsonObject
+                {
+                    ["mode"] = "urlencoded",
+                    ["urlencoded"] =
+                        new JsonArray(
+                            node.BodyFormData
+                                .Select(f => (JsonNode)new JsonObject
+                                {
+                                    ["key"] = f.Key,
+                                    ["value"] = f.Value,
+                                    ["disabled"] = !f.Enabled
+                                })
+                                .ToArray())
+                };
+
+            case "formdata":
+
+                return new JsonObject
+                {
+                    ["mode"] = "formdata",
+                    ["formdata"] =
+                        new JsonArray(
+                            node.BodyFormData
+                                .Select(f => (JsonNode)new JsonObject
+                                {
+                                    ["key"] = f.Key,
+                                    ["value"] = f.Value,
+                                    ["disabled"] = !f.Enabled
+                                })
+                                .ToArray())
+                };
+
+            case "raw" when !string.IsNullOrEmpty(node.Body):
+
+                return new JsonObject
+                {
+                    ["mode"] = "raw",
+                    ["raw"] = node.Body
+                };
+
+            default:
+
+                return null;
+        }
+    }
+
+    private static string
+    SanitizeFileName(
+        string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+
+        var cleaned =
+            new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray())
+                .Trim();
+
+        return string.IsNullOrWhiteSpace(cleaned) ? "collection" : cleaned;
+    }
+
+    private string
+    MakeUniqueFileName(
+        string baseName)
+    {
+        var fileName = $"{baseName}.json";
+        var counter = 1;
+
+        while (File.Exists(Path.Combine(CollectionsFolder, fileName)))
+        {
+            fileName = $"{baseName} ({++counter}).json";
+        }
+
+        return fileName;
     }
 }

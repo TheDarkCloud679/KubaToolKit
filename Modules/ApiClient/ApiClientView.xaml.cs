@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -608,6 +609,309 @@ public partial class ApiClientView
             default:
                 BodyRawRadio.IsChecked = true;
                 break;
+        }
+    }
+
+    /// Un clic droit ne sélectionne pas le TreeViewItem visé par défaut en
+    /// WPF : sans ça, le menu contextuel agirait sur l'élément sélectionné
+    /// précédemment plutôt que celui sous le curseur.
+    private void
+    CollectionsTreeView_PreviewMouseRightButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (DataGridSortHelper.FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject)
+            is { } item)
+        {
+            item.IsSelected = true;
+            item.Focus();
+        }
+    }
+
+    private void
+    CollectionsContextMenu_Opened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var node = CollectionsTreeView.SelectedItem as CollectionNode;
+        var isRequest = node?.IsRequest == true;
+        var isFolder = node != null && !isRequest;
+
+        AddRequestMenuItem.IsEnabled = isFolder;
+        AddFolderMenuItem.IsEnabled = isFolder;
+        UpdateRequestMenuItem.IsEnabled = isRequest;
+        RenameMenuItem.IsEnabled = node != null;
+        DeleteMenuItem.IsEnabled = node != null;
+    }
+
+    private void
+    NewCollection_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouvelle collection",
+                "Nom de la collection :",
+                "Ma collection");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _collectionStorage.CreateCollection(name);
+            LoadCollectionsAndEnvironments();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Collection creation error");
+        }
+    }
+
+    private void
+    AddFolder_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouveau dossier",
+                "Nom du dossier :",
+                "Nouveau dossier");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        target.Children.Add(
+            new CollectionNode { Name = name, IsRequest = false, Parent = target });
+
+        SaveCollectionOf(target);
+    }
+
+    private void
+    AddRequestToCollection_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Nouvelle requête",
+                "Nom de la requête :",
+                "Nouvelle requête");
+
+        if (name == null)
+        {
+            return;
+        }
+
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        var mode = GetSelectedBodyMode();
+
+        var newNode =
+            new CollectionNode
+            {
+                Name = name,
+                IsRequest = true,
+                Parent = target,
+                Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET",
+                Url = UrlTextBox.Text.Trim(),
+
+                Headers =
+                    _headers
+                        .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                        .ToList(),
+
+                Body = BodyTextBox.Text,
+                BodyMode = mode,
+
+                BodyFormData =
+                    (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                        .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                        .ToList()
+            };
+
+        target.Children.Add(newNode);
+
+        SaveCollectionOf(target);
+    }
+
+    private void
+    UpdateRequestFromEditor_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || !node.IsRequest)
+        {
+            return;
+        }
+
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        var mode = GetSelectedBodyMode();
+
+        node.Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET";
+        node.Url = UrlTextBox.Text.Trim();
+
+        node.Headers =
+            _headers
+                .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                .ToList();
+
+        node.Body = BodyTextBox.Text;
+        node.BodyMode = mode;
+
+        node.BodyFormData =
+            (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                .ToList();
+
+        // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
+        RefreshNodeDisplay(node);
+
+        SaveCollectionOf(node);
+    }
+
+    private void
+    RenameNode_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node)
+        {
+            return;
+        }
+
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Renommer",
+                "Nouveau nom :",
+                node.Name);
+
+        if (name == null)
+        {
+            return;
+        }
+
+        node.Name = name;
+
+        RefreshNodeDisplay(node);
+
+        SaveCollectionOf(node);
+    }
+
+    private void
+    DeleteNode_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node)
+        {
+            return;
+        }
+
+        if (node.Parent == null)
+        {
+            if (MessageBox.Show(
+                    $"Supprimer définitivement la collection \"{node.Name}\" (fichier inclus) ?",
+                    "Supprimer la collection",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning)
+                != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                _collectionStorage.DeleteCollectionFile(node.FilePath ?? "");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Delete error");
+                return;
+            }
+
+            _collections.Remove(node);
+            return;
+        }
+
+        if (MessageBox.Show(
+                $"Supprimer \"{node.Name}\" ?",
+                "Supprimer",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning)
+            != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var parent = node.Parent;
+
+        parent.Children.Remove(node);
+
+        SaveCollectionOf(parent);
+    }
+
+    /// CollectionNode n'implémente pas INotifyPropertyChanged : le retirer
+    /// puis le réinsérer au même endroit force le TreeView à régénérer son
+    /// conteneur et donc relire DisplayText/Name à jour (même trick que
+    /// SortNodes pour le tri).
+    private void
+    RefreshNodeDisplay(
+        CollectionNode node)
+    {
+        var siblings = node.Parent?.Children ?? _collections;
+        var index = siblings.IndexOf(node);
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        siblings.RemoveAt(index);
+        siblings.Insert(index, node);
+    }
+
+    private void
+    SaveCollectionOf(
+        CollectionNode node)
+    {
+        try
+        {
+            _collectionStorage.SaveCollection(node.GetRoot());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Collection save error");
         }
     }
 

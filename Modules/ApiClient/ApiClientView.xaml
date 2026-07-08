@@ -32,6 +32,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBlock
@@ -51,12 +52,22 @@
                         Height="28"
                         Padding="0"
                         Margin="4,0,0,0"
+                        ToolTip="Nouvelle collection"
+                        Content="+"
+                        Click="NewCollection_Click"/>
+
+                    <Button
+                        Grid.Column="2"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Margin="4,0,0,0"
                         ToolTip="Ouvrir le dossier des collections/environnements"
                         Content="📂"
                         Click="OpenCollectionsFolder_Click"/>
 
                     <Button
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Width="28"
                         Height="28"
                         Padding="0"
@@ -71,7 +82,8 @@
                     Grid.Row="1"
                     BorderThickness="0"
                     Background="Transparent"
-                    MouseDoubleClick="CollectionsTreeView_MouseDoubleClick">
+                    MouseDoubleClick="CollectionsTreeView_MouseDoubleClick"
+                    PreviewMouseRightButtonDown="CollectionsTreeView_PreviewMouseRightButtonDown">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock
@@ -79,6 +91,32 @@
                                 TextTrimming="CharacterEllipsis"/>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
+                    <TreeView.ContextMenu>
+                        <ContextMenu Opened="CollectionsContextMenu_Opened">
+                            <MenuItem
+                                x:Name="AddRequestMenuItem"
+                                Header="Nouvelle requête (depuis l'éditeur)"
+                                Click="AddRequestToCollection_Click"/>
+                            <MenuItem
+                                x:Name="AddFolderMenuItem"
+                                Header="Nouveau dossier"
+                                Click="AddFolder_Click"/>
+                            <Separator/>
+                            <MenuItem
+                                x:Name="UpdateRequestMenuItem"
+                                Header="Mettre à jour depuis l'éditeur"
+                                Click="UpdateRequestFromEditor_Click"/>
+                            <MenuItem
+                                x:Name="RenameMenuItem"
+                                Header="Renommer"
+                                Click="RenameNode_Click"/>
+                            <Separator/>
+                            <MenuItem
+                                x:Name="DeleteMenuItem"
+                                Header="Supprimer"
+                                Click="DeleteNode_Click"/>
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
                 </TreeView>
             </Grid>
         </Border>
