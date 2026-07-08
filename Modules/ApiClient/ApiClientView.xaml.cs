@@ -86,6 +86,29 @@ public partial class ApiClientView
     }
 
     private void
+    AddEnvironment_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _collectionStorage.EnsureFoldersExist();
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = CollectionStorageService.EnvironmentsFolder,
+                UseShellExecute = true
+            });
+    }
+
+    private void
+    ReloadEnvironments_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        LoadCollectionsAndEnvironments();
+    }
+
+    private void
     CollectionsTreeView_MouseDoubleClick(
         object sender,
         MouseButtonEventArgs e)
