@@ -174,6 +174,9 @@ public partial class ApiClientView
                 _collections.Add(root);
             }
 
+            _collectionsSortDescending = false;
+            SortNodes(_collections, _collectionsSortDescending);
+
             var environments =
                 new List<EnvironmentSet>
                 {
