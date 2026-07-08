@@ -16,6 +16,11 @@ public class CollectionNode
     public string BodyMode { get; set; } = "raw";
     public List<HeaderItem> BodyFormData { get; set; } = new();
 
+    // Favori (requêtes uniquement) : remonté en tête de sa fratrie par
+    // SortNodes, persisté via un champ non standard dans le fichier de
+    // collection (ignoré sans risque par Postman lui-même).
+    public bool IsFavorite { get; set; }
+
     // ObservableCollection (pas List) : le tri par double-clic réordonne
     // en place à chaque niveau, il faut que le TreeView le voie.
     public ObservableCollection<CollectionNode> Children { get; set; } = new();
@@ -30,7 +35,7 @@ public class CollectionNode
     public CollectionNode? Parent { get; set; }
 
     public string DisplayText =>
-        IsRequest ? $"{Method}  {Name}" : Name;
+        (IsFavorite ? "⭐ " : "") + (IsRequest ? $"{Method}  {Name}" : Name);
 
     public CollectionNode
     GetRoot()

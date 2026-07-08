@@ -200,7 +200,8 @@ public class CollectionStorageService
 
                         Body = body?.Raw ?? "",
                         BodyMode = bodyMode,
-                        BodyFormData = bodyFormData
+                        BodyFormData = bodyFormData,
+                        IsFavorite = item.Request.Favorite == true
                     });
             }
             else if (item.Item != null)
@@ -459,6 +460,11 @@ public class CollectionStorageService
                 if (bodyNode != null)
                 {
                     request["body"] = bodyNode;
+                }
+
+                if (node.IsFavorite)
+                {
+                    request["_kubatoolkit_favorite"] = true;
                 }
 
                 array.Add(

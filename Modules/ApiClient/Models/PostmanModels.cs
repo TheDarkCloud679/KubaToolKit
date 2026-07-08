@@ -52,6 +52,11 @@ public class PostmanRequest
     // {raw, host, path, query...} : JsonElement capture les deux formes.
     [JsonPropertyName("url")]
     public JsonElement Url { get; set; }
+
+    // Champ propre à KubaToolKit (absent des exports Postman standards,
+    // ignoré sans risque si le fichier est réimporté dans Postman).
+    [JsonPropertyName("_kubatoolkit_favorite")]
+    public bool? Favorite { get; set; }
 }
 
 public class PostmanHeader

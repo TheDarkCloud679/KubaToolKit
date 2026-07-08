@@ -107,6 +107,10 @@
                                 Header="Mettre à jour depuis l'éditeur"
                                 Click="UpdateRequestFromEditor_Click"/>
                             <MenuItem
+                                x:Name="FavoriteMenuItem"
+                                Header="☆ Ajouter aux favoris"
+                                Click="ToggleFavorite_Click"/>
+                            <MenuItem
                                 x:Name="RenameMenuItem"
                                 Header="Renommer"
                                 Click="RenameNode_Click"/>

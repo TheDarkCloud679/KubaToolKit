@@ -197,6 +197,13 @@ public partial class ApiClientView
         {
             RefreshAutoHeaders();
         }
+        else if (grid == ParamsGrid)
+        {
+            // Sans ça, l'URL garde le paramètre supprimé et
+            // SyncParamsFromUrl le réinjecterait au prochain changement
+            // d'URL (les deux vues restent normalement synchronisées).
+            SyncUrlFromParams();
+        }
     }
 
     private void
@@ -402,15 +409,21 @@ public partial class ApiClientView
         SortNodes(_collections, _collectionsSortDescending);
     }
 
+    /// Les favoris restent toujours en tête de leur fratrie, quel que soit
+    /// le sens du tri ; seul l'ordre alphabétique à l'intérieur de chaque
+    /// groupe (favoris / non-favoris) suit le sens demandé.
     private static void
     SortNodes(
         ObservableCollection<CollectionNode> nodes,
         bool descending)
     {
+        var byFavorite = nodes.OrderByDescending(n => n.IsFavorite);
+
         var sorted =
-            descending
-                ? nodes.OrderByDescending(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList()
-                : nodes.OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            (descending
+                ? byFavorite.ThenByDescending(n => n.Name, StringComparer.OrdinalIgnoreCase)
+                : byFavorite.ThenBy(n => n.Name, StringComparer.OrdinalIgnoreCase))
+            .ToList();
 
         nodes.Clear();
 
@@ -723,6 +736,32 @@ public partial class ApiClientView
         UpdateRequestMenuItem.IsEnabled = isRequest;
         RenameMenuItem.IsEnabled = node != null;
         DeleteMenuItem.IsEnabled = node != null;
+
+        FavoriteMenuItem.IsEnabled = isRequest;
+        FavoriteMenuItem.Header =
+            node?.IsFavorite == true
+                ? "★ Retirer des favoris"
+                : "☆ Ajouter aux favoris";
+    }
+
+    private void
+    ToggleFavorite_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || !node.IsRequest)
+        {
+            return;
+        }
+
+        node.IsFavorite = !node.IsFavorite;
+
+        // Fait remonter/redescendre immédiatement le nœud dans sa fratrie
+        // plutôt que d'attendre un rechargement ou un tri manuel.
+        SortNodes(_collections, _collectionsSortDescending);
+
+        SaveCollectionOf(node);
     }
 
     private void
