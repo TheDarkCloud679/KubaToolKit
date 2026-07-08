@@ -1029,13 +1029,14 @@ FormatTimeTextBox(
                 ?.IsChecked
             == true;
 
+        bool isCloudWatch =
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient;
+
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
 
         _cloudWatchView.Visibility =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
         _s3View.Visibility =
             isS3 ? Visibility.Visible : Visibility.Collapsed;
@@ -1054,6 +1055,19 @@ FormatTimeTextBox(
 
         DateRangeRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
+
+        // Pattern/dates ne servent qu'au filtrage CloudWatch ; Search sert
+        // aussi en S3 (recherche dans les dossiers). Les autres modules
+        // n'affichent que Profile + le bouton d'action, pour maximiser
+        // l'espace réservé aux données de chaque module.
+        PatternGroup.Visibility =
+            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
+
+        SearchGroup.Visibility =
+            isCloudWatch || isS3 ? Visibility.Visible : Visibility.Collapsed;
+
+        DateFieldsGroup.Visibility =
+            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {
