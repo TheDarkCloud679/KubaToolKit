@@ -82,6 +82,7 @@
                 CanUserDeleteRows="False"
                 CanUserSortColumns="False"
                 HeadersVisibility="Column"
+                HorizontalScrollBarVisibility="Auto"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
                 VirtualizingPanel.ScrollUnit="Pixel"
@@ -93,12 +94,12 @@
                         Header="Execution"
                         Binding="{Binding Name}"
                         SortMemberPath="Name"
-                        Width="*"/>
+                        Width="Auto"/>
 
                     <DataGridTemplateColumn
                         Header="Status"
                         SortMemberPath="Status"
-                        Width="130">
+                        Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Border
@@ -119,13 +120,13 @@
                         Header="Start"
                         Binding="{Binding StartDisplay}"
                         SortMemberPath="StartDate"
-                        Width="160"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Stop"
                         Binding="{Binding StopDisplay}"
                         SortMemberPath="StopDate"
-                        Width="160"/>
+                        Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

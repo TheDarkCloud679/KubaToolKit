@@ -98,18 +98,19 @@
                     CanUserAddRows="False"
                     CanUserDeleteRows="False"
                     HeadersVisibility="Column"
+                    HorizontalScrollBarVisibility="Auto"
                     MouseDoubleClick="MessagesGrid_DoubleClick">
 
                     <DataGrid.Columns>
                         <DataGridTextColumn
                             Header="Sent"
                             Binding="{Binding SentTimestamp}"
-                            Width="160"/>
+                            Width="Auto"/>
 
                         <DataGridTextColumn
                             Header="Message ID"
                             Binding="{Binding MessageId}"
-                            Width="260"/>
+                            Width="Auto"/>
 
                         <DataGridTemplateColumn
                             Header="Body"

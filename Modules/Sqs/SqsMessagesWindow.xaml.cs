@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.Sqs.Models;
+using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -97,6 +98,10 @@ public partial class SqsMessagesWindow
             {
                 _messages.Add(message);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(MessagesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
 
             StatusTextBlock.Text =
                 $"{messages.Count} message(s) • consultation seule, aucune suppression";

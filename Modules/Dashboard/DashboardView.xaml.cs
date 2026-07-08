@@ -163,6 +163,14 @@ public partial class DashboardView
             {
                 _ec2Metrics.Add(instance);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() =>
+                {
+                    DataGridSortHelper.RefreshColumnWidths(RdsGrid);
+                    DataGridSortHelper.RefreshColumnWidths(Ec2Grid);
+                }),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (OperationCanceledException)
         {

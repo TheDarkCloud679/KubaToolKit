@@ -80,6 +80,10 @@ public partial class ExecutionsWindow
             {
                 _executions.Add(execution);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(ExecutionsGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (OperationCanceledException)
         {

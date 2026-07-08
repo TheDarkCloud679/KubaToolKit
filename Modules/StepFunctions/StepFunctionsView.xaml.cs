@@ -68,6 +68,10 @@ public partial class StepFunctionsView
             {
                 _stateMachines.Add(stateMachine);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(StateMachinesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (OperationCanceledException)
         {

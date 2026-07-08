@@ -183,6 +183,7 @@ IsReadOnly="True"
 CanUserAddRows="False"
 CanUserDeleteRows="False"
 HeadersVisibility="Column"
+HorizontalScrollBarVisibility="Auto"
 SelectionMode="Extended"
 SelectionUnit="FullRow"
 AllowDrop="True"
@@ -210,12 +211,12 @@ MouseDoubleClick="S3FilesGrid_DoubleClick">
                             <DataGridTextColumn
             Header="Size"
             Binding="{Binding SizeDisplay}"
-            Width="100"/>
+            Width="Auto"/>
 
                             <DataGridTextColumn
             Header="Last Modified"
             Binding="{Binding LastModified}"
-            Width="180"/>
+            Width="Auto"/>
                         </DataGrid.Columns>
 
                     </DataGrid>

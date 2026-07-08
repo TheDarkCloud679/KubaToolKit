@@ -77,6 +77,10 @@ public partial class ExecutionEventsWindow
             {
                 _events.Add(historyEvent);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(EventsGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (OperationCanceledException)
         {

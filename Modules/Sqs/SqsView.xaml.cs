@@ -63,6 +63,10 @@ public partial class SqsView
             {
                 _queues.Add(queue);
             }
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(QueuesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         catch (OperationCanceledException)
         {

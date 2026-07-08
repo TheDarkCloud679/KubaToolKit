@@ -291,7 +291,7 @@
                                             <DataGridTextColumn
                                                 Header="Timestamp"
                                                 Binding="{Binding Timestamp}"
-                                                Width="180"/>
+                                                Width="Auto"/>
                                             <DataGridTemplateColumn
                                                     Header="Message"
                                                     Width="*">

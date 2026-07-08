@@ -73,6 +73,7 @@
                 CanUserDeleteRows="False"
                 CanUserSortColumns="False"
                 HeadersVisibility="Column"
+                HorizontalScrollBarVisibility="Auto"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
                 VirtualizingPanel.ScrollUnit="Pixel"
@@ -84,19 +85,19 @@
                         Header="ID"
                         Binding="{Binding Id}"
                         SortMemberPath="Id"
-                        Width="60"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Type"
                         Binding="{Binding Type}"
                         SortMemberPath="Type"
-                        Width="220"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Step"
                         Binding="{Binding Step}"
                         SortMemberPath="Step"
-                        Width="200"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Resource"
@@ -108,7 +109,7 @@
                         Header="Timestamp"
                         Binding="{Binding TimestampDisplay}"
                         SortMemberPath="Timestamp"
-                        Width="180"/>
+                        Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

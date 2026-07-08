@@ -57,7 +57,7 @@
                     <Setter Property="Cursor" Value="Hand"/>
                     <Setter Property="BorderThickness" Value="1.5"/>
                     <Setter Property="BorderBrush" Value="Transparent"/>
-                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                    <Setter Property="HorizontalAlignment" Value="Left"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
@@ -124,6 +124,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
+                        HorizontalScrollBarVisibility="Auto"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
                         MouseDoubleClick="RdsGrid_MouseDoubleClick">
@@ -133,18 +134,18 @@
                                 Header="DB Instance"
                                 Binding="{Binding Identifier}"
                                 SortMemberPath="Identifier"
-                                Width="*"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Engine"
                                 Binding="{Binding Engine}"
                                 SortMemberPath="Engine"
-                                Width="140"/>
+                                Width="Auto"/>
 
                             <DataGridTemplateColumn
                                 Header="Status"
                                 SortMemberPath="Status"
-                                Width="130">
+                                Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
@@ -164,7 +165,7 @@
                             <DataGridTemplateColumn
                                 Header="CPU"
                                 SortMemberPath="CpuPercent"
-                                Width="130">
+                                Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
@@ -183,7 +184,7 @@
                             <DataGridTemplateColumn
                                 Header="Activity"
                                 SortMemberPath="DatabaseConnections"
-                                Width="150">
+                                Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
@@ -203,13 +204,13 @@
                                 Header="Auto-Start"
                                 Binding="{Binding AutoStart}"
                                 SortMemberPath="AutoStart"
-                                Width="100"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Auto-Stop"
                                 Binding="{Binding AutoStop}"
                                 SortMemberPath="AutoStop"
-                                Width="100"/>
+                                Width="Auto"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
@@ -262,6 +263,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
+                        HorizontalScrollBarVisibility="Auto"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
                         MouseDoubleClick="Ec2Grid_MouseDoubleClick">
@@ -271,18 +273,18 @@
                                 Header="Name"
                                 Binding="{Binding Name}"
                                 SortMemberPath="Name"
-                                Width="*"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Type"
                                 Binding="{Binding InstanceType}"
                                 SortMemberPath="InstanceType"
-                                Width="120"/>
+                                Width="Auto"/>
 
                             <DataGridTemplateColumn
                                 Header="State"
                                 SortMemberPath="State"
-                                Width="120">
+                                Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
@@ -303,13 +305,13 @@
                                 Header="Auto-Start"
                                 Binding="{Binding AutoStart}"
                                 SortMemberPath="AutoStart"
-                                Width="100"/>
+                                Width="Auto"/>
 
                             <DataGridTextColumn
                                 Header="Auto-Stop"
                                 Binding="{Binding AutoStop}"
                                 SortMemberPath="AutoStop"
-                                Width="100"/>
+                                Width="Auto"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>

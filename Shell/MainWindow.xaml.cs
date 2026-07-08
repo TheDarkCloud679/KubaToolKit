@@ -1,5 +1,6 @@
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Infrastructure;
+using KubaToolKit.Modules.ApiClient;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.Dashboard;
 using KubaToolKit.Modules.S3Explorer;
@@ -26,6 +27,7 @@ public partial class MainWindow
     private readonly S3ExplorerView _s3View;
     private readonly SqsView _sqsView;
     private readonly StepFunctionsView _stepFunctionsView;
+    private readonly ApiClientView _apiClientView;
 
     private bool _windowLoaded = false;
     private bool _editingSecondHourDigit = false;
@@ -53,6 +55,7 @@ public partial class MainWindow
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
+        _apiClientView = _modules.OfType<ApiClientModule>().Single().TypedView;
 
         foreach (var module in _modules)
         {
@@ -206,6 +209,11 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             await _stepFunctionsView.OnProfileChanged(profile);
         }
+        else if (ApiClientModeRadio?.IsChecked == true)
+        {
+            // Aucun profil AWS nécessaire : l'API Client est indépendant
+            // du système de credentials/profils de l'app.
+        }
         else
         {
             await LoadCloudWatchLogGroupsAsync(profile);
@@ -297,6 +305,22 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 try
                 {
                     await _stepFunctionsView.RefreshAsync();
+                }
+                finally
+                {
+                    SearchButton.IsEnabled = true;
+                }
+
+                return;
+            }
+
+            if (ApiClientModeRadio?.IsChecked == true)
+            {
+                SearchButton.IsEnabled = false;
+
+                try
+                {
+                    await _apiClientView.SendAsync();
                 }
                 finally
                 {
@@ -1000,11 +1024,16 @@ FormatTimeTextBox(
                 ?.IsChecked
             == true;
 
+        bool isApiClient =
+            ApiClientModeRadio
+                ?.IsChecked
+            == true;
+
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
 
         _cloudWatchView.Visibility =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -1016,6 +1045,9 @@ FormatTimeTextBox(
 
         _stepFunctionsView.Visibility =
             isStepFunctions ? Visibility.Visible : Visibility.Collapsed;
+
+        _apiClientView.Visibility =
+            isApiClient ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {

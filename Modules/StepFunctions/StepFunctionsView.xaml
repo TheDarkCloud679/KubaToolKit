@@ -68,6 +68,7 @@
                 CanUserDeleteRows="False"
                 CanUserSortColumns="False"
                 HeadersVisibility="Column"
+                HorizontalScrollBarVisibility="Auto"
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
                 VirtualizingPanel.ScrollUnit="Pixel"
@@ -79,13 +80,13 @@
                         Header="State Machine"
                         Binding="{Binding Name}"
                         SortMemberPath="Name"
-                        Width="*"/>
+                        Width="Auto"/>
 
                     <DataGridTextColumn
                         Header="Type"
                         Binding="{Binding Type}"
                         SortMemberPath="Type"
-                        Width="140"/>
+                        Width="Auto"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
