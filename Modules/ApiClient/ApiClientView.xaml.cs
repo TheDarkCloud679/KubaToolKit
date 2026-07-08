@@ -172,6 +172,33 @@ public partial class ApiClientView
         _headers.Add(new HeaderItem());
     }
 
+    /// Bouton "✕" partagé par Params/Headers/BodyFormGrid : retire la
+    /// ligne cliquée de la collection actuellement liée à SA grille (peu
+    /// importe laquelle), pas besoin d'un handler par grille.
+    private void
+    DeleteHeaderItemRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button
+            || button.DataContext is not HeaderItem item)
+        {
+            return;
+        }
+
+        if (DataGridSortHelper.FindAncestor<DataGrid>(button) is not { } grid)
+        {
+            return;
+        }
+
+        (grid.ItemsSource as ObservableCollection<HeaderItem>)?.Remove(item);
+
+        if (grid == HeadersGrid)
+        {
+            RefreshAutoHeaders();
+        }
+    }
+
     private void
     HeadersGrid_LostFocus(
         object sender,
@@ -230,6 +257,47 @@ public partial class ApiClientView
             _headers.Any(h =>
                 h.Enabled
                 && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
+
+        // Reflète l'onglet Auth, comme Postman qui y affiche aussi
+        // l'Authorization calculée (masquée) plutôt que de la faire saisir
+        // dans la grille Headers elle-même.
+        switch (AuthTypeCombo?.SelectedIndex)
+        {
+            case 1 when !string.IsNullOrWhiteSpace(BearerTokenTextBox?.Text):
+
+                if (!Has("Authorization"))
+                {
+                    _autoHeaders.Add(
+                        new HeaderItem { Key = "Authorization", Value = "Bearer " + Mask(BearerTokenTextBox!.Text) });
+                }
+
+                break;
+
+            case 2 when !string.IsNullOrWhiteSpace(BasicUsernameTextBox?.Text)
+                        || !string.IsNullOrEmpty(BasicPasswordBox?.Password):
+
+                if (!Has("Authorization"))
+                {
+                    _autoHeaders.Add(
+                        new HeaderItem
+                        {
+                            Key = "Authorization",
+                            Value = "Basic " + Mask($"{BasicUsernameTextBox?.Text}:{BasicPasswordBox?.Password}")
+                        });
+                }
+
+                break;
+
+            case 3 when !string.IsNullOrWhiteSpace(ApiKeyNameTextBox?.Text):
+
+                if (!Has(ApiKeyNameTextBox!.Text))
+                {
+                    _autoHeaders.Add(
+                        new HeaderItem { Key = ApiKeyNameTextBox.Text, Value = Mask(ApiKeyValueTextBox?.Text) });
+                }
+
+                break;
+        }
 
         var method =
             (MethodCombo?.SelectedItem as ComboBoxItem)?.Content as string
@@ -304,6 +372,19 @@ public partial class ApiClientView
             _autoHeaders.Add(
                 new HeaderItem { Key = "Connection", Value = "keep-alive" });
         }
+    }
+
+    private static string
+    Mask(
+        string? value) =>
+        string.IsNullOrEmpty(value) ? "" : new string('•', Math.Clamp(value.Length, 8, 24));
+
+    private void
+    AuthField_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        RefreshAutoHeaders();
     }
 
     private void
@@ -945,6 +1026,8 @@ public partial class ApiClientView
                 ApiKeyAuthPanel.Visibility = Visibility.Visible;
                 break;
         }
+
+        RefreshAutoHeaders();
     }
 
     private async void

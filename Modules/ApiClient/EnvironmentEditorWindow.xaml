@@ -96,6 +96,20 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
+                    <DataGridTemplateColumn Width="34">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button
+                                    Width="24"
+                                    Height="24"
+                                    Padding="0"
+                                    ToolTip="Supprimer cette ligne"
+                                    Content="✕"
+                                    Click="DeleteVariableRow_Click"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
