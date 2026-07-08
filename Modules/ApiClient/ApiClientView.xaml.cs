@@ -1,6 +1,7 @@
 using KubaToolKit.Modules.ApiClient.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,7 +12,9 @@ public partial class ApiClientView
     : UserControl
 {
     private readonly ApiClientService _apiClientService = new();
+    private readonly CollectionStorageService _collectionStorage = new();
     private readonly ObservableCollection<HeaderItem> _headers = new();
+    private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
 
     public ApiClientView()
@@ -19,9 +22,102 @@ public partial class ApiClientView
         InitializeComponent();
 
         HeadersGrid.ItemsSource = _headers;
+        CollectionsTreeView.ItemsSource = _collections;
 
         _headers.Add(
             new HeaderItem { Key = "Content-Type", Value = "application/json" });
+
+        LoadCollectionsAndEnvironments();
+    }
+
+    private void
+    LoadCollectionsAndEnvironments()
+    {
+        try
+        {
+            _collections.Clear();
+
+            foreach (var root in _collectionStorage.LoadCollections())
+            {
+                _collections.Add(root);
+            }
+
+            var environments =
+                new List<EnvironmentSet>
+                {
+                    new() { Name = "(No Environment)" }
+                };
+
+            environments.AddRange(
+                _collectionStorage.LoadEnvironments());
+
+            EnvironmentCombo.ItemsSource = environments;
+            EnvironmentCombo.SelectedIndex = 0;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                ex.Message,
+                "Collections loading error");
+        }
+    }
+
+    private void
+    ReloadCollections_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        LoadCollectionsAndEnvironments();
+    }
+
+    private void
+    OpenCollectionsFolder_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _collectionStorage.EnsureFoldersExist();
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = CollectionStorageService.RootFolder,
+                UseShellExecute = true
+            });
+    }
+
+    private void
+    CollectionsTreeView_MouseDoubleClick(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || !node.IsRequest)
+        {
+            return;
+        }
+
+        foreach (ComboBoxItem item in MethodCombo.Items)
+        {
+            if (string.Equals(
+                    item.Content as string,
+                    node.Method,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                MethodCombo.SelectedItem = item;
+                break;
+            }
+        }
+
+        UrlTextBox.Text = node.Url;
+
+        _headers.Clear();
+
+        foreach (var header in node.Headers)
+        {
+            _headers.Add(header);
+        }
+
+        BodyTextBox.Text = node.Body;
     }
 
     private void
@@ -111,6 +207,9 @@ public partial class ApiClientView
 
             var auth = BuildAuthConfig();
 
+            var variables =
+                (EnvironmentCombo.SelectedItem as EnvironmentSet)?.Variables;
+
             var result =
                 await _apiClientService.SendAsync(
                     method,
@@ -118,6 +217,7 @@ public partial class ApiClientView
                     _headers.ToList(),
                     BodyTextBox.Text,
                     auth,
+                    variables,
                     _sendCancellation.Token);
 
             StatusTextBlock.Text = result.StatusDisplay;

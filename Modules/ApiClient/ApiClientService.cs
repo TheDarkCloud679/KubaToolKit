@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -16,6 +17,9 @@ public class ApiClientService
         Timeout = TimeSpan.FromSeconds(100)
     };
 
+    private static readonly Regex VariablePattern =
+        new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
+
     public async Task<ApiResponseResult>
     SendAsync(
         string method,
@@ -23,8 +27,12 @@ public class ApiClientService
         List<HeaderItem> headers,
         string? body,
         AuthConfig auth,
+        Dictionary<string, string>? variables = null,
         CancellationToken cancellationToken = default)
     {
+        url = SubstituteVariables(url, variables);
+        body = SubstituteVariables(body, variables);
+
         using var request =
             new HttpRequestMessage(
                 new HttpMethod(method),
@@ -47,6 +55,10 @@ public class ApiClientService
                 continue;
             }
 
+            var headerValue =
+                SubstituteVariables(header.Value, variables)
+                ?? "";
+
             // Content-Type doit être posé sur les headers du Content, pas
             // de la requête, sans quoi HttpClient l'ignore silencieusement.
             if (string.Equals(
@@ -54,13 +66,13 @@ public class ApiClientService
                     "Content-Type",
                     StringComparison.OrdinalIgnoreCase))
             {
-                contentType = header.Value;
+                contentType = headerValue;
                 continue;
             }
 
             request.Headers.TryAddWithoutValidation(
                 header.Key,
-                header.Value);
+                headerValue);
         }
 
         if (request.Content != null)
@@ -103,6 +115,30 @@ public class ApiClientService
         string method) =>
         !string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase)
         && !string.Equals(method, "HEAD", StringComparison.OrdinalIgnoreCase);
+
+    /// Remplace les {{clé}} (syntaxe Postman) par la valeur correspondante
+    /// de l'environnement sélectionné ; laisse le texte tel quel si aucun
+    /// environnement n'est actif ou si la clé est introuvable.
+    [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(text))]
+    private static string?
+    SubstituteVariables(
+        string? text,
+        Dictionary<string, string>? variables)
+    {
+        if (string.IsNullOrEmpty(text)
+            || variables == null
+            || variables.Count == 0)
+        {
+            return text;
+        }
+
+        return VariablePattern.Replace(
+            text,
+            match =>
+                variables.TryGetValue(match.Groups[1].Value, out var value)
+                    ? value
+                    : match.Value);
+    }
 
     private static void
     ApplyAuth(
