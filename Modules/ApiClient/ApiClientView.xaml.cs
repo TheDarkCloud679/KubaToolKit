@@ -15,10 +15,12 @@ public partial class ApiClientView
     private readonly CollectionStorageService _collectionStorage = new();
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
+    private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
     private bool _syncingUrlAndParams;
     private bool _collectionsSortDescending;
+    private bool _showAutoHeaders = true;
 
     public ApiClientView()
     {
@@ -26,14 +28,151 @@ public partial class ApiClientView
 
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
+        AutoHeadersGrid.ItemsSource = _autoHeaders;
         CollectionsTreeView.ItemsSource = _collections;
 
         _headers.Add(
             new HeaderItem { Key = "Content-Type", Value = "application/json" });
 
+        _headers.CollectionChanged += (_, __) => RefreshAutoHeaders();
+
         UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
+        UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
         LoadCollectionsAndEnvironments();
+
+        RefreshAutoHeaders();
+    }
+
+    private void
+    AddParamRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _params.Add(new HeaderItem());
+    }
+
+    private void
+    AddHeaderRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _headers.Add(new HeaderItem());
+    }
+
+    private void
+    HeadersGrid_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    MethodCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    BodyTextBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        RefreshAutoHeaders();
+    }
+
+    private void
+    ToggleAutoHeaders_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        _showAutoHeaders = !_showAutoHeaders;
+
+        AutoHeadersGrid.Visibility =
+            _showAutoHeaders ? Visibility.Visible : Visibility.Collapsed;
+
+        ToggleAutoHeadersText.Text =
+            _showAutoHeaders
+                ? "Masquer les en-têtes générés automatiquement"
+                : "Afficher les en-têtes générés automatiquement";
+    }
+
+    /// Aperçu des en-têtes que KubaToolKit ajoute lui-même à l'envoi
+    /// (User-Agent, Accept, Accept-Encoding via HttpClient, Host,
+    /// Content-Length) quand l'utilisateur ne les a pas déjà définis
+    /// explicitement dans la grille Headers.
+    private void
+    RefreshAutoHeaders()
+    {
+        if (HeadersGrid == null)
+        {
+            return;
+        }
+
+        _autoHeaders.Clear();
+
+        bool Has(string key) =>
+            _headers.Any(h =>
+                h.Enabled
+                && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
+
+        var method =
+            (MethodCombo?.SelectedItem as ComboBoxItem)?.Content as string
+            ?? "GET";
+
+        bool hasBody =
+            !string.IsNullOrEmpty(BodyTextBox?.Text)
+            && ApiClientService.AllowsBody(method);
+
+        if (hasBody && !Has("Content-Type"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Content-Type", Value = "application/json" });
+        }
+
+        if (hasBody)
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Content-Length", Value = "<calculé à l'envoi>" });
+        }
+
+        if (!Has("Host"))
+        {
+            var host =
+                Uri.TryCreate(UrlTextBox?.Text, UriKind.Absolute, out var uri)
+                    ? uri.Host
+                    : null;
+
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Host", Value = host ?? "<calculé à l'envoi>" });
+        }
+
+        if (!Has("User-Agent"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "User-Agent", Value = "KubaToolKit/1.0" });
+        }
+
+        if (!Has("Accept"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Accept", Value = "*/*" });
+        }
+
+        if (!Has("Accept-Encoding"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Accept-Encoding", Value = "gzip, deflate, br" });
+        }
+
+        if (!Has("Connection"))
+        {
+            _autoHeaders.Add(
+                new HeaderItem { Key = "Connection", Value = "keep-alive" });
+        }
     }
 
     private void

@@ -1,5 +1,6 @@
 using KubaToolKit.Modules.ApiClient.Models;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -12,10 +13,14 @@ public class ApiClientService
     // Instance HttpClient partagée et réutilisée pour toutes les requêtes :
     // en créer une nouvelle par appel épuiserait les sockets disponibles
     // sous charge (limitation connue de HttpClient/IDisposable).
-    private static readonly HttpClient Client = new()
-    {
-        Timeout = TimeSpan.FromSeconds(100)
-    };
+    // AutomaticDecompression fait ajouter par le framework un en-tête
+    // Accept-Encoding cohérent avec les en-têtes "auto-générés" affichés
+    // dans l'UI (Host/Content-Length le sont aussi nativement).
+    private static readonly HttpClient Client =
+        new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All })
+        {
+            Timeout = TimeSpan.FromSeconds(100)
+        };
 
     private static readonly Regex VariablePattern =
         new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
@@ -84,6 +89,23 @@ public class ApiClientService
                         : contentType);
         }
 
+        // Repli identique à ce que montre l'UI comme en-têtes
+        // "auto-générés" : on ne les ajoute que si l'utilisateur ne les a
+        // pas déjà définis explicitement dans sa liste de headers.
+        if (!request.Headers.Contains("User-Agent"))
+        {
+            request.Headers.TryAddWithoutValidation(
+                "User-Agent",
+                "KubaToolKit/1.0");
+        }
+
+        if (!request.Headers.Contains("Accept"))
+        {
+            request.Headers.TryAddWithoutValidation(
+                "Accept",
+                "*/*");
+        }
+
         ApplyAuth(request, auth);
 
         var stopwatch =
@@ -110,7 +132,7 @@ public class ApiClientService
         };
     }
 
-    private static bool
+    internal static bool
     AllowsBody(
         string method) =>
         !string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase)

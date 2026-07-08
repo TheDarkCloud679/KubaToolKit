@@ -116,7 +116,8 @@
                     x:Name="MethodCombo"
                     Grid.Column="0"
                     Margin="0,0,8,0"
-                    SelectedIndex="0">
+                    SelectedIndex="0"
+                    SelectionChanged="MethodCombo_SelectionChanged">
                     <ComboBoxItem Content="GET"/>
                     <ComboBoxItem Content="POST"/>
                     <ComboBoxItem Content="PUT"/>
@@ -197,52 +198,63 @@
                             Header="Params"
                             IsExpanded="False"
                             Margin="0,0,0,10">
-                            <DataGrid
-                                x:Name="ParamsGrid"
-                                Margin="0,10,0,0"
-                                AutoGenerateColumns="False"
-                                CanUserAddRows="True"
-                                CanUserDeleteRows="True"
-                                HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                MaxHeight="180"
-                                RowHeight="38"
-                                LostFocus="ParamsGrid_LostFocus">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn
-                                        Header="On"
-                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="Auto"/>
+                            <StackPanel Margin="0,10,0,0">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Ajouter une ligne"
+                                    Content="+"
+                                    Click="AddParamRow_Click"/>
 
-                                    <DataGridTextColumn
-                                        Header="Key"
-                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="2*"
-                                        MinWidth="160">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Key}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                <DataGrid
+                                    x:Name="ParamsGrid"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="True"
+                                    CanUserDeleteRows="True"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="180"
+                                    RowHeight="38"
+                                    LostFocus="ParamsGrid_LostFocus">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn
+                                            Header="On"
+                                            Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="Auto"/>
 
-                                    <DataGridTextColumn
-                                        Header="Value"
-                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="3*"
-                                        MinWidth="200">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Value}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="2*"
+                                            MinWidth="160">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="3*"
+                                            MinWidth="200">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
                         </Expander>
 
                         <!-- Auth -->
@@ -321,51 +333,100 @@
                             Header="Headers"
                             IsExpanded="False"
                             Margin="0,0,0,10">
-                            <DataGrid
-                                x:Name="HeadersGrid"
-                                Margin="0,10,0,0"
-                                AutoGenerateColumns="False"
-                                CanUserAddRows="True"
-                                CanUserDeleteRows="True"
-                                HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                MaxHeight="220"
-                                RowHeight="38">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn
-                                        Header="On"
-                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="Auto"/>
+                            <StackPanel Margin="0,10,0,0">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Ajouter une ligne"
+                                    Content="+"
+                                    Click="AddHeaderRow_Click"/>
 
-                                    <DataGridTextColumn
-                                        Header="Key"
-                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="2*"
-                                        MinWidth="160">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Key}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                <DataGrid
+                                    x:Name="HeadersGrid"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="True"
+                                    CanUserDeleteRows="True"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="220"
+                                    RowHeight="38"
+                                    LostFocus="HeadersGrid_LostFocus">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn
+                                            Header="On"
+                                            Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="Auto"/>
 
-                                    <DataGridTextColumn
-                                        Header="Value"
-                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        Width="3*"
-                                        MinWidth="200">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="ToolTip" Value="{Binding Value}"/>
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="2*"
+                                            MinWidth="160">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="3*"
+                                            MinWidth="200">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock
+                                    x:Name="ToggleAutoHeadersText"
+                                    Margin="0,10,0,6"
+                                    FontSize="11"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Cursor="Hand"
+                                    Text="Masquer les en-têtes générés automatiquement"
+                                    MouseLeftButtonDown="ToggleAutoHeaders_MouseLeftButtonDown"/>
+
+                                <DataGrid
+                                    x:Name="AutoHeadersGrid"
+                                    IsReadOnly="True"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="False"
+                                    CanUserDeleteRows="False"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    MaxHeight="200"
+                                    RowHeight="34"
+                                    Opacity="0.7"
+                                    ToolTip="En-têtes ajoutés automatiquement par KubaToolKit à l'envoi ; non modifiables ici.">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key}"
+                                            Width="2*"
+                                            MinWidth="160"/>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value}"
+                                            Width="3*"
+                                            MinWidth="200"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
                         </Expander>
 
                         <!-- Body -->
@@ -383,7 +444,8 @@
                                 FontFamily="Cascadia Code, Consolas"
                                 FontSize="13"
                                 MinHeight="150"
-                                MaxHeight="300"/>
+                                MaxHeight="300"
+                                TextChanged="BodyTextBox_TextChanged"/>
                         </Expander>
 
                     </StackPanel>
