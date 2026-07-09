@@ -48,6 +48,8 @@ public partial class MainWindow
 
     public MainWindow()
     {
+        Logger.Info("MainWindow: InitializeComponent.");
+
         InitializeComponent();
 
         _dashboardView = _modules.OfType<DashboardModule>().Single().TypedView;
@@ -57,6 +59,8 @@ public partial class MainWindow
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
         _apiClientView = _modules.OfType<ApiClientModule>().Single().TypedView;
 
+        Logger.Debug($"MainWindow: {_modules.Count} module(s) instancié(s).");
+
         foreach (var module in _modules)
         {
             module.View.Visibility = Visibility.Collapsed;
@@ -64,6 +68,8 @@ public partial class MainWindow
         }
 
         _dashboardView.Visibility = Visibility.Visible;
+
+        Logger.Info("MainWindow: constructeur terminé.");
 
         _cloudWatchView.GetDateRange =
             () => (StartDatePicker.SelectedDate, StartTimeTextBox.Text, EndDatePicker.SelectedDate, EndTimeTextBox.Text);
@@ -111,9 +117,13 @@ MainWindow_Loaded(
             ModeRadio_Checked(
                 this,
                 new RoutedEventArgs());
+
+            Logger.Info("MainWindow: chargement initial terminé.");
         }
         catch (Exception ex)
         {
+            Logger.Error("MainWindow: échec du chargement initial.", ex);
+
             MessageBox.Show(
                 ex.ToString(),
                 "Startup error");

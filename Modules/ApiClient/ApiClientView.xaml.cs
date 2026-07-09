@@ -28,6 +28,8 @@ public partial class ApiClientView
 
     public ApiClientView()
     {
+        Logger.Debug("ApiClientView: InitializeComponent.");
+
         InitializeComponent();
 
         HeadersGrid.ItemsSource = _headers;
@@ -46,6 +48,8 @@ public partial class ApiClientView
         LoadCollectionsAndEnvironments();
 
         RefreshAutoHeaders();
+
+        Logger.Debug("ApiClientView: constructeur terminé.");
     }
 
     // Utilise des accès null-conditionnels : lors du parsing XAML initial,
@@ -631,6 +635,8 @@ public partial class ApiClientView
         }
         catch (Exception ex)
         {
+            Logger.Error("ApiClientView: échec du chargement des collections/environnements.", ex);
+
             MessageBox.Show(
                 ex.Message,
                 "Collections loading error");
@@ -1224,6 +1230,8 @@ public partial class ApiClientView
                     GraphQlVariables = GraphQlVariablesTextBox.Text
                 };
 
+            Logger.Debug($"ApiClientView: envoi {method} {url}");
+
             var result =
                 await _apiClientService.SendAsync(
                     method,
@@ -1233,6 +1241,8 @@ public partial class ApiClientView
                     auth,
                     variables,
                     _sendCancellation.Token);
+
+            Logger.Info($"ApiClientView: {method} {url} -> {result.StatusDisplay} ({result.ElapsedMs} ms)");
 
             StatusTextBlock.Text = result.StatusDisplay;
             StatusBadge.Background = result.StatusBackground;
@@ -1245,9 +1255,12 @@ public partial class ApiClientView
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug($"ApiClientView: requête {method} {url} annulée.");
         }
         catch (Exception ex)
         {
+            Logger.Error($"ApiClientView: échec de la requête {method} {url}.", ex);
+
             ResponseHeadersTextBox.Text = "";
             ResponseBodyEditor.Text = "";
             MessageBox.Show(
