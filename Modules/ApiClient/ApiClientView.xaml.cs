@@ -1494,6 +1494,7 @@ public partial class ApiClientView
 
         RefreshResponseView();
         UpdatePaginationControls();
+        UpdateSizeSortControls();
     }
 
     /// Détecte comment paginer la requête actuelle à partir de ses
@@ -1679,6 +1680,152 @@ public partial class ApiClientView
         // DataGrid à relire la valeur affichée.
         ParamsGrid.Items.Refresh();
 
+        SyncUrlFromParams();
+
+        await SendAsync();
+    }
+
+    /// Un param de taille de page parmi les mêmes noms déjà reconnus
+    /// comme pas d'"offset" dans DetectPagination (size/limit/pageSize).
+    private HeaderItem?
+    DetectSizeParam()
+    {
+        var sizeKeys = new[] { "size", "limit", "pagesize" };
+
+        return _params.FirstOrDefault(p =>
+            p.Enabled
+            && p.Key != null
+            && sizeKeys.Contains(p.Key.Trim().ToLowerInvariant()));
+    }
+
+    /// Un param de tri parmi les noms usuels, dont la valeur actuelle
+    /// ressemble déjà à "asc"/"desc" -- sinon impossible de savoir sans
+    /// se tromper si l'API attend "1"/"-1", "+champ"/"-champ", etc.
+    private HeaderItem?
+    DetectSortParam()
+    {
+        var sortKeys = new[] { "sort", "order", "direction", "sortdirection", "sortorder" };
+
+        return _params.FirstOrDefault(p =>
+            p.Enabled
+            && p.Key != null
+            && sortKeys.Contains(p.Key.Trim().ToLowerInvariant())
+            && p.Value != null
+            && (string.Equals(p.Value.Trim(), "asc", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.Value.Trim(), "desc", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private void
+    UpdateSizeSortControls()
+    {
+        var sizeParam = DetectSizeParam();
+
+        PageSizeLabel.Visibility = sizeParam != null ? Visibility.Visible : Visibility.Collapsed;
+        PageSizeBox.Visibility = sizeParam != null ? Visibility.Visible : Visibility.Collapsed;
+
+        if (sizeParam != null)
+        {
+            PageSizeBox.Text = sizeParam.Value;
+        }
+
+        var sortParam = DetectSortParam();
+
+        SortToggleButton.Visibility = sortParam != null ? Visibility.Visible : Visibility.Collapsed;
+
+        if (sortParam != null)
+        {
+            var isDescending = string.Equals(sortParam.Value?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+
+            SortToggleButton.Content = isDescending ? "Tri ▼ Décroissant" : "Tri ▲ Croissant";
+        }
+    }
+
+    /// Changer la taille de page ou le tri invalide la position actuelle
+    /// dans la liste : repartir de la première page évite un décalage
+    /// incohérent (offset 40 avec une taille de page qui vient de
+    /// changer, par exemple).
+    private void
+    ResetPageToStart()
+    {
+        var pagination = DetectPagination();
+
+        if (pagination != null)
+        {
+            pagination.Value.Param.Value = "0";
+        }
+    }
+
+    private async void
+    PageSizeBox_KeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        await ApplyPageSizeAsync();
+    }
+
+    private async void
+    PageSizeBox_LostFocus(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyPageSizeAsync();
+
+    private async Task
+    ApplyPageSizeAsync()
+    {
+        var sizeParam = DetectSizeParam();
+
+        if (sizeParam == null)
+        {
+            return;
+        }
+
+        if (!int.TryParse(PageSizeBox.Text.Trim(), out var newSize)
+            || newSize <= 0)
+        {
+            PageSizeBox.Text = sizeParam.Value;
+
+            return;
+        }
+
+        if (sizeParam.Value == newSize.ToString())
+        {
+            return;
+        }
+
+        sizeParam.Value = newSize.ToString();
+
+        ResetPageToStart();
+        ParamsGrid.Items.Refresh();
+        SyncUrlFromParams();
+
+        await SendAsync();
+    }
+
+    private async void
+    SortToggle_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var sortParam = DetectSortParam();
+
+        if (sortParam == null)
+        {
+            return;
+        }
+
+        var isDescending = string.Equals(sortParam.Value?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+
+        sortParam.Value = isDescending ? "asc" : "desc";
+
+        ResetPageToStart();
+        ParamsGrid.Items.Refresh();
         SyncUrlFromParams();
 
         await SendAsync();

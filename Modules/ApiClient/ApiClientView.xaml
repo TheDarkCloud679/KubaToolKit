@@ -1071,6 +1071,38 @@
                                 Padding="8,0"
                                 Height="24"
                                 FontSize="11"
+                                Margin="0,0,6,0"
+                                Visibility="Collapsed"/>
+
+                            <TextBlock
+                                x:Name="PageSizeLabel"
+                                Text="Taille"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Margin="0,0,4,0"
+                                Visibility="Collapsed"/>
+
+                            <TextBox
+                                x:Name="PageSizeBox"
+                                Width="42"
+                                Height="22"
+                                FontSize="11"
+                                Padding="4,0"
+                                VerticalContentAlignment="Center"
+                                ToolTip="Taille de page (Entrée pour appliquer)"
+                                Margin="0,0,10,0"
+                                KeyDown="PageSizeBox_KeyDown"
+                                LostFocus="PageSizeBox_LostFocus"
+                                Visibility="Collapsed"/>
+
+                            <Button
+                                x:Name="SortToggleButton"
+                                Click="SortToggle_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="8,0"
+                                Height="24"
+                                FontSize="11"
                                 Margin="0,0,16,0"
                                 Visibility="Collapsed"/>
 
