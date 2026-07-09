@@ -118,6 +118,10 @@
                                 x:Name="FolderAuthMenuItem"
                                 Header="Modifier l'authentification"
                                 Click="EditFolderAuth_Click"/>
+                            <MenuItem
+                                x:Name="ApplyBearerToAllMenuItem"
+                                Header="Appliquer Bearer Token à toutes les requêtes"
+                                Click="ApplyBearerTokenToAllRequests_Click"/>
                             <Separator/>
                             <MenuItem
                                 x:Name="DeleteMenuItem"

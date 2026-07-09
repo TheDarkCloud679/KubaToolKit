@@ -875,6 +875,7 @@ public partial class ApiClientView
         // Pour une requête, l'onglet Auth de l'éditeur suffit déjà ; ce
         // menu ne sert qu'à définir l'auth partagée d'un dossier/collection.
         FolderAuthMenuItem.IsEnabled = isFolder;
+        ApplyBearerToAllMenuItem.IsEnabled = isFolder;
     }
 
     private void
@@ -923,6 +924,69 @@ public partial class ApiClientView
             SaveCollectionOf(node);
             RefreshAutoHeaders();
         }
+    }
+
+    private void
+    ApplyBearerTokenToAllRequests_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var token =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Bearer Token pour toutes les requêtes",
+                "Token (une variable {{...}} d'environnement est possible) :",
+                "{{TMP_AUTH_Service_IdToken}}");
+
+        if (token == null)
+        {
+            return;
+        }
+
+        var count = ApplyBearerTokenRecursive(target, token);
+
+        SaveCollectionOf(target);
+        RefreshAutoHeaders();
+
+        MessageBox.Show(
+            $"{count} requête(s) mise(s) à jour sous « {target.Name} ».",
+            "Bearer Token appliqué");
+    }
+
+    private static int
+    ApplyBearerTokenRecursive(
+        CollectionNode node,
+        string token)
+    {
+        var count = 0;
+
+        foreach (var child in node.Children)
+        {
+            if (child.IsFavoritesFolder)
+            {
+                // Mêmes objets que sous leur vrai dossier : les compter ici
+                // aussi les compterait deux fois.
+                continue;
+            }
+
+            if (child.IsRequest)
+            {
+                child.Auth = new AuthConfig { Type = AuthType.Bearer, BearerToken = token };
+                count++;
+            }
+            else
+            {
+                count += ApplyBearerTokenRecursive(child, token);
+            }
+        }
+
+        return count;
     }
 
     private void
