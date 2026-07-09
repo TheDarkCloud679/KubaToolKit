@@ -779,6 +779,13 @@ public partial class ApiClientView
                 BodyRawRadio.IsChecked = true;
                 break;
         }
+
+        // Ne pas dépendre uniquement des événements Checked/SelectionChanged
+        // déclenchés ci-dessus : si la requête chargée a la même méthode ou
+        // le même mode de body que la précédente, ils ne se redéclenchent
+        // pas (la valeur ne change pas), et l'aperçu resterait basé sur
+        // l'état d'avant le chargement.
+        RefreshAutoHeaders();
     }
 
     /// Un clic droit ne sélectionne pas le TreeViewItem visé par défaut en

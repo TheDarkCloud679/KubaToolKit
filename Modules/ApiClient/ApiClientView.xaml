@@ -137,7 +137,7 @@
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="RequestConfigRow" Height="Auto" MinHeight="60"/>
+                <RowDefinition x:Name="RequestConfigRow" Height="280" MinHeight="60"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="ResponseRow" Height="*" MinHeight="120"/>
             </Grid.RowDefinitions>
