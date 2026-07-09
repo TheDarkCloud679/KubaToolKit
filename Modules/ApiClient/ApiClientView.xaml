@@ -322,7 +322,7 @@
                                         Grid.Row="1"
                                         Height="6"
                                         HorizontalAlignment="Stretch"
-                                        ResizeBehavior="Previous"
+                                        ResizeBehavior="PreviousAndCurrent"
                                         ResizeDirection="Rows"
                                         ToolTip="Glisser pour redimensionner"/>
                                 </Grid>
@@ -488,7 +488,7 @@
                                         Grid.Row="1"
                                         Height="6"
                                         HorizontalAlignment="Stretch"
-                                        ResizeBehavior="Previous"
+                                        ResizeBehavior="PreviousAndCurrent"
                                         ResizeDirection="Rows"
                                         ToolTip="Glisser pour redimensionner"/>
                                 </Grid>
@@ -541,7 +541,7 @@
                                         Grid.Row="1"
                                         Height="6"
                                         HorizontalAlignment="Stretch"
-                                        ResizeBehavior="Previous"
+                                        ResizeBehavior="PreviousAndCurrent"
                                         ResizeDirection="Rows"
                                         ToolTip="Glisser pour redimensionner"/>
                                 </Grid>
@@ -696,7 +696,7 @@
                                             Grid.Row="1"
                                             Height="6"
                                             HorizontalAlignment="Stretch"
-                                            ResizeBehavior="Previous"
+                                            ResizeBehavior="PreviousAndCurrent"
                                             ResizeDirection="Rows"
                                             ToolTip="Glisser pour redimensionner"/>
                                     </Grid>
@@ -740,7 +740,7 @@
                                             Grid.Row="1"
                                             Height="6"
                                             HorizontalAlignment="Stretch"
-                                            ResizeBehavior="Previous"
+                                            ResizeBehavior="PreviousAndCurrent"
                                             ResizeDirection="Rows"
                                             ToolTip="Glisser pour redimensionner"/>
                                     </Grid>
