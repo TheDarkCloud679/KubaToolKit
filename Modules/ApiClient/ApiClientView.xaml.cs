@@ -1782,23 +1782,6 @@ public partial class ApiClientView
         }
     }
 
-    /// La molette par défaut de ScrollViewer avance de 3 lignes (~48px)
-    /// par cran, beaucoup trop lent pour parcourir une longue réponse en
-    /// vue Cartes : on multiplie le déplacement.
-    private const double ResponseScrollSpeedMultiplier = 3.0;
-
-    private void
-    ResponsePrettyScroll_PreviewMouseWheel(
-        object sender,
-        MouseWheelEventArgs e)
-    {
-        ResponsePrettyScroll.ScrollToVerticalOffset(
-            ResponsePrettyScroll.VerticalOffset
-            - e.Delta / 120.0 * 48 * ResponseScrollSpeedMultiplier);
-
-        e.Handled = true;
-    }
-
     /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
     /// pour chaque règle activée (grille "Extraction → Environnement"),
     /// copie le champ JSON de premier niveau correspondant de la réponse
