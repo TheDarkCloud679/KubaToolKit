@@ -1500,10 +1500,26 @@ public partial class ApiClientView
                     && !string.IsNullOrWhiteSpace(r.Value))
                 .ToList();
 
-        if (rules.Count == 0
-            || EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+        Logger.Debug(
+            $"ApiClientView: extraction post-réponse -- {rules.Count} règle(s) active(s) "
+            + $"({string.Join(", ", rules.Select(r => $"{r.Key}->{r.Value}"))}), "
+            + $"environnement sélectionné = "
+            + $"{(EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name ?? "(aucun)"}.");
+
+        if (rules.Count == 0)
+        {
+            Logger.Debug(
+                "ApiClientView: extraction ignorée -- aucune règle active sur cette requête.");
+
+            return;
+        }
+
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
             || string.IsNullOrEmpty(environment.FilePath))
         {
+            Logger.Debug(
+                "ApiClientView: extraction ignorée -- aucun environnement (avec fichier) sélectionné.");
+
             return;
         }
 
@@ -1513,13 +1529,19 @@ public partial class ApiClientView
         {
             root = JsonDocument.Parse(responseBody).RootElement;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Logger.Debug(
+                $"ApiClientView: extraction ignorée -- réponse non-JSON ({ex.Message}).");
+
             return;
         }
 
         if (root.ValueKind != JsonValueKind.Object)
         {
+            Logger.Debug(
+                $"ApiClientView: extraction ignorée -- réponse JSON de type {root.ValueKind}, objet attendu.");
+
             return;
         }
 
@@ -1529,6 +1551,9 @@ public partial class ApiClientView
         {
             if (!root.TryGetProperty(rule.Key, out var valueElement))
             {
+                Logger.Debug(
+                    $"ApiClientView: extraction -- champ '{rule.Key}' absent du premier niveau de la réponse.");
+
                 continue;
             }
 
@@ -1556,11 +1581,18 @@ public partial class ApiClientView
                     new HeaderItem { Enabled = true, Key = rule.Value, Value = value });
             }
 
+            Logger.Debug(
+                $"ApiClientView: extraction -- '{rule.Key}' = '{value}' -> variable '{rule.Value}' "
+                + $"({(existing != null ? "mise à jour" : "créée")}).");
+
             updated++;
         }
 
         if (updated == 0)
         {
+            Logger.Debug(
+                "ApiClientView: extraction -- aucune règle ne correspondait à un champ de la réponse, rien à sauvegarder.");
+
             return;
         }
 
@@ -1569,7 +1601,7 @@ public partial class ApiClientView
             _collectionStorage.SaveEnvironment(environment);
 
             Logger.Info(
-                $"ApiClientView: environnement '{environment.Name}' mis à jour ({updated} variable(s) extraite(s) de la réponse).");
+                $"ApiClientView: environnement '{environment.Name}' mis à jour ({updated} variable(s) extraite(s) de la réponse) -> fichier '{environment.FilePath}'.");
         }
         catch (Exception ex)
         {
