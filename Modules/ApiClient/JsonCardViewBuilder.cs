@@ -7,6 +7,17 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ApiClient;
 
+/// Un raccourci de navigation vers un bloc de la vue Cartes (voir
+/// JsonCardViewBuilder.Build) : Element.BringIntoView() fait défiler
+/// automatiquement le ScrollViewer ambiant jusqu'à ce bloc.
+public sealed record JsonCardAnchor(
+    string Label,
+    FrameworkElement Element);
+
+public sealed record JsonCardViewResult(
+    UIElement Root,
+    IReadOnlyList<JsonCardAnchor> Anchors);
+
 /// Transforme un corps de réponse JSON en une arborescence de "cartes"
 /// WPF lisibles (un bloc par objet/élément de tableau, badges colorés
 /// pour les champs d'état, dates reformatées) plutôt que le JSON brut.
@@ -31,7 +42,7 @@ public static class JsonCardViewBuilder
 
     /// Null si le texte n'est pas du JSON valide (l'appelant doit alors
     /// se rabattre sur la vue brute).
-    public static UIElement?
+    public static JsonCardViewResult?
     Build(
         string json)
     {
@@ -54,20 +65,25 @@ public static class JsonCardViewBuilder
         using (doc)
         {
             var root = doc.RootElement;
+            var anchors = new List<JsonCardAnchor>();
 
-            return root.ValueKind switch
-            {
-                JsonValueKind.Object => BuildObjectBody(root, 0),
-                JsonValueKind.Array => BuildArrayItemsPanel(root, 0),
-                _ => MutedText(root.GetRawText())
-            };
+            UIElement rootElement =
+                root.ValueKind switch
+                {
+                    JsonValueKind.Object => BuildObjectBody(root, 0, anchors),
+                    JsonValueKind.Array => BuildArrayItemsPanel(root, 0, anchors),
+                    _ => MutedText(root.GetRawText())
+                };
+
+            return new JsonCardViewResult(rootElement, anchors);
         }
     }
 
     private static Panel
     BuildObjectBody(
         JsonElement obj,
-        int depth)
+        int depth,
+        List<JsonCardAnchor> anchors)
     {
         var panel = new StackPanel();
 
@@ -108,7 +124,7 @@ public static class JsonCardViewBuilder
 
         foreach (var prop in complexProps)
         {
-            var block = BuildComplexBlock(prop.Name, prop.Value, depth);
+            var block = BuildComplexBlock(prop.Name, prop.Value, depth, anchors);
 
             block.Margin = new Thickness(0, scalarProps.Count > 0 || panel.Children.Count > 1 ? 10 : 0, 0, 0);
 
@@ -249,34 +265,43 @@ public static class JsonCardViewBuilder
             _ => element.GetRawText()
         };
 
+    /// Les blocs "nommés" (propriété d'objet -> objet ou tableau) jusqu'à
+    /// une profondeur de 1 deviennent des raccourcis dans la barre de
+    /// navigation rapide au-dessus de la réponse ; au-delà, une réponse
+    /// très imbriquée en produirait beaucoup trop pour être utile.
+    private const int MaxAnchorDepth = 1;
+
     private static Border
     BuildComplexBlock(
         string propertyName,
         JsonElement value,
-        int depth)
+        int depth,
+        List<JsonCardAnchor> anchors)
     {
-        if (value.ValueKind == JsonValueKind.Object)
+        var label = Humanize(propertyName);
+
+        Border card =
+            value.ValueKind == JsonValueKind.Object
+                ? BuildCard(label, null, BuildObjectBody(value, depth + 1, anchors), depth)
+                : BuildCard(
+                    $"{label} ({value.GetArrayLength()})",
+                    null,
+                    BuildArrayItemsPanel(value, depth + 1, anchors),
+                    depth);
+
+        if (depth <= MaxAnchorDepth)
         {
-            return BuildCard(
-                Humanize(propertyName),
-                null,
-                BuildObjectBody(value, depth + 1),
-                depth);
+            anchors.Add(new JsonCardAnchor(label, card));
         }
 
-        var items = value.EnumerateArray().ToList();
-
-        return BuildCard(
-            $"{Humanize(propertyName)} ({items.Count})",
-            null,
-            BuildArrayItemsPanel(value, depth + 1),
-            depth);
+        return card;
     }
 
     private static Panel
     BuildArrayItemsPanel(
         JsonElement array,
-        int depth)
+        int depth,
+        List<JsonCardAnchor> anchors)
     {
         var itemsPanel = new StackPanel();
         var items = array.EnumerateArray().ToList();
@@ -300,11 +325,11 @@ public static class JsonCardViewBuilder
             {
                 var (headerText, badge) = BuildArrayItemHeader(item, i);
 
-                child = BuildCard(headerText, badge, BuildObjectBody(item, depth + 1), depth);
+                child = BuildCard(headerText, badge, BuildObjectBody(item, depth + 1, anchors), depth);
             }
             else if (item.ValueKind == JsonValueKind.Array)
             {
-                child = BuildCard($"[{i}]", null, BuildArrayItemsPanel(item, depth + 1), depth);
+                child = BuildCard($"[{i}]", null, BuildArrayItemsPanel(item, depth + 1, anchors), depth);
             }
             else
             {

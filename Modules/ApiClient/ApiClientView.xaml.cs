@@ -1509,11 +1509,12 @@ public partial class ApiClientView
     {
         // Le RadioButton "Cartes" a IsChecked="True" dans le XAML : son
         // événement Checked se déclenche pendant InitializeComponent(),
-        // avant que ResponseBodyEditor/ResponsePrettyScroll (plus bas
+        // avant que ResponseBodyEditor/ResponsePrettyContainer (plus bas
         // dans l'arbre) n'existent encore.
         if (ResponseBodyEditor == null
-            || ResponsePrettyScroll == null
-            || ResponsePrettyContent == null)
+            || ResponsePrettyContainer == null
+            || ResponsePrettyContent == null
+            || ResponseAnchorsPanel == null)
         {
             return;
         }
@@ -1521,18 +1522,18 @@ public partial class ApiClientView
         if (ResponseViewRawRadio?.IsChecked == true)
         {
             ResponseBodyEditor.Visibility = Visibility.Visible;
-            ResponsePrettyScroll.Visibility = Visibility.Collapsed;
+            ResponsePrettyContainer.Visibility = Visibility.Collapsed;
 
             return;
         }
 
         ResponseBodyEditor.Visibility = Visibility.Collapsed;
-        ResponsePrettyScroll.Visibility = Visibility.Visible;
+        ResponsePrettyContainer.Visibility = Visibility.Visible;
 
         var cardsView = JsonCardViewBuilder.Build(_lastResponseBody);
 
         ResponsePrettyContent.Content =
-            cardsView
+            cardsView?.Root
             ?? new TextBlock
             {
                 Text = "Réponse non-JSON : voir la vue \"Brut\".",
@@ -1540,6 +1541,73 @@ public partial class ApiClientView
                 Foreground = (Brush)FindResource("TextMutedBrush"),
                 Margin = new Thickness(8)
             };
+
+        BuildResponseAnchorsBar(cardsView?.Anchors);
+    }
+
+    /// Barre de raccourcis au-dessus de la vue Cartes : un chip par bloc
+    /// nommé (transitAccount, productContainers...) qui fait défiler
+    /// directement jusqu'à ce bloc via BringIntoView(), plutôt que de
+    /// devoir tout parcourir à la molette pour une réponse volumineuse.
+    private void
+    BuildResponseAnchorsBar(
+        IReadOnlyList<JsonCardAnchor>? anchors)
+    {
+        ResponseAnchorsPanel.Children.Clear();
+
+        if (anchors == null
+            || anchors.Count == 0)
+        {
+            ResponseAnchorsPanel.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        ResponseAnchorsPanel.Visibility = Visibility.Visible;
+
+        foreach (var anchor in anchors)
+        {
+            var target = anchor.Element;
+
+            var chip =
+                new Border
+                {
+                    Background = (Brush)FindResource("AccentSoftBrush"),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(10, 4, 10, 4),
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Cursor = Cursors.Hand,
+                    Child = new TextBlock
+                    {
+                        Text = anchor.Label,
+                        FontSize = 12,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = (Brush)FindResource("AccentBrush")
+                    }
+                };
+
+            chip.MouseLeftButtonUp +=
+                (_, _) => target.BringIntoView();
+
+            ResponseAnchorsPanel.Children.Add(chip);
+        }
+    }
+
+    /// La molette par défaut de ScrollViewer avance de 3 lignes (~48px)
+    /// par cran, beaucoup trop lent pour parcourir une longue réponse en
+    /// vue Cartes : on multiplie le déplacement.
+    private const double ResponseScrollSpeedMultiplier = 3.0;
+
+    private void
+    ResponsePrettyScroll_PreviewMouseWheel(
+        object sender,
+        MouseWheelEventArgs e)
+    {
+        ResponsePrettyScroll.ScrollToVerticalOffset(
+            ResponsePrettyScroll.VerticalOffset
+            - e.Delta / 120.0 * 48 * ResponseScrollSpeedMultiplier);
+
+        e.Handled = true;
     }
 
     /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :

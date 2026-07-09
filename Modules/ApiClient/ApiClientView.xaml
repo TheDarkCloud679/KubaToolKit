@@ -1052,13 +1052,27 @@
                             Padding="8"
                             Visibility="Collapsed"/>
 
-                        <ScrollViewer
-                            x:Name="ResponsePrettyScroll"
-                            HorizontalScrollBarVisibility="Auto"
-                            VerticalScrollBarVisibility="Auto"
-                            Padding="4">
-                            <ContentControl x:Name="ResponsePrettyContent"/>
-                        </ScrollViewer>
+                        <Grid x:Name="ResponsePrettyContainer">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <WrapPanel
+                                x:Name="ResponseAnchorsPanel"
+                                Grid.Row="0"
+                                Margin="0,0,0,8"/>
+
+                            <ScrollViewer
+                                x:Name="ResponsePrettyScroll"
+                                Grid.Row="1"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto"
+                                PreviewMouseWheel="ResponsePrettyScroll_PreviewMouseWheel"
+                                Padding="4">
+                                <ContentControl x:Name="ResponsePrettyContent"/>
+                            </ScrollViewer>
+                        </Grid>
                     </Grid>
                 </Grid>
             </Border>
