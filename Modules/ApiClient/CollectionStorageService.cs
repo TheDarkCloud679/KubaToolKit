@@ -203,7 +203,18 @@ public class CollectionStorageService
                         BodyMode = bodyMode,
                         BodyFormData = bodyFormData,
                         IsFavorite = item.Request.Favorite == true,
-                        Auth = ParseAuth(item.Request.Auth)
+                        Auth = ParseAuth(item.Request.Auth),
+
+                        PostResponseExtractions =
+                            item.Request.Extract?
+                                .Select(h => new HeaderItem
+                                {
+                                    Enabled = !h.Disabled,
+                                    Key = h.Key,
+                                    Value = h.Value
+                                })
+                                .ToList()
+                            ?? new List<HeaderItem>()
                     });
             }
             else if (item.Item != null)
@@ -530,6 +541,25 @@ public class CollectionStorageService
                 if (node.IsFavorite)
                 {
                     request["_kubatoolkit_favorite"] = true;
+                }
+
+                var extractions =
+                    node.PostResponseExtractions
+                        .Where(h => !string.IsNullOrWhiteSpace(h.Key))
+                        .ToList();
+
+                if (extractions.Count > 0)
+                {
+                    request["_kubatoolkit_extract"] =
+                        new JsonArray(
+                            extractions
+                                .Select(h => (JsonNode)new JsonObject
+                                {
+                                    ["key"] = h.Key,
+                                    ["value"] = h.Value,
+                                    ["disabled"] = !h.Enabled
+                                })
+                                .ToArray());
                 }
 
                 var requestAuthNode = BuildAuthNode(node.Auth);

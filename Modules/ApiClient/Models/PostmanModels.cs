@@ -61,10 +61,13 @@ public class PostmanRequest
     [JsonPropertyName("url")]
     public JsonElement Url { get; set; }
 
-    // Champ propre à KubaToolKit (absent des exports Postman standards,
-    // ignoré sans risque si le fichier est réimporté dans Postman).
+    // Champs propres à KubaToolKit (absents des exports Postman standards,
+    // ignorés sans risque si le fichier est réimporté dans Postman).
     [JsonPropertyName("_kubatoolkit_favorite")]
     public bool? Favorite { get; set; }
+
+    [JsonPropertyName("_kubatoolkit_extract")]
+    public List<PostmanHeader>? Extract { get; set; }
 
     [JsonPropertyName("auth")]
     public PostmanAuth? Auth { get; set; }

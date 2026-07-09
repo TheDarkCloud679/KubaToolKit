@@ -2,6 +2,7 @@ using KubaToolKit.Modules.ApiClient.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,6 +20,7 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
     private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
+    private readonly ObservableCollection<HeaderItem> _extractions = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
     private bool _syncingUrlAndParams;
@@ -41,6 +43,7 @@ public partial class ApiClientView
         ParamsGrid.ItemsSource = _params;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
         BodyFormGrid.ItemsSource = _bodyFormData;
+        ExtractionsGrid.ItemsSource = _extractions;
         CollectionsTreeView.ItemsSource = _collections;
 
         _headers.CollectionChanged += (_, __) => RefreshAutoHeaders();
@@ -129,6 +132,14 @@ public partial class ApiClientView
     {
         (GetSelectedBodyMode() == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
             .Add(new HeaderItem());
+    }
+
+    private void
+    AddExtractionRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _extractions.Add(new HeaderItem());
     }
 
     private void
@@ -813,6 +824,13 @@ public partial class ApiClientView
         ApiKeyNameTextBox.Text = string.IsNullOrEmpty(node.Auth.ApiKeyName) ? "X-API-Key" : node.Auth.ApiKeyName;
         ApiKeyValueTextBox.Text = node.Auth.ApiKeyValue;
 
+        _extractions.Clear();
+
+        foreach (var extraction in node.PostResponseExtractions)
+        {
+            _extractions.Add(extraction);
+        }
+
         AuthTypeCombo.SelectedIndex = node.Auth.Type switch
         {
             AuthType.None => 1,
@@ -1098,7 +1116,12 @@ public partial class ApiClientView
                         .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
                         .ToList(),
 
-                Auth = BuildAuthConfig()
+                Auth = BuildAuthConfig(),
+
+                PostResponseExtractions =
+                    _extractions
+                        .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
+                        .ToList()
             };
 
         target.Children.Add(newNode);
@@ -1143,6 +1166,11 @@ public partial class ApiClientView
                 .ToList();
 
         node.Auth = BuildAuthConfig();
+
+        node.PostResponseExtractions =
+            _extractions
+                .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
+                .ToList();
 
         // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
         RefreshNodeDisplay(node);
@@ -1407,6 +1435,11 @@ public partial class ApiClientView
             ResponseHeadersTextBox.Text = result.Headers;
 
             LoadResponseBody(result.Body);
+
+            if (result.StatusCode is >= 200 and < 300)
+            {
+                ApplyPostResponseExtractions(result.Body);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -1449,6 +1482,99 @@ public partial class ApiClientView
         ResponseBodyEditor.TextArea
             .TextView
             .Redraw();
+    }
+
+    /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
+    /// pour chaque règle activée (grille "Extraction → Environnement"),
+    /// copie le champ JSON de premier niveau correspondant de la réponse
+    /// dans la variable d'environnement visée (créée si elle n'existe pas
+    /// encore), puis sauvegarde le fichier d'environnement.
+    private void
+    ApplyPostResponseExtractions(
+        string responseBody)
+    {
+        var rules =
+            _extractions
+                .Where(r => r.Enabled
+                    && !string.IsNullOrWhiteSpace(r.Key)
+                    && !string.IsNullOrWhiteSpace(r.Value))
+                .ToList();
+
+        if (rules.Count == 0
+            || EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || string.IsNullOrEmpty(environment.FilePath))
+        {
+            return;
+        }
+
+        JsonElement root;
+
+        try
+        {
+            root = JsonDocument.Parse(responseBody).RootElement;
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        var updated = 0;
+
+        foreach (var rule in rules)
+        {
+            if (!root.TryGetProperty(rule.Key, out var valueElement))
+            {
+                continue;
+            }
+
+            var value =
+                valueElement.ValueKind switch
+                {
+                    JsonValueKind.String => valueElement.GetString() ?? "",
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    JsonValueKind.Null => "",
+                    _ => valueElement.GetRawText()
+                };
+
+            var existing =
+                environment.Variables.FirstOrDefault(v => v.Key == rule.Value);
+
+            if (existing != null)
+            {
+                existing.Enabled = true;
+                existing.Value = value;
+            }
+            else
+            {
+                environment.Variables.Add(
+                    new HeaderItem { Enabled = true, Key = rule.Value, Value = value });
+            }
+
+            updated++;
+        }
+
+        if (updated == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _collectionStorage.SaveEnvironment(environment);
+
+            Logger.Info(
+                $"ApiClientView: environnement '{environment.Name}' mis à jour ({updated} variable(s) extraite(s) de la réponse).");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ApiClientView: échec de la mise à jour de l'environnement après extraction.", ex);
+        }
     }
 
     /// État brut du panneau Auth (peut être "Inherit") : à utiliser pour

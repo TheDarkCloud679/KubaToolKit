@@ -16,6 +16,13 @@ public class CollectionNode
     public string BodyMode { get; set; } = "raw";
     public List<HeaderItem> BodyFormData { get; set; } = new();
 
+    // Règles d'extraction post-réponse (équivalent simplifié d'un script
+    // Postman "pm.environment.set(...)") : Key = nom du champ JSON de
+    // premier niveau dans le corps de la réponse, Value = nom de la
+    // variable de l'environnement sélectionné à créer/mettre à jour avec
+    // sa valeur après un envoi réussi.
+    public List<HeaderItem> PostResponseExtractions { get; set; } = new();
+
     // Valable pour n'importe quel nœud (requête, dossier ou collection) :
     // AuthType.Inherit remonte via Parent jusqu'au premier ancêtre qui
     // définit un auth concret, comme Postman ("Inherit auth from parent").
