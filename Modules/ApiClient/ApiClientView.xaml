@@ -114,6 +114,10 @@
                                 x:Name="RenameMenuItem"
                                 Header="Renommer"
                                 Click="RenameNode_Click"/>
+                            <MenuItem
+                                x:Name="FolderAuthMenuItem"
+                                Header="Modifier l'authentification"
+                                Click="EditFolderAuth_Click"/>
                             <Separator/>
                             <MenuItem
                                 x:Name="DeleteMenuItem"
@@ -337,15 +341,24 @@
                             <StackPanel Margin="4,10,4,4">
                                 <ComboBox
                                     x:Name="AuthTypeCombo"
-                                    Width="200"
+                                    Width="220"
                                     HorizontalAlignment="Left"
                                     SelectedIndex="0"
                                     SelectionChanged="AuthTypeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Inherit auth from parent"/>
                                     <ComboBoxItem Content="No Auth"/>
                                     <ComboBoxItem Content="Bearer Token"/>
                                     <ComboBoxItem Content="Basic Auth"/>
                                     <ComboBoxItem Content="API Key"/>
                                 </ComboBox>
+
+                                <TextBlock
+                                    x:Name="InheritAuthPanel"
+                                    Margin="0,10,0,0"
+                                    TextWrapping="Wrap"
+                                    FontSize="12"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Text="L'en-tête d'autorisation sera calculé à l'envoi à partir de l'authentification définie sur le dossier ou la collection parente (clic droit dessus &#8594; « Modifier l'authentification »)."/>
 
                                 <StackPanel
                                     x:Name="BearerAuthPanel"

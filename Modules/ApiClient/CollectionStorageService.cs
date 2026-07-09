@@ -102,7 +102,8 @@ public class CollectionStorageService
                                 ? Path.GetFileNameWithoutExtension(file)
                                 : collection.Info!.Name,
                         IsRequest = false,
-                        FilePath = file
+                        FilePath = file,
+                        Auth = ParseAuth(collection.Auth)
                     };
 
                 root.Children = BuildNodes(collection.Item, root);
@@ -201,7 +202,8 @@ public class CollectionStorageService
                         Body = body?.Raw ?? "",
                         BodyMode = bodyMode,
                         BodyFormData = bodyFormData,
-                        IsFavorite = item.Request.Favorite == true
+                        IsFavorite = item.Request.Favorite == true,
+                        Auth = ParseAuth(item.Request.Auth)
                     });
             }
             else if (item.Item != null)
@@ -211,7 +213,8 @@ public class CollectionStorageService
                     {
                         Name = item.Name,
                         IsRequest = false,
-                        Parent = parent
+                        Parent = parent,
+                        Auth = ParseAuth(item.Auth)
                     };
 
                 folder.Children = BuildNodes(item.Item, folder);
@@ -239,6 +242,49 @@ public class CollectionStorageService
         }
 
         return "";
+    }
+
+    /// Absence de champ "auth" = hérite du parent, comme Postman. Un
+    /// résultat "Inherit" côté racine (aucun ancêtre) se résout en "None"
+    /// via CollectionNode.ResolveEffectiveAuth au moment de l'envoi.
+    private static AuthConfig
+    ParseAuth(
+        PostmanAuth? auth)
+    {
+        if (auth == null)
+        {
+            return new AuthConfig { Type = AuthType.Inherit };
+        }
+
+        static string? Find(List<PostmanAuthAttribute>? attributes, string key) =>
+            attributes?.FirstOrDefault(a => a.Key == key)?.Value;
+
+        return auth.Type switch
+        {
+            "bearer" => new AuthConfig
+            {
+                Type = AuthType.Bearer,
+                BearerToken = Find(auth.Bearer, "token") ?? ""
+            },
+
+            "basic" => new AuthConfig
+            {
+                Type = AuthType.Basic,
+                Username = Find(auth.Basic, "username") ?? "",
+                Password = Find(auth.Basic, "password") ?? ""
+            },
+
+            "apikey" => new AuthConfig
+            {
+                Type = AuthType.ApiKey,
+                ApiKeyName = Find(auth.ApiKey, "key") ?? "",
+                ApiKeyValue = Find(auth.ApiKey, "value") ?? ""
+            },
+
+            "noauth" => new AuthConfig { Type = AuthType.None },
+
+            _ => new AuthConfig { Type = AuthType.Inherit }
+        };
     }
 
     public List<EnvironmentSet>
@@ -422,6 +468,17 @@ public class CollectionStorageService
         fileRoot["info"] = info;
         fileRoot["item"] = BuildItemArray(root.Children);
 
+        var authNode = BuildAuthNode(root.Auth);
+
+        if (authNode != null)
+        {
+            fileRoot["auth"] = authNode;
+        }
+        else
+        {
+            fileRoot.Remove("auth");
+        }
+
         File.WriteAllText(
             root.FilePath,
             fileRoot.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
@@ -475,6 +532,13 @@ public class CollectionStorageService
                     request["_kubatoolkit_favorite"] = true;
                 }
 
+                var requestAuthNode = BuildAuthNode(node.Auth);
+
+                if (requestAuthNode != null)
+                {
+                    request["auth"] = requestAuthNode;
+                }
+
                 array.Add(
                     new JsonObject
                     {
@@ -484,16 +548,63 @@ public class CollectionStorageService
             }
             else
             {
-                array.Add(
+                var folderObject =
                     new JsonObject
                     {
                         ["name"] = node.Name,
                         ["item"] = BuildItemArray(node.Children)
-                    });
+                    };
+
+                var folderAuthNode = BuildAuthNode(node.Auth);
+
+                if (folderAuthNode != null)
+                {
+                    folderObject["auth"] = folderAuthNode;
+                }
+
+                array.Add(folderObject);
             }
         }
 
         return array;
+    }
+
+    /// Null (donc absence du champ "auth") pour Inherit, afin de préserver
+    /// la convention Postman "pas de champ = hérite du parent" plutôt que
+    /// d'écrire un type "inherit" qui n'existe pas dans son schéma.
+    private static JsonObject?
+    BuildAuthNode(
+        AuthConfig auth)
+    {
+        return auth.Type switch
+        {
+            AuthType.None => new JsonObject { ["type"] = "noauth" },
+
+            AuthType.Bearer => new JsonObject
+            {
+                ["type"] = "bearer",
+                ["bearer"] = new JsonArray(
+                    new JsonObject { ["key"] = "token", ["value"] = auth.BearerToken, ["type"] = "string" })
+            },
+
+            AuthType.Basic => new JsonObject
+            {
+                ["type"] = "basic",
+                ["basic"] = new JsonArray(
+                    new JsonObject { ["key"] = "username", ["value"] = auth.Username, ["type"] = "string" },
+                    new JsonObject { ["key"] = "password", ["value"] = auth.Password, ["type"] = "string" })
+            },
+
+            AuthType.ApiKey => new JsonObject
+            {
+                ["type"] = "apikey",
+                ["apikey"] = new JsonArray(
+                    new JsonObject { ["key"] = "key", ["value"] = auth.ApiKeyName, ["type"] = "string" },
+                    new JsonObject { ["key"] = "value", ["value"] = auth.ApiKeyValue, ["type"] = "string" })
+            },
+
+            _ => null
+        };
     }
 
     private static JsonObject?

@@ -1,0 +1,121 @@
+<Window
+    x:Class="KubaToolKit.Modules.ApiClient.FolderAuthWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Authentification"
+    Width="460"
+    Height="440"
+    MinWidth="380"
+    MinHeight="360"
+    WindowStartupLocation="CenterOwner"
+    Background="{StaticResource WindowBackgroundBrush}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="TitleText"
+            Grid.Row="0"
+            FontWeight="Bold"
+            FontSize="15"
+            Foreground="{StaticResource TextPrimaryBrush}"
+            Margin="0,0,0,14"
+            TextWrapping="Wrap"/>
+
+        <StackPanel Grid.Row="1">
+            <ComboBox
+                x:Name="AuthTypeCombo"
+                Width="220"
+                HorizontalAlignment="Left"
+                SelectionChanged="AuthTypeCombo_SelectionChanged">
+                <ComboBoxItem Content="Inherit auth from parent"/>
+                <ComboBoxItem Content="No Auth"/>
+                <ComboBoxItem Content="Bearer Token"/>
+                <ComboBoxItem Content="Basic Auth"/>
+                <ComboBoxItem Content="API Key"/>
+            </ComboBox>
+
+            <TextBlock
+                x:Name="InheritAuthPanel"
+                Margin="0,10,0,0"
+                TextWrapping="Wrap"
+                FontSize="12"
+                Foreground="{StaticResource TextSecondaryBrush}"
+                Text="Hérite de l'authentification définie sur le dossier ou la collection parente (ou d'aucune s'il n'y en a pas)."/>
+
+            <StackPanel
+                x:Name="BearerAuthPanel"
+                Margin="0,10,0,0"
+                Visibility="Collapsed">
+                <TextBlock
+                    Text="Token"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,4"/>
+                <TextBox x:Name="BearerTokenTextBox"/>
+            </StackPanel>
+
+            <StackPanel
+                x:Name="BasicAuthPanel"
+                Margin="0,10,0,0"
+                Visibility="Collapsed">
+                <TextBlock
+                    Text="Username"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,4"/>
+                <TextBox x:Name="BasicUsernameTextBox" Margin="0,0,0,8"/>
+                <TextBlock
+                    Text="Password"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,4"/>
+                <PasswordBox x:Name="BasicPasswordBox"/>
+            </StackPanel>
+
+            <StackPanel
+                x:Name="ApiKeyAuthPanel"
+                Margin="0,10,0,0"
+                Visibility="Collapsed">
+                <TextBlock
+                    Text="Header Name"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,4"/>
+                <TextBox
+                    x:Name="ApiKeyNameTextBox"
+                    Text="X-API-Key"
+                    Margin="0,0,0,8"/>
+                <TextBlock
+                    Text="Value"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Margin="0,0,0,4"/>
+                <TextBox x:Name="ApiKeyValueTextBox"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel
+            Grid.Row="2"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right"
+            Margin="0,16,0,0">
+
+            <Button
+                Width="100"
+                Margin="0,0,8,0"
+                Content="Annuler"
+                Click="CancelButton_Click"/>
+
+            <Button
+                Width="100"
+                Style="{StaticResource AccentButtonStyle}"
+                Content="Enregistrer"
+                Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

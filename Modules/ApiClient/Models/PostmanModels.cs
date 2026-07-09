@@ -15,6 +15,9 @@ public class PostmanCollection
 
     [JsonPropertyName("item")]
     public List<PostmanItem>? Item { get; set; }
+
+    [JsonPropertyName("auth")]
+    public PostmanAuth? Auth { get; set; }
 }
 
 public class PostmanInfo
@@ -35,6 +38,11 @@ public class PostmanItem
     // Présent pour une requête (feuille).
     [JsonPropertyName("request")]
     public PostmanRequest? Request { get; set; }
+
+    // Postman autorise aussi un auth directement sur un dossier (hérité
+    // par ses enfants), en plus de celui sur la collection ou la requête.
+    [JsonPropertyName("auth")]
+    public PostmanAuth? Auth { get; set; }
 }
 
 public class PostmanRequest
@@ -57,6 +65,38 @@ public class PostmanRequest
     // ignoré sans risque si le fichier est réimporté dans Postman).
     [JsonPropertyName("_kubatoolkit_favorite")]
     public bool? Favorite { get; set; }
+
+    [JsonPropertyName("auth")]
+    public PostmanAuth? Auth { get; set; }
+}
+
+// Absent = hérite du parent (comportement par défaut de Postman).
+// {"type":"noauth"} = explicitement aucune auth (n'hérite pas).
+public class PostmanAuth
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("bearer")]
+    public List<PostmanAuthAttribute>? Bearer { get; set; }
+
+    [JsonPropertyName("basic")]
+    public List<PostmanAuthAttribute>? Basic { get; set; }
+
+    [JsonPropertyName("apikey")]
+    public List<PostmanAuthAttribute>? ApiKey { get; set; }
+}
+
+public class PostmanAuthAttribute
+{
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    public string? Value { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
 }
 
 public class PostmanHeader

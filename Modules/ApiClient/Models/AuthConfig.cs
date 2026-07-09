@@ -2,6 +2,7 @@ namespace KubaToolKit.Modules.ApiClient.Models;
 
 public enum AuthType
 {
+    Inherit,
     None,
     Bearer,
     Basic,

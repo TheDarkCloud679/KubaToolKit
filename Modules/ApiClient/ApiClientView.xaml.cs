@@ -26,6 +26,11 @@ public partial class ApiClientView
     private bool _showAutoHeaders = true;
     private string? _binaryFilePath;
 
+    // Le nœud dont le contenu est actuellement chargé dans l'éditeur (null
+    // pour une requête ad hoc jamais enregistrée) : sert à résoudre "Inherit
+    // auth from parent" en remontant node.Parent.
+    private CollectionNode? _currentRequestNode;
+
     public ApiClientView()
     {
         Logger.Debug("ApiClientView: InitializeComponent.");
@@ -269,23 +274,26 @@ public partial class ApiClientView
                 h.Enabled
                 && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
 
-        // Reflète l'onglet Auth, comme Postman qui y affiche aussi
-        // l'Authorization calculée (masquée) plutôt que de la faire saisir
+        // Reflète l'Authorization réellement envoyée (onglet Auth de la
+        // requête, ou celle héritée du dossier/collection parent), comme
+        // Postman qui l'affiche calculée plutôt que de la faire saisir
         // dans la grille Headers elle-même.
-        switch (AuthTypeCombo?.SelectedIndex)
+        var resolvedAuth = ResolveAuthConfigForSend();
+
+        switch (resolvedAuth.Type)
         {
-            case 1 when !string.IsNullOrWhiteSpace(BearerTokenTextBox?.Text):
+            case AuthType.Bearer when !string.IsNullOrWhiteSpace(resolvedAuth.BearerToken):
 
                 if (!Has("Authorization"))
                 {
                     _autoHeaders.Add(
-                        new HeaderItem { Key = "Authorization", Value = "Bearer " + Mask(BearerTokenTextBox!.Text) });
+                        new HeaderItem { Key = "Authorization", Value = "Bearer " + Mask(resolvedAuth.BearerToken) });
                 }
 
                 break;
 
-            case 2 when !string.IsNullOrWhiteSpace(BasicUsernameTextBox?.Text)
-                        || !string.IsNullOrEmpty(BasicPasswordBox?.Password):
+            case AuthType.Basic when !string.IsNullOrWhiteSpace(resolvedAuth.Username)
+                        || !string.IsNullOrEmpty(resolvedAuth.Password):
 
                 if (!Has("Authorization"))
                 {
@@ -293,18 +301,18 @@ public partial class ApiClientView
                         new HeaderItem
                         {
                             Key = "Authorization",
-                            Value = "Basic " + Mask($"{BasicUsernameTextBox?.Text}:{BasicPasswordBox?.Password}")
+                            Value = "Basic " + Mask($"{resolvedAuth.Username}:{resolvedAuth.Password}")
                         });
                 }
 
                 break;
 
-            case 3 when !string.IsNullOrWhiteSpace(ApiKeyNameTextBox?.Text):
+            case AuthType.ApiKey when !string.IsNullOrWhiteSpace(resolvedAuth.ApiKeyName):
 
-                if (!Has(ApiKeyNameTextBox!.Text))
+                if (!Has(resolvedAuth.ApiKeyName))
                 {
                     _autoHeaders.Add(
-                        new HeaderItem { Key = ApiKeyNameTextBox.Text, Value = Mask(ApiKeyValueTextBox?.Text) });
+                        new HeaderItem { Key = resolvedAuth.ApiKeyName, Value = Mask(resolvedAuth.ApiKeyValue) });
                 }
 
                 break;
@@ -728,6 +736,8 @@ public partial class ApiClientView
             return;
         }
 
+        _currentRequestNode = node;
+
         foreach (ComboBoxItem item in MethodCombo.Items)
         {
             if (string.Equals(
@@ -780,11 +790,26 @@ public partial class ApiClientView
                 break;
         }
 
+        BearerTokenTextBox.Text = node.Auth.BearerToken;
+        BasicUsernameTextBox.Text = node.Auth.Username;
+        BasicPasswordBox.Password = node.Auth.Password;
+        ApiKeyNameTextBox.Text = string.IsNullOrEmpty(node.Auth.ApiKeyName) ? "X-API-Key" : node.Auth.ApiKeyName;
+        ApiKeyValueTextBox.Text = node.Auth.ApiKeyValue;
+
+        AuthTypeCombo.SelectedIndex = node.Auth.Type switch
+        {
+            AuthType.None => 1,
+            AuthType.Bearer => 2,
+            AuthType.Basic => 3,
+            AuthType.ApiKey => 4,
+            _ => 0
+        };
+
         // Ne pas dépendre uniquement des événements Checked/SelectionChanged
-        // déclenchés ci-dessus : si la requête chargée a la même méthode ou
-        // le même mode de body que la précédente, ils ne se redéclenchent
-        // pas (la valeur ne change pas), et l'aperçu resterait basé sur
-        // l'état d'avant le chargement.
+        // déclenchés ci-dessus : si la requête chargée a la même méthode,
+        // le même mode de body ou le même type d'auth que la précédente,
+        // ils ne se redéclenchent pas (la valeur ne change pas), et
+        // l'aperçu resterait basé sur l'état d'avant le chargement.
         RefreshAutoHeaders();
     }
 
@@ -829,6 +854,10 @@ public partial class ApiClientView
             node?.IsFavorite == true
                 ? "★ Retirer des favoris"
                 : "☆ Ajouter aux favoris";
+
+        // Pour une requête, l'onglet Auth de l'éditeur suffit déjà ; ce
+        // menu ne sert qu'à définir l'auth partagée d'un dossier/collection.
+        FolderAuthMenuItem.IsEnabled = isFolder;
     }
 
     private void
@@ -851,6 +880,32 @@ public partial class ApiClientView
         RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
+    }
+
+    private void
+    EditFolderAuth_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || node.IsRequest)
+        {
+            return;
+        }
+
+        var editor =
+            new FolderAuthWindow(node)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+        editor.ShowDialog();
+
+        if (editor.Saved)
+        {
+            SaveCollectionOf(node);
+            RefreshAutoHeaders();
+        }
     }
 
     private void
@@ -960,10 +1015,14 @@ public partial class ApiClientView
                 BodyFormData =
                     (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
                         .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
-                        .ToList()
+                        .ToList(),
+
+                Auth = BuildAuthConfig()
             };
 
         target.Children.Add(newNode);
+
+        _currentRequestNode = newNode;
 
         SaveCollectionOf(target);
     }
@@ -1001,6 +1060,8 @@ public partial class ApiClientView
             (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
                 .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
                 .ToList();
+
+        node.Auth = BuildAuthConfig();
 
         // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
         RefreshNodeDisplay(node);
@@ -1132,28 +1193,34 @@ public partial class ApiClientView
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (BearerAuthPanel == null
+        if (InheritAuthPanel == null
+            || BearerAuthPanel == null
             || BasicAuthPanel == null
             || ApiKeyAuthPanel == null)
         {
             return;
         }
 
+        InheritAuthPanel.Visibility = Visibility.Collapsed;
         BearerAuthPanel.Visibility = Visibility.Collapsed;
         BasicAuthPanel.Visibility = Visibility.Collapsed;
         ApiKeyAuthPanel.Visibility = Visibility.Collapsed;
 
         switch (AuthTypeCombo.SelectedIndex)
         {
-            case 1:
-                BearerAuthPanel.Visibility = Visibility.Visible;
+            case 0:
+                InheritAuthPanel.Visibility = Visibility.Visible;
                 break;
 
             case 2:
-                BasicAuthPanel.Visibility = Visibility.Visible;
+                BearerAuthPanel.Visibility = Visibility.Visible;
                 break;
 
             case 3:
+                BasicAuthPanel.Visibility = Visibility.Visible;
+                break;
+
+            case 4:
                 ApiKeyAuthPanel.Visibility = Visibility.Visible;
                 break;
         }
@@ -1219,7 +1286,7 @@ public partial class ApiClientView
             _sendCancellation?.Cancel();
             _sendCancellation = new CancellationTokenSource();
 
-            var auth = BuildAuthConfig();
+            var auth = ResolveAuthConfigForSend();
 
             var variables =
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
@@ -1303,15 +1370,19 @@ public partial class ApiClientView
             .Redraw();
     }
 
+    /// État brut du panneau Auth (peut être "Inherit") : à utiliser pour
+    /// sauvegarder sur un CollectionNode, jamais directement pour envoyer
+    /// une requête (voir ResolveAuthConfigForSend).
     private AuthConfig
     BuildAuthConfig()
     {
         var type = AuthTypeCombo.SelectedIndex switch
         {
-            1 => AuthType.Bearer,
-            2 => AuthType.Basic,
-            3 => AuthType.ApiKey,
-            _ => AuthType.None
+            1 => AuthType.None,
+            2 => AuthType.Bearer,
+            3 => AuthType.Basic,
+            4 => AuthType.ApiKey,
+            _ => AuthType.Inherit
         };
 
         return new AuthConfig
@@ -1323,5 +1394,20 @@ public partial class ApiClientView
             ApiKeyName = ApiKeyNameTextBox.Text,
             ApiKeyValue = ApiKeyValueTextBox.Text
         };
+    }
+
+    /// Résout "Inherit" en remontant vers le parent du nœud actuellement
+    /// chargé dans l'éditeur (le nœud lui-même est ignoré : c'est justement
+    /// lui qui vaut "Inherit" dans ce cas). Sans nœud chargé (nouvelle
+    /// requête non enregistrée) ou sans parent concret, retombe sur "None".
+    private AuthConfig
+    ResolveAuthConfigForSend()
+    {
+        var raw = BuildAuthConfig();
+
+        return raw.Type != AuthType.Inherit
+            ? raw
+            : _currentRequestNode?.Parent?.ResolveEffectiveAuth()
+                ?? new AuthConfig { Type = AuthType.None };
     }
 }
