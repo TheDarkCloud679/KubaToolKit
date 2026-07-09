@@ -237,7 +237,7 @@ public partial class ApiClientView
     {
         _showAutoHeaders = !_showAutoHeaders;
 
-        AutoHeadersGrid.Visibility =
+        AutoHeadersGridContainer.Visibility =
             _showAutoHeaders ? Visibility.Visible : Visibility.Collapsed;
 
         ToggleAutoHeadersText.Text =
