@@ -278,7 +278,7 @@ public static class JsonCardViewBuilder
 
                 var items =
                     value.EnumerateArray()
-                        .Select(FormatScalarElement)
+                        .Select(item => FormatScalarElementWithLabel(ctx, propertyName, item))
                         .ToList();
 
                 return items.Count == 0
@@ -339,6 +339,24 @@ public static class JsonCardViewBuilder
             JsonValueKind.Null => "—",
             _ => element.GetRawText()
         };
+
+    /// Comme FormatScalarElement, mais applique aussi la correspondance
+    /// de BuildContext.ValueLabels à chaque élément d'un tableau de
+    /// codes (ex: "allowedOperators": [9, 165] -> "Movima (9), Transdev
+    /// Marsan (165)") -- la lecture d'un champ scalaire simple appliquait
+    /// déjà la même règle, un tableau ne devrait pas se comporter
+    /// différemment juste parce qu'il a plusieurs valeurs.
+    private static string
+    FormatScalarElementWithLabel(
+        BuildContext ctx,
+        string propertyName,
+        JsonElement element)
+    {
+        var raw = FormatScalarElement(element);
+        var label = TryGetValueLabel(ctx, propertyName, raw);
+
+        return label != null ? $"{label} ({raw})" : raw;
+    }
 
     /// Les blocs "nommés" (propriété d'objet -> objet ou tableau) jusqu'à
     /// une profondeur de 1 deviennent des raccourcis dans la barre de
