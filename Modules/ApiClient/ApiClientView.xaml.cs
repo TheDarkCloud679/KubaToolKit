@@ -435,6 +435,74 @@ public partial class ApiClientView
         }
     }
 
+    /// Insère, en tête de chaque collection racine, un pseudo-dossier
+    /// "Favoris" regroupant (mêmes références, pas de copie) toutes les
+    /// requêtes marquées favorites où qu'elles soient nichées dans cette
+    /// collection, triées par ordre alphabétique. Purement visuel : ne
+    /// touche ni Parent ni le fichier .json (voir CollectionStorageService,
+    /// qui l'ignore explicitement à la sauvegarde).
+    private void
+    RebuildFavoritesFolders()
+    {
+        foreach (var root in _collections)
+        {
+            if (root.Children.Count > 0
+                && root.Children[0].IsFavoritesFolder)
+            {
+                root.Children.RemoveAt(0);
+            }
+
+            var favorites =
+                CollectFavorites(root)
+                    .OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+            if (favorites.Count == 0)
+            {
+                continue;
+            }
+
+            var favoritesFolder =
+                new CollectionNode
+                {
+                    Name = "Favoris",
+                    IsRequest = false,
+                    IsFavorite = true,
+                    IsFavoritesFolder = true
+                };
+
+            foreach (var favorite in favorites)
+            {
+                favoritesFolder.Children.Add(favorite);
+            }
+
+            root.Children.Insert(0, favoritesFolder);
+        }
+    }
+
+    private static IEnumerable<CollectionNode>
+    CollectFavorites(
+        CollectionNode node)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.IsFavoritesFolder)
+            {
+                continue;
+            }
+
+            if (child.IsRequest && child.IsFavorite)
+            {
+                yield return child;
+            }
+
+            foreach (var nested in CollectFavorites(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
     /// Reconstruit la grille Params à partir de la chaîne de requête de
     /// l'URL (Postman : les deux vues restent synchronisées).
     private void
@@ -540,6 +608,7 @@ public partial class ApiClientView
 
             _collectionsSortDescending = false;
             SortNodes(_collections, _collectionsSortDescending);
+            RebuildFavoritesFolders();
 
             var environments =
                 new List<EnvironmentSet>
@@ -729,13 +798,18 @@ public partial class ApiClientView
     {
         var node = CollectionsTreeView.SelectedItem as CollectionNode;
         var isRequest = node?.IsRequest == true;
-        var isFolder = node != null && !isRequest;
+        var isRealNode = node != null && node.IsFavoritesFolder != true;
+        var isFolder = isRealNode && !isRequest;
 
+        // Le pseudo-dossier "Favoris" n'est pas un vrai nœud : rien n'y
+        // est modifiable directement (les requêtes qu'il liste le restent
+        // depuis leur vrai dossier, ou via ce même menu puisque ce sont
+        // les mêmes objets).
         AddRequestMenuItem.IsEnabled = isFolder;
         AddFolderMenuItem.IsEnabled = isFolder;
         UpdateRequestMenuItem.IsEnabled = isRequest;
-        RenameMenuItem.IsEnabled = node != null;
-        DeleteMenuItem.IsEnabled = node != null;
+        RenameMenuItem.IsEnabled = isRealNode;
+        DeleteMenuItem.IsEnabled = isRealNode;
 
         FavoriteMenuItem.IsEnabled = isRequest;
         FavoriteMenuItem.Header =
@@ -757,9 +831,11 @@ public partial class ApiClientView
 
         node.IsFavorite = !node.IsFavorite;
 
-        // Fait remonter/redescendre immédiatement le nœud dans sa fratrie
-        // plutôt que d'attendre un rechargement ou un tri manuel.
+        // Fait remonter/redescendre immédiatement le nœud dans sa fratrie,
+        // et met à jour le pseudo-dossier "Favoris" en tête de sa
+        // collection, plutôt que d'attendre un rechargement.
         SortNodes(_collections, _collectionsSortDescending);
+        RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
     }
@@ -915,6 +991,7 @@ public partial class ApiClientView
 
         // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
         RefreshNodeDisplay(node);
+        RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
     }
@@ -944,6 +1021,7 @@ public partial class ApiClientView
         node.Name = name;
 
         RefreshNodeDisplay(node);
+        RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
     }
@@ -997,6 +1075,7 @@ public partial class ApiClientView
         var parent = node.Parent;
 
         parent.Children.Remove(node);
+        RebuildFavoritesFolders();
 
         SaveCollectionOf(parent);
     }

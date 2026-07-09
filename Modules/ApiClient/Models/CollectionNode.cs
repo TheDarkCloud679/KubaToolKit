@@ -21,6 +21,12 @@ public class CollectionNode
     // collection (ignoré sans risque par Postman lui-même).
     public bool IsFavorite { get; set; }
 
+    // True uniquement pour le pseudo-dossier "Favoris" inséré en tête de
+    // chaque collection par RebuildFavoritesFolders : un regroupement
+    // purement visuel (mêmes références de nœuds que leur vrai
+    // emplacement), jamais sérialisé ni éditable directement.
+    public bool IsFavoritesFolder { get; set; }
+
     // ObservableCollection (pas List) : le tri par double-clic réordonne
     // en place à chaque niveau, il faut que le TreeView le voie.
     public ObservableCollection<CollectionNode> Children { get; set; } = new();
