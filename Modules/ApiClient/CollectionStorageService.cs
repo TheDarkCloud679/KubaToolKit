@@ -435,6 +435,14 @@ public class CollectionStorageService
 
         foreach (var node in nodes)
         {
+            // Pseudo-dossier "Favoris" : purement visuel, jamais persisté
+            // (les requêtes qu'il contient le sont déjà via leur vrai
+            // emplacement, sous leur dossier d'origine).
+            if (node.IsFavoritesFolder)
+            {
+                continue;
+            }
+
             if (node.IsRequest)
             {
                 var request =

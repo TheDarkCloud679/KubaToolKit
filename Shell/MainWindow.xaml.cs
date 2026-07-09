@@ -1053,13 +1053,17 @@ FormatTimeTextBox(
         ProfilePatternSearchRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
 
+        // Dates/heures ne servent qu'au filtrage CloudWatch.
         DateRangeRow.Visibility =
-            isApiClient ? Visibility.Collapsed : Visibility.Visible;
+            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
-        // Pattern/dates ne servent qu'au filtrage CloudWatch ; Search sert
-        // aussi en S3 (recherche dans les dossiers). Les autres modules
-        // n'affichent que Profile + le bouton d'action, pour maximiser
-        // l'espace réservé aux données de chaque module.
+        // Pattern ne sert qu'au filtrage CloudWatch ; Search sert aussi en
+        // S3 (recherche dans les dossiers). Dashboard/SQS/Step Functions
+        // ont chacun leur propre bouton "Refresh" et n'utilisent ni le
+        // texte de recherche ni le bouton d'action partagé : les deux
+        // disparaissent complètement pour ces modules plutôt que
+        // d'occuper une ligne pour rien. Le bouton reste toujours sur la
+        // même ligne que Search, jamais avec les dates.
         PatternGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
@@ -1068,6 +1072,9 @@ FormatTimeTextBox(
 
         DateFieldsGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
+
+        SearchButton.Visibility =
+            isCloudWatch || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {
