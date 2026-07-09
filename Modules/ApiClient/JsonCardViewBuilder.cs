@@ -180,6 +180,7 @@ public static class JsonCardViewBuilder
                 BuildScalarValueElement(prop.Name, prop.Value);
 
             valueElement.Margin = new Thickness(0, 3, 0, 3);
+            valueElement.HorizontalAlignment = HorizontalAlignment.Left;
 
             Grid.SetRow(valueElement, row);
             Grid.SetColumn(valueElement, 1);

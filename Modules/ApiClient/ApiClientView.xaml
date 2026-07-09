@@ -1002,6 +1002,36 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button
+                                x:Name="PrevPageButton"
+                                Content="◀ Précédente"
+                                Click="PrevPage_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="8,0"
+                                Height="24"
+                                FontSize="11"
+                                Margin="0,0,6,0"
+                                Visibility="Collapsed"/>
+
+                            <TextBlock
+                                x:Name="PageInfoTextBlock"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Margin="0,0,6,0"
+                                Visibility="Collapsed"/>
+
+                            <Button
+                                x:Name="NextPageButton"
+                                Content="Suivante ▶"
+                                Click="NextPage_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="8,0"
+                                Height="24"
+                                FontSize="11"
+                                Margin="0,0,16,0"
+                                Visibility="Collapsed"/>
+
                             <RadioButton
                                 x:Name="ResponseViewCardsRadio"
                                 Content="Cartes"

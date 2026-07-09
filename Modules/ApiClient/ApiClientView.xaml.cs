@@ -1492,6 +1492,195 @@ public partial class ApiClientView
             .Redraw();
 
         RefreshResponseView();
+        UpdatePaginationControls();
+    }
+
+    /// Détecte comment paginer la requête actuelle à partir de ses
+    /// propres Params (jamais de la réponse : c'est la requête qui porte
+    /// les paramètres à modifier pour changer de page) : "offset" (avec
+    /// un pas déduit de size/limit/pageSize, ou de la réponse à défaut)
+    /// ou "page"/"pageNumber"/"pageIndex" (pas de 1). Retourne null si
+    /// aucun des deux schémas n'est présent dans les Params.
+    private (HeaderItem Param, string Mode, int Step)?
+    DetectPagination()
+    {
+        var offsetParam =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && string.Equals(p.Key?.Trim(), "offset", StringComparison.OrdinalIgnoreCase));
+
+        if (offsetParam != null)
+        {
+            var step =
+                TryGetIntParam("size")
+                ?? TryGetIntParam("limit")
+                ?? TryGetIntParam("pageSize")
+                ?? TryGetResponseIntField("size")
+                ?? TryGetResponseIntField("pageSize")
+                ?? 20;
+
+            return (offsetParam, "offset", step);
+        }
+
+        var pageKeys = new[] { "page", "pagenumber", "pageindex" };
+
+        var pageParam =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && p.Key != null
+                && pageKeys.Contains(p.Key.Trim().ToLowerInvariant()));
+
+        return pageParam != null
+            ? (pageParam, "page", 1)
+            : null;
+    }
+
+    private int?
+    TryGetIntParam(
+        string key)
+    {
+        var param =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && string.Equals(p.Key?.Trim(), key, StringComparison.OrdinalIgnoreCase));
+
+        return param != null && int.TryParse(param.Value, out var value)
+            ? value
+            : null;
+    }
+
+    private int?
+    TryGetResponseIntField(
+        string key)
+    {
+        if (string.IsNullOrWhiteSpace(_lastResponseBody))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(_lastResponseBody);
+
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty(key, out var element)
+                && element.ValueKind == JsonValueKind.Number
+                    ? element.GetInt32()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// Affiche/active les boutons Page précédente/suivante selon ce que
+    /// DetectPagination() trouve dans les Params actuels, et essaie
+    /// d'estimer s'il reste une page suivante à partir de champs
+    /// habituels de la réponse (items/total/totalItems/count, ou
+    /// pages/totalPages) -- purement indicatif, jamais bloquant si ces
+    /// champs sont absents ou nommés différemment par l'API.
+    private void
+    UpdatePaginationControls()
+    {
+        var pagination = DetectPagination();
+
+        if (pagination == null)
+        {
+            PrevPageButton.Visibility = Visibility.Collapsed;
+            NextPageButton.Visibility = Visibility.Collapsed;
+            PageInfoTextBlock.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        var (param, mode, step) = pagination.Value;
+
+        int.TryParse(param.Value, out var current);
+
+        PrevPageButton.Visibility = Visibility.Visible;
+        NextPageButton.Visibility = Visibility.Visible;
+        PageInfoTextBlock.Visibility = Visibility.Visible;
+
+        PrevPageButton.IsEnabled = current > 0;
+
+        if (mode == "offset")
+        {
+            var total =
+                TryGetResponseIntField("items")
+                ?? TryGetResponseIntField("total")
+                ?? TryGetResponseIntField("totalItems")
+                ?? TryGetResponseIntField("count");
+
+            NextPageButton.IsEnabled = !total.HasValue || current + step < total.Value;
+
+            PageInfoTextBlock.Text =
+                total.HasValue
+                    ? $"offset {current} / {total.Value}"
+                    : $"offset {current}";
+        }
+        else
+        {
+            var totalPages =
+                TryGetResponseIntField("pages")
+                ?? TryGetResponseIntField("totalPages");
+
+            NextPageButton.IsEnabled = !totalPages.HasValue || current + 1 < totalPages.Value;
+
+            PageInfoTextBlock.Text =
+                totalPages.HasValue
+                    ? $"page {current} / {totalPages.Value}"
+                    : $"page {current}";
+        }
+    }
+
+    private async void
+    PrevPage_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await GoToAdjacentPageAsync(-1);
+
+    private async void
+    NextPage_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await GoToAdjacentPageAsync(1);
+
+    private async Task
+    GoToAdjacentPageAsync(
+        int direction)
+    {
+        var pagination = DetectPagination();
+
+        if (pagination == null)
+        {
+            return;
+        }
+
+        var (param, mode, step) = pagination.Value;
+
+        int.TryParse(param.Value, out var current);
+
+        var next =
+            mode == "offset"
+                ? current + direction * step
+                : current + direction;
+
+        if (next < 0)
+        {
+            next = 0;
+        }
+
+        param.Value = next.ToString();
+
+        // HeaderItem n'implémente pas INotifyPropertyChanged (mutation
+        // depuis le code, pas depuis une cellule éditée) : forcer le
+        // DataGrid à relire la valeur affichée.
+        ParamsGrid.Items.Refresh();
+
+        SyncUrlFromParams();
+
+        await SendAsync();
     }
 
     private void
