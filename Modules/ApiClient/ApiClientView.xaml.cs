@@ -1400,6 +1400,11 @@ public partial class ApiClientView
             var variables =
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
 
+            Logger.Debug(
+                $"ApiClientView: auth résolue pour l'envoi -- type={auth.Type}, "
+                + $"bearerToken='{MaskForLog(auth.BearerToken)}', "
+                + $"variables disponibles=[{string.Join(", ", variables?.Keys ?? Enumerable.Empty<string>())}].");
+
             var requestBody =
                 new RequestBody
                 {
@@ -1607,6 +1612,24 @@ public partial class ApiClientView
         {
             Logger.Error("ApiClientView: échec de la mise à jour de l'environnement après extraction.", ex);
         }
+    }
+
+    /// Ne journalise jamais un secret en clair : montre juste de quoi
+    /// vérifier qu'un placeholder {{...}} a bien été remplacé par autre
+    /// chose (longueur + début), sans exposer le token complet dans les
+    /// logs.
+    private static string
+    MaskForLog(
+        string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "(vide)";
+        }
+
+        return value.Length <= 12
+            ? value
+            : $"{value[..12]}…({value.Length} car.)";
     }
 
     /// État brut du panneau Auth (peut être "Inherit") : à utiliser pour

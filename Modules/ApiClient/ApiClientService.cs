@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ApiClient.Models;
+using KubaToolKit.Shared.Services;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -275,6 +276,23 @@ public class ApiClientService
                     : match.Value);
     }
 
+    /// Ne journalise jamais un secret en clair : montre juste de quoi
+    /// vérifier qu'un placeholder {{...}} a bien été remplacé, sans
+    /// exposer le token complet dans les logs.
+    private static string
+    MaskForLog(
+        string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "(vide)";
+        }
+
+        return value.Length <= 12
+            ? value
+            : $"{value[..12]}…({value.Length} car.)";
+    }
+
     private static void
     ApplyAuth(
         HttpRequestMessage request,
@@ -287,6 +305,11 @@ public class ApiClientService
 
                 var token =
                     SubstituteVariables(auth.BearerToken, variables);
+
+                Logger.Debug(
+                    $"ApiClientService: ApplyAuth Bearer -- brut='{MaskForLog(auth.BearerToken)}', "
+                    + $"après substitution='{MaskForLog(token)}', "
+                    + $"{variables?.Count ?? 0} variable(s) d'environnement disponible(s).");
 
                 if (!string.IsNullOrWhiteSpace(token))
                 {
