@@ -957,43 +957,68 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock
-                            Text="Response"
-                            FontWeight="Bold"
-                            FontSize="13"
-                            Foreground="{StaticResource TextPrimaryBrush}"
-                            VerticalAlignment="Center"/>
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                        <Border
-                            x:Name="StatusBadge"
-                            Margin="10,0,0,0"
-                            Padding="8,3"
-                            CornerRadius="4"
-                            Background="{StaticResource BorderBrush}"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
                             <TextBlock
-                                x:Name="StatusTextBlock"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource TextPrimaryBrush}"/>
-                        </Border>
+                                Text="Response"
+                                FontWeight="Bold"
+                                FontSize="13"
+                                Foreground="{StaticResource TextPrimaryBrush}"
+                                VerticalAlignment="Center"/>
 
-                        <TextBlock
-                            x:Name="TimingTextBlock"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            FontSize="11"
-                            Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <Border
+                                x:Name="StatusBadge"
+                                Margin="10,0,0,0"
+                                Padding="8,3"
+                                CornerRadius="4"
+                                Background="{StaticResource BorderBrush}"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    x:Name="StatusTextBlock"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </Border>
 
-                        <ProgressBar
-                            x:Name="SendProgressBar"
-                            Width="140"
-                            Margin="10,0,0,0"
-                            IsIndeterminate="True"
-                            Visibility="Collapsed"
-                            VerticalAlignment="Center"/>
-                    </StackPanel>
+                            <TextBlock
+                                x:Name="TimingTextBlock"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                            <ProgressBar
+                                x:Name="SendProgressBar"
+                                Width="140"
+                                Margin="10,0,0,0"
+                                IsIndeterminate="True"
+                                Visibility="Collapsed"
+                                VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton
+                                x:Name="ResponseViewCardsRadio"
+                                Content="Cartes"
+                                GroupName="ResponseView"
+                                IsChecked="True"
+                                Checked="ResponseViewMode_Changed"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"/>
+
+                            <RadioButton
+                                x:Name="ResponseViewRawRadio"
+                                Content="Brut"
+                                GroupName="ResponseView"
+                                Checked="ResponseViewMode_Changed"
+                                VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
 
                     <Expander
                         Grid.Row="1"
@@ -1012,19 +1037,29 @@
                             FontSize="12"/>
                     </Expander>
 
-                    <avalonedit:TextEditor
-                        x:Name="ResponseBodyEditor"
-                        Grid.Row="2"
-                        FontFamily="Cascadia Code, Consolas"
-                        FontSize="13"
-                        ShowLineNumbers="True"
-                        IsReadOnly="True"
-                        WordWrap="False"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Auto"
-                        Padding="8"/>
+                    <Grid Grid.Row="2">
+                        <avalonedit:TextEditor
+                            x:Name="ResponseBodyEditor"
+                            FontFamily="Cascadia Code, Consolas"
+                            FontSize="13"
+                            ShowLineNumbers="True"
+                            IsReadOnly="True"
+                            WordWrap="False"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Auto"
+                            Padding="8"
+                            Visibility="Collapsed"/>
+
+                        <ScrollViewer
+                            x:Name="ResponsePrettyScroll"
+                            HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Auto"
+                            Padding="4">
+                            <ContentControl x:Name="ResponsePrettyContent"/>
+                        </ScrollViewer>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

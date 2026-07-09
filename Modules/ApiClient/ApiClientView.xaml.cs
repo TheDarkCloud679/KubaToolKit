@@ -27,6 +27,7 @@ public partial class ApiClientView
     private bool _collectionsSortDescending;
     private bool _showAutoHeaders = true;
     private string? _binaryFilePath;
+    private string _lastResponseBody = "";
 
     // Le nœud dont le contenu est actuellement chargé dans l'éditeur (null
     // pour une requête ad hoc jamais enregistrée) : sert à résoudre "Inherit
@@ -1471,6 +1472,8 @@ public partial class ApiClientView
     LoadResponseBody(
         string body)
     {
+        _lastResponseBody = body;
+
         ResponseBodyEditor.Text =
             JsonFormattingHelper.FormatJson(body);
 
@@ -1487,6 +1490,56 @@ public partial class ApiClientView
         ResponseBodyEditor.TextArea
             .TextView
             .Redraw();
+
+        RefreshResponseView();
+    }
+
+    private void
+    ResponseViewMode_Changed(
+        object sender,
+        RoutedEventArgs e) =>
+        RefreshResponseView();
+
+    /// Bascule entre la vue "Brut" (JSON tel quel, avec coloration) et la
+    /// vue "Cartes" (un bloc par objet/élément de tableau, voir
+    /// JsonCardViewBuilder). Reconstruit la vue Cartes à chaque appel :
+    /// pas de cache, la réponse ne change qu'après un nouvel envoi.
+    private void
+    RefreshResponseView()
+    {
+        // Le RadioButton "Cartes" a IsChecked="True" dans le XAML : son
+        // événement Checked se déclenche pendant InitializeComponent(),
+        // avant que ResponseBodyEditor/ResponsePrettyScroll (plus bas
+        // dans l'arbre) n'existent encore.
+        if (ResponseBodyEditor == null
+            || ResponsePrettyScroll == null
+            || ResponsePrettyContent == null)
+        {
+            return;
+        }
+
+        if (ResponseViewRawRadio?.IsChecked == true)
+        {
+            ResponseBodyEditor.Visibility = Visibility.Visible;
+            ResponsePrettyScroll.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        ResponseBodyEditor.Visibility = Visibility.Collapsed;
+        ResponsePrettyScroll.Visibility = Visibility.Visible;
+
+        var cardsView = JsonCardViewBuilder.Build(_lastResponseBody);
+
+        ResponsePrettyContent.Content =
+            cardsView
+            ?? new TextBlock
+            {
+                Text = "Réponse non-JSON : voir la vue \"Brut\".",
+                FontStyle = FontStyles.Italic,
+                Foreground = (Brush)FindResource("TextMutedBrush"),
+                Margin = new Thickness(8)
+            };
     }
 
     /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
