@@ -2,6 +2,7 @@ using KubaToolKit.Modules.ApiClient.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,12 +20,18 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
     private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
+    private readonly ObservableCollection<HeaderItem> _extractions = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
     private bool _syncingUrlAndParams;
     private bool _collectionsSortDescending;
     private bool _showAutoHeaders = true;
     private string? _binaryFilePath;
+
+    // Le nœud dont le contenu est actuellement chargé dans l'éditeur (null
+    // pour une requête ad hoc jamais enregistrée) : sert à résoudre "Inherit
+    // auth from parent" en remontant node.Parent.
+    private CollectionNode? _currentRequestNode;
 
     public ApiClientView()
     {
@@ -36,6 +43,7 @@ public partial class ApiClientView
         ParamsGrid.ItemsSource = _params;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
         BodyFormGrid.ItemsSource = _bodyFormData;
+        ExtractionsGrid.ItemsSource = _extractions;
         CollectionsTreeView.ItemsSource = _collections;
 
         _headers.CollectionChanged += (_, __) => RefreshAutoHeaders();
@@ -124,6 +132,14 @@ public partial class ApiClientView
     {
         (GetSelectedBodyMode() == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
             .Add(new HeaderItem());
+    }
+
+    private void
+    AddExtractionRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _extractions.Add(new HeaderItem());
     }
 
     private void
@@ -269,42 +285,62 @@ public partial class ApiClientView
                 h.Enabled
                 && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
 
-        // Reflète l'onglet Auth, comme Postman qui y affiche aussi
-        // l'Authorization calculée (masquée) plutôt que de la faire saisir
+        // Reflète l'Authorization réellement envoyée (onglet Auth de la
+        // requête, ou celle héritée du dossier/collection parent), comme
+        // Postman qui l'affiche calculée plutôt que de la faire saisir
         // dans la grille Headers elle-même.
-        switch (AuthTypeCombo?.SelectedIndex)
+        var resolvedAuth = ResolveAuthConfigForSend();
+
+        // Dès qu'un type d'auth concret est résolu (pas None/Inherit non
+        // résolu), la ligne apparaît toujours, même si le token/mot de
+        // passe est encore vide au moment de l'aperçu — comme Postman, qui
+        // l'affiche avec une valeur "tentative" plutôt que de l'omettre.
+        switch (resolvedAuth.Type)
         {
-            case 1 when !string.IsNullOrWhiteSpace(BearerTokenTextBox?.Text):
+            case AuthType.Bearer:
 
                 if (!Has("Authorization"))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem { Key = "Authorization", Value = "Bearer " + Mask(BearerTokenTextBox!.Text) });
+                    var value =
+                        string.IsNullOrWhiteSpace(resolvedAuth.BearerToken)
+                            ? "Bearer <calculé à l'envoi>"
+                            : "Bearer " + Mask(resolvedAuth.BearerToken);
+
+                    _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
                 }
 
                 break;
 
-            case 2 when !string.IsNullOrWhiteSpace(BasicUsernameTextBox?.Text)
-                        || !string.IsNullOrEmpty(BasicPasswordBox?.Password):
+            case AuthType.Basic:
 
                 if (!Has("Authorization"))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem
-                        {
-                            Key = "Authorization",
-                            Value = "Basic " + Mask($"{BasicUsernameTextBox?.Text}:{BasicPasswordBox?.Password}")
-                        });
+                    var value =
+                        string.IsNullOrWhiteSpace(resolvedAuth.Username)
+                        && string.IsNullOrEmpty(resolvedAuth.Password)
+                            ? "Basic <calculé à l'envoi>"
+                            : "Basic " + Mask($"{resolvedAuth.Username}:{resolvedAuth.Password}");
+
+                    _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
                 }
 
                 break;
 
-            case 3 when !string.IsNullOrWhiteSpace(ApiKeyNameTextBox?.Text):
+            case AuthType.ApiKey:
 
-                if (!Has(ApiKeyNameTextBox!.Text))
+                var keyName =
+                    string.IsNullOrWhiteSpace(resolvedAuth.ApiKeyName)
+                        ? "Authorization"
+                        : resolvedAuth.ApiKeyName;
+
+                if (!Has(keyName))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem { Key = ApiKeyNameTextBox.Text, Value = Mask(ApiKeyValueTextBox?.Text) });
+                    var value =
+                        string.IsNullOrEmpty(resolvedAuth.ApiKeyValue)
+                            ? "<calculé à l'envoi>"
+                            : Mask(resolvedAuth.ApiKeyValue);
+
+                    _autoHeaders.Add(new HeaderItem { Key = keyName, Value = value });
                 }
 
                 break;
@@ -728,6 +764,8 @@ public partial class ApiClientView
             return;
         }
 
+        _currentRequestNode = node;
+
         foreach (ComboBoxItem item in MethodCombo.Items)
         {
             if (string.Equals(
@@ -779,6 +817,35 @@ public partial class ApiClientView
                 BodyRawRadio.IsChecked = true;
                 break;
         }
+
+        BearerTokenTextBox.Text = node.Auth.BearerToken;
+        BasicUsernameTextBox.Text = node.Auth.Username;
+        BasicPasswordBox.Password = node.Auth.Password;
+        ApiKeyNameTextBox.Text = string.IsNullOrEmpty(node.Auth.ApiKeyName) ? "X-API-Key" : node.Auth.ApiKeyName;
+        ApiKeyValueTextBox.Text = node.Auth.ApiKeyValue;
+
+        _extractions.Clear();
+
+        foreach (var extraction in node.PostResponseExtractions)
+        {
+            _extractions.Add(extraction);
+        }
+
+        AuthTypeCombo.SelectedIndex = node.Auth.Type switch
+        {
+            AuthType.None => 1,
+            AuthType.Bearer => 2,
+            AuthType.Basic => 3,
+            AuthType.ApiKey => 4,
+            _ => 0
+        };
+
+        // Ne pas dépendre uniquement des événements Checked/SelectionChanged
+        // déclenchés ci-dessus : si la requête chargée a la même méthode,
+        // le même mode de body ou le même type d'auth que la précédente,
+        // ils ne se redéclenchent pas (la valeur ne change pas), et
+        // l'aperçu resterait basé sur l'état d'avant le chargement.
+        RefreshAutoHeaders();
     }
 
     /// Un clic droit ne sélectionne pas le TreeViewItem visé par défaut en
@@ -822,6 +889,11 @@ public partial class ApiClientView
             node?.IsFavorite == true
                 ? "★ Retirer des favoris"
                 : "☆ Ajouter aux favoris";
+
+        // Pour une requête, l'onglet Auth de l'éditeur suffit déjà ; ce
+        // menu ne sert qu'à définir l'auth partagée d'un dossier/collection.
+        FolderAuthMenuItem.IsEnabled = isFolder;
+        ApplyBearerToAllMenuItem.IsEnabled = isFolder;
     }
 
     private void
@@ -844,6 +916,95 @@ public partial class ApiClientView
         RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
+    }
+
+    private void
+    EditFolderAuth_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode node
+            || node.IsRequest)
+        {
+            return;
+        }
+
+        var editor =
+            new FolderAuthWindow(node)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+        editor.ShowDialog();
+
+        if (editor.Saved)
+        {
+            SaveCollectionOf(node);
+            RefreshAutoHeaders();
+        }
+    }
+
+    private void
+    ApplyBearerTokenToAllRequests_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (CollectionsTreeView.SelectedItem is not CollectionNode target
+            || target.IsRequest)
+        {
+            return;
+        }
+
+        var token =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Bearer Token pour toutes les requêtes",
+                "Token (une variable {{...}} d'environnement est possible) :",
+                "{{TMP_AUTH_Service_IdToken}}");
+
+        if (token == null)
+        {
+            return;
+        }
+
+        var count = ApplyBearerTokenRecursive(target, token);
+
+        SaveCollectionOf(target);
+        RefreshAutoHeaders();
+
+        MessageBox.Show(
+            $"{count} requête(s) mise(s) à jour sous « {target.Name} ».",
+            "Bearer Token appliqué");
+    }
+
+    private static int
+    ApplyBearerTokenRecursive(
+        CollectionNode node,
+        string token)
+    {
+        var count = 0;
+
+        foreach (var child in node.Children)
+        {
+            if (child.IsFavoritesFolder)
+            {
+                // Mêmes objets que sous leur vrai dossier : les compter ici
+                // aussi les compterait deux fois.
+                continue;
+            }
+
+            if (child.IsRequest)
+            {
+                child.Auth = new AuthConfig { Type = AuthType.Bearer, BearerToken = token };
+                count++;
+            }
+            else
+            {
+                count += ApplyBearerTokenRecursive(child, token);
+            }
+        }
+
+        return count;
     }
 
     private void
@@ -953,10 +1114,19 @@ public partial class ApiClientView
                 BodyFormData =
                     (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
                         .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                        .ToList(),
+
+                Auth = BuildAuthConfig(),
+
+                PostResponseExtractions =
+                    _extractions
+                        .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
                         .ToList()
             };
 
         target.Children.Add(newNode);
+
+        _currentRequestNode = newNode;
 
         SaveCollectionOf(target);
     }
@@ -993,6 +1163,13 @@ public partial class ApiClientView
         node.BodyFormData =
             (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
                 .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                .ToList();
+
+        node.Auth = BuildAuthConfig();
+
+        node.PostResponseExtractions =
+            _extractions
+                .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
                 .ToList();
 
         // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
@@ -1125,28 +1302,34 @@ public partial class ApiClientView
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (BearerAuthPanel == null
+        if (InheritAuthPanel == null
+            || BearerAuthPanel == null
             || BasicAuthPanel == null
             || ApiKeyAuthPanel == null)
         {
             return;
         }
 
+        InheritAuthPanel.Visibility = Visibility.Collapsed;
         BearerAuthPanel.Visibility = Visibility.Collapsed;
         BasicAuthPanel.Visibility = Visibility.Collapsed;
         ApiKeyAuthPanel.Visibility = Visibility.Collapsed;
 
         switch (AuthTypeCombo.SelectedIndex)
         {
-            case 1:
-                BearerAuthPanel.Visibility = Visibility.Visible;
+            case 0:
+                InheritAuthPanel.Visibility = Visibility.Visible;
                 break;
 
             case 2:
-                BasicAuthPanel.Visibility = Visibility.Visible;
+                BearerAuthPanel.Visibility = Visibility.Visible;
                 break;
 
             case 3:
+                BasicAuthPanel.Visibility = Visibility.Visible;
+                break;
+
+            case 4:
                 ApiKeyAuthPanel.Visibility = Visibility.Visible;
                 break;
         }
@@ -1212,10 +1395,15 @@ public partial class ApiClientView
             _sendCancellation?.Cancel();
             _sendCancellation = new CancellationTokenSource();
 
-            var auth = BuildAuthConfig();
+            var auth = ResolveAuthConfigForSend();
 
             var variables =
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
+
+            Logger.Debug(
+                $"ApiClientView: auth résolue pour l'envoi -- type={auth.Type}, "
+                + $"bearerToken='{MaskForLog(auth.BearerToken)}', "
+                + $"variables disponibles=[{string.Join(", ", (variables ?? new()).Select(kv => $"{kv.Key}({kv.Value.Length} car.)"))}].");
 
             var requestBody =
                 new RequestBody
@@ -1252,6 +1440,11 @@ public partial class ApiClientView
             ResponseHeadersTextBox.Text = result.Headers;
 
             LoadResponseBody(result.Body);
+
+            if (result.StatusCode is >= 200 and < 300)
+            {
+                ApplyPostResponseExtractions(result.Body);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -1296,15 +1489,183 @@ public partial class ApiClientView
             .Redraw();
     }
 
+    /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
+    /// pour chaque règle activée (grille "Extraction → Environnement"),
+    /// copie le champ JSON de premier niveau correspondant de la réponse
+    /// dans la variable d'environnement visée (créée si elle n'existe pas
+    /// encore), puis sauvegarde le fichier d'environnement.
+    private void
+    ApplyPostResponseExtractions(
+        string responseBody)
+    {
+        var rules =
+            _extractions
+                .Where(r => r.Enabled
+                    && !string.IsNullOrWhiteSpace(r.Key)
+                    && !string.IsNullOrWhiteSpace(r.Value))
+                .ToList();
+
+        Logger.Debug(
+            $"ApiClientView: extraction post-réponse -- {rules.Count} règle(s) active(s) "
+            + $"({string.Join(", ", rules.Select(r => $"{r.Key}->{r.Value}"))}), "
+            + $"environnement sélectionné = "
+            + $"{(EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name ?? "(aucun)"}.");
+
+        if (rules.Count == 0)
+        {
+            Logger.Debug(
+                "ApiClientView: extraction ignorée -- aucune règle active sur cette requête.");
+
+            return;
+        }
+
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || string.IsNullOrEmpty(environment.FilePath))
+        {
+            Logger.Debug(
+                "ApiClientView: extraction ignorée -- aucun environnement (avec fichier) sélectionné.");
+
+            return;
+        }
+
+        JsonElement root;
+
+        try
+        {
+            root = JsonDocument.Parse(responseBody).RootElement;
+        }
+        catch (JsonException ex)
+        {
+            Logger.Debug(
+                $"ApiClientView: extraction ignorée -- réponse non-JSON ({ex.Message}).");
+
+            return;
+        }
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            Logger.Debug(
+                $"ApiClientView: extraction ignorée -- réponse JSON de type {root.ValueKind}, objet attendu.");
+
+            return;
+        }
+
+        var updated = 0;
+
+        foreach (var rule in rules)
+        {
+            if (!root.TryGetProperty(rule.Key, out var valueElement))
+            {
+                Logger.Debug(
+                    $"ApiClientView: extraction -- champ '{rule.Key}' absent du premier niveau de la réponse.");
+
+                continue;
+            }
+
+            var value =
+                valueElement.ValueKind switch
+                {
+                    JsonValueKind.String => valueElement.GetString() ?? "",
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    JsonValueKind.Null => "",
+                    _ => valueElement.GetRawText()
+                };
+
+            // S'il existe plusieurs entrées pour la même clé (import Postman
+            // ou édition manuelle malencontreuse), ToSubstitutionMap() ne
+            // regarde que la dernière : ne mettre à jour que la première et
+            // laisser une copie obsolète/vide trainer casserait
+            // silencieusement la substitution. On nettoie donc les doublons
+            // ici pour ne garder qu'une seule entrée, à jour.
+            var duplicates =
+                environment.Variables
+                    .Where(v => v.Key == rule.Value)
+                    .ToList();
+
+            var wasExisting = duplicates.Count > 0;
+
+            if (duplicates.Count > 0)
+            {
+                var existing = duplicates[0];
+
+                existing.Enabled = true;
+                existing.Value = value;
+
+                foreach (var duplicate in duplicates.Skip(1))
+                {
+                    Logger.Debug(
+                        $"ApiClientView: extraction -- doublon de la variable '{rule.Value}' supprimé "
+                        + $"(valeur obsolète='{MaskForLog(duplicate.Value)}').");
+
+                    environment.Variables.Remove(duplicate);
+                }
+            }
+            else
+            {
+                environment.Variables.Add(
+                    new HeaderItem { Enabled = true, Key = rule.Value, Value = value });
+            }
+
+            Logger.Debug(
+                $"ApiClientView: extraction -- '{rule.Key}' = '{value}' -> variable '{rule.Value}' "
+                + $"({(wasExisting ? "mise à jour" : "créée")}).");
+
+            updated++;
+        }
+
+        if (updated == 0)
+        {
+            Logger.Debug(
+                "ApiClientView: extraction -- aucune règle ne correspondait à un champ de la réponse, rien à sauvegarder.");
+
+            return;
+        }
+
+        try
+        {
+            _collectionStorage.SaveEnvironment(environment);
+
+            Logger.Info(
+                $"ApiClientView: environnement '{environment.Name}' mis à jour ({updated} variable(s) extraite(s) de la réponse) -> fichier '{environment.FilePath}'.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ApiClientView: échec de la mise à jour de l'environnement après extraction.", ex);
+        }
+    }
+
+    /// Ne journalise jamais un secret en clair : montre juste de quoi
+    /// vérifier qu'un placeholder {{...}} a bien été remplacé par autre
+    /// chose (longueur + début), sans exposer le token complet dans les
+    /// logs.
+    private static string
+    MaskForLog(
+        string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "(vide)";
+        }
+
+        return value.Length <= 12
+            ? value
+            : $"{value[..12]}…({value.Length} car.)";
+    }
+
+    /// État brut du panneau Auth (peut être "Inherit") : à utiliser pour
+    /// sauvegarder sur un CollectionNode, jamais directement pour envoyer
+    /// une requête (voir ResolveAuthConfigForSend).
     private AuthConfig
     BuildAuthConfig()
     {
         var type = AuthTypeCombo.SelectedIndex switch
         {
-            1 => AuthType.Bearer,
-            2 => AuthType.Basic,
-            3 => AuthType.ApiKey,
-            _ => AuthType.None
+            1 => AuthType.None,
+            2 => AuthType.Bearer,
+            3 => AuthType.Basic,
+            4 => AuthType.ApiKey,
+            _ => AuthType.Inherit
         };
 
         return new AuthConfig
@@ -1316,5 +1677,20 @@ public partial class ApiClientView
             ApiKeyName = ApiKeyNameTextBox.Text,
             ApiKeyValue = ApiKeyValueTextBox.Text
         };
+    }
+
+    /// Résout "Inherit" en remontant vers le parent du nœud actuellement
+    /// chargé dans l'éditeur (le nœud lui-même est ignoré : c'est justement
+    /// lui qui vaut "Inherit" dans ce cas). Sans nœud chargé (nouvelle
+    /// requête non enregistrée) ou sans parent concret, retombe sur "None".
+    private AuthConfig
+    ResolveAuthConfigForSend()
+    {
+        var raw = BuildAuthConfig();
+
+        return raw.Type != AuthType.Inherit
+            ? raw
+            : _currentRequestNode?.Parent?.ResolveEffectiveAuth()
+                ?? new AuthConfig { Type = AuthType.None };
     }
 }

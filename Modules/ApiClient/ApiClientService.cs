@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ApiClient.Models;
+using KubaToolKit.Shared.Services;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -98,7 +99,7 @@ public class ApiClientService
                 "*/*");
         }
 
-        ApplyAuth(request, auth);
+        ApplyAuth(request, auth, variables);
 
         var stopwatch =
             Stopwatch.StartNew();
@@ -275,31 +276,63 @@ public class ApiClientService
                     : match.Value);
     }
 
+    /// Ne journalise jamais un secret en clair : montre juste de quoi
+    /// vérifier qu'un placeholder {{...}} a bien été remplacé, sans
+    /// exposer le token complet dans les logs.
+    private static string
+    MaskForLog(
+        string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "(vide)";
+        }
+
+        return value.Length <= 12
+            ? value
+            : $"{value[..12]}…({value.Length} car.)";
+    }
+
     private static void
     ApplyAuth(
         HttpRequestMessage request,
-        AuthConfig auth)
+        AuthConfig auth,
+        Dictionary<string, string>? variables)
     {
         switch (auth.Type)
         {
             case AuthType.Bearer:
 
-                if (!string.IsNullOrWhiteSpace(auth.BearerToken))
+                var token =
+                    SubstituteVariables(auth.BearerToken, variables);
+
+                Logger.Debug(
+                    $"ApiClientService: ApplyAuth Bearer -- brut='{MaskForLog(auth.BearerToken)}', "
+                    + $"après substitution='{MaskForLog(token)}', "
+                    + $"{variables?.Count ?? 0} variable(s) d'environnement disponible(s).");
+
+                if (!string.IsNullOrWhiteSpace(token))
                 {
                     request.Headers.Authorization =
                         new AuthenticationHeaderValue(
                             "Bearer",
-                            auth.BearerToken);
+                            token);
                 }
 
                 break;
 
             case AuthType.Basic:
 
+                var username =
+                    SubstituteVariables(auth.Username, variables);
+
+                var password =
+                    SubstituteVariables(auth.Password, variables);
+
                 var credentials =
                     Convert.ToBase64String(
                         Encoding.UTF8.GetBytes(
-                            $"{auth.Username}:{auth.Password}"));
+                            $"{username}:{password}"));
 
                 request.Headers.Authorization =
                     new AuthenticationHeaderValue(
@@ -312,9 +345,12 @@ public class ApiClientService
 
                 if (!string.IsNullOrWhiteSpace(auth.ApiKeyName))
                 {
+                    var apiKeyValue =
+                        SubstituteVariables(auth.ApiKeyValue, variables);
+
                     request.Headers.TryAddWithoutValidation(
                         auth.ApiKeyName,
-                        auth.ApiKeyValue);
+                        apiKeyValue);
                 }
 
                 break;

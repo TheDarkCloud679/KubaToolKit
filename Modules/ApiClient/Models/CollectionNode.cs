@@ -16,6 +16,18 @@ public class CollectionNode
     public string BodyMode { get; set; } = "raw";
     public List<HeaderItem> BodyFormData { get; set; } = new();
 
+    // Règles d'extraction post-réponse (équivalent simplifié d'un script
+    // Postman "pm.environment.set(...)") : Key = nom du champ JSON de
+    // premier niveau dans le corps de la réponse, Value = nom de la
+    // variable de l'environnement sélectionné à créer/mettre à jour avec
+    // sa valeur après un envoi réussi.
+    public List<HeaderItem> PostResponseExtractions { get; set; } = new();
+
+    // Valable pour n'importe quel nœud (requête, dossier ou collection) :
+    // AuthType.Inherit remonte via Parent jusqu'au premier ancêtre qui
+    // définit un auth concret, comme Postman ("Inherit auth from parent").
+    public AuthConfig Auth { get; set; } = new();
+
     // Favori (requêtes uniquement) : remonté en tête de sa fratrie par
     // SortNodes, persisté via un champ non standard dans le fichier de
     // collection (ignoré sans risque par Postman lui-même).
@@ -54,5 +66,26 @@ public class CollectionNode
         }
 
         return node;
+    }
+
+    /// Remonte l'arbre jusqu'au premier ancêtre (inclus) dont l'auth n'est
+    /// pas "Inherit" ; retourne "None" si personne dans la chaîne n'en
+    /// définit un (comme Postman quand rien n'est configuré nulle part).
+    public AuthConfig
+    ResolveEffectiveAuth()
+    {
+        var node = this;
+
+        while (node != null)
+        {
+            if (node.Auth.Type != AuthType.Inherit)
+            {
+                return node.Auth;
+            }
+
+            node = node.Parent;
+        }
+
+        return new AuthConfig { Type = AuthType.None };
     }
 }
