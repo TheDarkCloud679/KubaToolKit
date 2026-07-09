@@ -1403,7 +1403,7 @@ public partial class ApiClientView
             Logger.Debug(
                 $"ApiClientView: auth résolue pour l'envoi -- type={auth.Type}, "
                 + $"bearerToken='{MaskForLog(auth.BearerToken)}', "
-                + $"variables disponibles=[{string.Join(", ", variables?.Keys ?? Enumerable.Empty<string>())}].");
+                + $"variables disponibles=[{string.Join(", ", (variables ?? new()).Select(kv => $"{kv.Key}({kv.Value.Length} car.)"))}].");
 
             var requestBody =
                 new RequestBody
@@ -1572,13 +1572,34 @@ public partial class ApiClientView
                     _ => valueElement.GetRawText()
                 };
 
-            var existing =
-                environment.Variables.FirstOrDefault(v => v.Key == rule.Value);
+            // S'il existe plusieurs entrées pour la même clé (import Postman
+            // ou édition manuelle malencontreuse), ToSubstitutionMap() ne
+            // regarde que la dernière : ne mettre à jour que la première et
+            // laisser une copie obsolète/vide trainer casserait
+            // silencieusement la substitution. On nettoie donc les doublons
+            // ici pour ne garder qu'une seule entrée, à jour.
+            var duplicates =
+                environment.Variables
+                    .Where(v => v.Key == rule.Value)
+                    .ToList();
 
-            if (existing != null)
+            var wasExisting = duplicates.Count > 0;
+
+            if (duplicates.Count > 0)
             {
+                var existing = duplicates[0];
+
                 existing.Enabled = true;
                 existing.Value = value;
+
+                foreach (var duplicate in duplicates.Skip(1))
+                {
+                    Logger.Debug(
+                        $"ApiClientView: extraction -- doublon de la variable '{rule.Value}' supprimé "
+                        + $"(valeur obsolète='{MaskForLog(duplicate.Value)}').");
+
+                    environment.Variables.Remove(duplicate);
+                }
             }
             else
             {
@@ -1588,7 +1609,7 @@ public partial class ApiClientView
 
             Logger.Debug(
                 $"ApiClientView: extraction -- '{rule.Key}' = '{value}' -> variable '{rule.Value}' "
-                + $"({(existing != null ? "mise à jour" : "créée")}).");
+                + $"({(wasExisting ? "mise à jour" : "créée")}).");
 
             updated++;
         }
