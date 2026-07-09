@@ -2058,7 +2058,7 @@ public partial class ApiClientView
 
         match.Element.Background = SearchMatchBrush;
 
-        ExpandAndScrollTo(match.Element);
+        ExpandAndScrollTo(match.Element, match.Ancestors);
     }
 
     private void
@@ -2122,8 +2122,10 @@ public partial class ApiClientView
                     }
                 };
 
+            var ancestors = anchor.Ancestors;
+
             chip.MouseLeftButtonUp +=
-                (_, _) => ExpandAndScrollTo(target);
+                (_, _) => ExpandAndScrollTo(target, ancestors);
 
             ResponseAnchorsPanel.Children.Add(chip);
         }
@@ -2138,16 +2140,17 @@ public partial class ApiClientView
     /// encore les anciennes dimensions, repliées).
     private static void
     ExpandAndScrollTo(
-        FrameworkElement target)
+        FrameworkElement target,
+        IReadOnlyList<Expander> ancestors)
     {
-        for (DependencyObject? node = target;
-             node != null;
-             node = VisualTreeHelper.GetParent(node))
+        foreach (var ancestor in ancestors)
         {
-            if (node is Expander expander)
-            {
-                expander.IsExpanded = true;
-            }
+            ancestor.IsExpanded = true;
+        }
+
+        if (target is Expander self)
+        {
+            self.IsExpanded = true;
         }
 
         target.Dispatcher.BeginInvoke(

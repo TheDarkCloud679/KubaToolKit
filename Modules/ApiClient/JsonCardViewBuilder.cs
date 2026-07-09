@@ -9,18 +9,25 @@ namespace KubaToolKit.Modules.ApiClient;
 
 /// Un raccourci de navigation vers un bloc de la vue Cartes (voir
 /// JsonCardViewBuilder.Build) : Element.BringIntoView() fait défiler
-/// automatiquement le ScrollViewer ambiant jusqu'à ce bloc.
+/// automatiquement le ScrollViewer ambiant jusqu'à ce bloc. Ancestors
+/// liste les Expander parents (du plus extérieur au plus proche) à
+/// déplier avant de défiler -- capturés explicitement à la construction
+/// plutôt que remontés depuis l'arbre visuel à l'exécution, qui peut ne
+/// pas être entièrement connecté tant qu'un Expander reste replié.
 public sealed record JsonCardAnchor(
     string Label,
-    FrameworkElement Element);
+    Expander Element,
+    IReadOnlyList<Expander> Ancestors);
 
 /// Une entrée cherchable de la vue Cartes (clé, valeur, badge ou titre
 /// de bloc) : Element est un conteneur dédié (Border transparent) dont
 /// on peut basculer Background sans jamais perturber l'apparence
-/// d'origine de son contenu (y compris un badge déjà coloré).
+/// d'origine de son contenu (y compris un badge déjà coloré). Ancestors :
+/// voir JsonCardAnchor.
 public sealed record JsonCardSearchEntry(
     string Text,
-    Border Element);
+    Border Element,
+    IReadOnlyList<Expander> Ancestors);
 
 public sealed record JsonCardViewResult(
     UIElement Root,
@@ -56,6 +63,13 @@ public static class JsonCardViewBuilder
     {
         public readonly List<JsonCardAnchor> Anchors = new();
         public readonly List<JsonCardSearchEntry> SearchEntries = new();
+
+        /// Pile des Expander "en cours" pendant la récursion : chaque
+        /// BeginCard pousse sa carte avant de construire son contenu, et
+        /// la retire une fois fini -- un instantané de cette pile au
+        /// moment où une entrée est enregistrée donne exactement la
+        /// chaîne de parents à déplier pour la révéler.
+        public readonly List<Expander> AncestorStack = new();
     }
 
     /// Null si le texte n'est pas du JSON valide (l'appelant doit alors
@@ -305,22 +319,46 @@ public static class JsonCardViewBuilder
     {
         var label = Humanize(propertyName);
 
-        Expander card =
+        var headerText =
             value.ValueKind == JsonValueKind.Object
-                ? BuildCard(label, null, BuildObjectBody(value, depth + 1, ctx), depth, ctx)
-                : BuildCard(
-                    $"{label} ({value.GetArrayLength()})",
-                    null,
-                    BuildArrayItemsPanel(value, depth + 1, ctx),
-                    depth,
-                    ctx);
+                ? label
+                : $"{label} ({value.GetArrayLength()})";
+
+        // Capturé avant de pousser cette carte sur la pile : ce sont ses
+        // propres ancêtres, pas elle-même.
+        var ancestorsForAnchor = ctx.AncestorStack.ToArray();
+
+        var card = BeginCard(headerText, null, depth, ctx);
+
+        card.Content =
+            value.ValueKind == JsonValueKind.Object
+                ? BuildCardContent(card, ctx, () => BuildObjectBody(value, depth + 1, ctx))
+                : BuildCardContent(card, ctx, () => BuildArrayItemsPanel(value, depth + 1, ctx));
 
         if (depth <= MaxAnchorDepth)
         {
-            ctx.Anchors.Add(new JsonCardAnchor(label, card));
+            ctx.Anchors.Add(new JsonCardAnchor(label, card, ancestorsForAnchor));
         }
 
         return card;
+    }
+
+    /// Pousse `card` sur la pile d'ancêtres avant d'appeler `build()`
+    /// (donc avant que son contenu n'enregistre la moindre entrée
+    /// cherchable), puis la retire -- voir BuildContext.AncestorStack.
+    private static UIElement
+    BuildCardContent(
+        Expander card,
+        BuildContext ctx,
+        Func<UIElement> build)
+    {
+        ctx.AncestorStack.Add(card);
+
+        var content = build();
+
+        ctx.AncestorStack.RemoveAt(ctx.AncestorStack.Count - 1);
+
+        return content;
     }
 
     private static Panel
@@ -351,11 +389,20 @@ public static class JsonCardViewBuilder
             {
                 var (headerText, badge) = BuildArrayItemHeader(item, i);
 
-                child = BuildCard(headerText, badge, BuildObjectBody(item, depth + 1, ctx), depth, ctx);
+                var itemCard = BeginCard(headerText, badge, depth, ctx);
+
+                itemCard.Content = BuildCardContent(itemCard, ctx, () => BuildObjectBody(item, depth + 1, ctx));
+
+                child = itemCard;
             }
             else if (item.ValueKind == JsonValueKind.Array)
             {
-                child = BuildCard($"[{i}]", null, BuildArrayItemsPanel(item, depth + 1, ctx), depth, ctx);
+                var arrayItemCard = BeginCard($"[{i}]", null, depth, ctx);
+
+                arrayItemCard.Content =
+                    BuildCardContent(arrayItemCard, ctx, () => BuildArrayItemsPanel(item, depth + 1, ctx));
+
+                child = arrayItemCard;
             }
             else
             {
@@ -525,12 +572,15 @@ public static class JsonCardViewBuilder
     /// déjà utilisé pour "Response Headers"/"Body"/etc.) plutôt qu'un
     /// simple Border : replié par défaut, la réponse peut compter des
     /// dizaines de blocs imbriqués et les afficher tous dépliés d'un
-    /// coup serait illisible.
+    /// coup serait illisible. Content n'est délibérément pas encore
+    /// affecté ici : l'appelant doit pousser la carte retournée sur
+    /// BuildContext.AncestorStack (via BuildCardContent) avant de
+    /// construire son contenu, pour que toute entrée cherchable qui y
+    /// est enregistrée connaisse cette carte comme ancêtre.
     private static Expander
-    BuildCard(
+    BeginCard(
         string header,
         UIElement? badge,
-        UIElement content,
         int depth,
         BuildContext ctx)
     {
@@ -568,8 +618,7 @@ public static class JsonCardViewBuilder
             Background = depth % 2 == 0 ? SurfaceBrush : SurfaceAltBrush,
             BorderBrush = BorderBrush,
             BorderThickness = new Thickness(1),
-            Margin = new Thickness(0, 0, 0, 8),
-            Content = content
+            Margin = new Thickness(0, 0, 0, 8)
         };
     }
 
@@ -631,7 +680,7 @@ public static class JsonCardViewBuilder
 
         if (!string.IsNullOrWhiteSpace(text))
         {
-            ctx.SearchEntries.Add(new JsonCardSearchEntry(text, wrapper));
+            ctx.SearchEntries.Add(new JsonCardSearchEntry(text, wrapper, ctx.AncestorStack.ToArray()));
         }
 
         return wrapper;
