@@ -280,39 +280,56 @@ public partial class ApiClientView
         // dans la grille Headers elle-même.
         var resolvedAuth = ResolveAuthConfigForSend();
 
+        // Dès qu'un type d'auth concret est résolu (pas None/Inherit non
+        // résolu), la ligne apparaît toujours, même si le token/mot de
+        // passe est encore vide au moment de l'aperçu — comme Postman, qui
+        // l'affiche avec une valeur "tentative" plutôt que de l'omettre.
         switch (resolvedAuth.Type)
         {
-            case AuthType.Bearer when !string.IsNullOrWhiteSpace(resolvedAuth.BearerToken):
+            case AuthType.Bearer:
 
                 if (!Has("Authorization"))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem { Key = "Authorization", Value = "Bearer " + Mask(resolvedAuth.BearerToken) });
+                    var value =
+                        string.IsNullOrWhiteSpace(resolvedAuth.BearerToken)
+                            ? "Bearer <calculé à l'envoi>"
+                            : "Bearer " + Mask(resolvedAuth.BearerToken);
+
+                    _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
                 }
 
                 break;
 
-            case AuthType.Basic when !string.IsNullOrWhiteSpace(resolvedAuth.Username)
-                        || !string.IsNullOrEmpty(resolvedAuth.Password):
+            case AuthType.Basic:
 
                 if (!Has("Authorization"))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem
-                        {
-                            Key = "Authorization",
-                            Value = "Basic " + Mask($"{resolvedAuth.Username}:{resolvedAuth.Password}")
-                        });
+                    var value =
+                        string.IsNullOrWhiteSpace(resolvedAuth.Username)
+                        && string.IsNullOrEmpty(resolvedAuth.Password)
+                            ? "Basic <calculé à l'envoi>"
+                            : "Basic " + Mask($"{resolvedAuth.Username}:{resolvedAuth.Password}");
+
+                    _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
                 }
 
                 break;
 
-            case AuthType.ApiKey when !string.IsNullOrWhiteSpace(resolvedAuth.ApiKeyName):
+            case AuthType.ApiKey:
 
-                if (!Has(resolvedAuth.ApiKeyName))
+                var keyName =
+                    string.IsNullOrWhiteSpace(resolvedAuth.ApiKeyName)
+                        ? "Authorization"
+                        : resolvedAuth.ApiKeyName;
+
+                if (!Has(keyName))
                 {
-                    _autoHeaders.Add(
-                        new HeaderItem { Key = resolvedAuth.ApiKeyName, Value = Mask(resolvedAuth.ApiKeyValue) });
+                    var value =
+                        string.IsNullOrEmpty(resolvedAuth.ApiKeyValue)
+                            ? "<calculé à l'envoi>"
+                            : Mask(resolvedAuth.ApiKeyValue);
+
+                    _autoHeaders.Add(new HeaderItem { Key = keyName, Value = value });
                 }
 
                 break;
