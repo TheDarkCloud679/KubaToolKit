@@ -24,6 +24,14 @@ public class CollectionStorageService
     public static string EnvironmentsFolder =>
         Path.Combine(RootFolder, "Environments");
 
+    /// Table de correspondance "code technique -> libellé lisible" pour
+    /// la vue Cartes des réponses (ex : providerCode 9 -> "Limoges",
+    /// affiché "Limoges (9)"). Un seul fichier plutôt qu'un par
+    /// collection : ces codes (fournisseur, tarif...) sont en général
+    /// partagés par toutes les requêtes d'une même API.
+    public static string ValueLabelsFile =>
+        Path.Combine(RootFolder, "ValueLabels.json");
+
     public void
     EnsureFoldersExist()
     {
@@ -349,6 +357,84 @@ public class CollectionStorageService
         }
 
         return environments;
+    }
+
+    /// Charge ValueLabels.json : { "champ JSON": { "code": "libellé" } }.
+    /// Créé au premier appel avec un exemple commenté si absent, pour ne
+    /// pas laisser l'utilisateur deviner le format. Jamais bloquant : un
+    /// fichier absent/invalide retombe sur "aucune correspondance" plutôt
+    /// que de faire planter l'affichage de la réponse.
+    public Dictionary<string, Dictionary<string, string>>
+    LoadValueLabels()
+    {
+        EnsureFoldersExist();
+
+        if (!File.Exists(ValueLabelsFile))
+        {
+            try
+            {
+                File.WriteAllText(
+                    ValueLabelsFile,
+                    """
+                    {
+                      "_comment": "Correspondance code technique -> libellé, affichée en Cartes sous la forme 'Libellé (code)'. Une entrée par champ JSON de la réponse (nom exact tel qu'il apparaît dans le JSON, ex: providerCode), avec pour chaque code observé le libellé à afficher. Cette clé _comment est ignorée.",
+                      "providerCode": {
+                        "9": "Limoges"
+                      },
+                      "externalCode": {
+                        "600": "Abonnement"
+                      }
+                    }
+                    """);
+            }
+            catch
+            {
+                // Non bloquant : voir le commentaire de la méthode.
+            }
+        }
+
+        var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var json = File.ReadAllText(ValueLabelsFile);
+
+            // JsonNode plutôt qu'une désérialisation forte-typée : "_comment"
+            // vaut une simple chaîne (pas un objet {code: libellé}), ce
+            // qu'un Dictionary<string, Dictionary<string,string>> rejetterait
+            // en bloc. Ignorer silencieusement toute entrée qui n'a pas la
+            // forme attendue est plus utile qu'un fichier entier invalidé.
+            if (JsonNode.Parse(json) is not JsonObject root)
+            {
+                return result;
+            }
+
+            foreach (var (field, node) in root)
+            {
+                if (node is not JsonObject codes)
+                {
+                    continue;
+                }
+
+                var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var (code, value) in codes)
+                {
+                    if (value != null)
+                    {
+                        labels[code] = value.ToString();
+                    }
+                }
+
+                result[field] = labels;
+            }
+        }
+        catch
+        {
+            // Non bloquant : voir le commentaire de la méthode.
+        }
+
+        return result;
     }
 
     /// Réécrit uniquement le tableau "values" du fichier d'environnement,

@@ -160,6 +160,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="90"/>
                 </Grid.ColumnDefinitions>
 
@@ -223,8 +224,18 @@
                     Click="ReloadEnvironments_Click"/>
 
                 <Button
-                    x:Name="SendButton"
                     Grid.Column="6"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    Margin="4,0,0,0"
+                    ToolTip="Ouvrir le fichier de traduction des codes techniques (ValueLabels.json) pour la vue Cartes"
+                    Content="🏷"
+                    Click="OpenValueLabels_Click"/>
+
+                <Button
+                    x:Name="SendButton"
+                    Grid.Column="7"
                     Margin="8,0,0,0"
                     Style="{StaticResource AccentButtonStyle}"
                     Content="Send"

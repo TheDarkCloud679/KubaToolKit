@@ -70,13 +70,21 @@ public static class JsonCardViewBuilder
         /// moment où une entrée est enregistrée donne exactement la
         /// chaîne de parents à déplier pour la révéler.
         public readonly List<Expander> AncestorStack = new();
+
+        /// Correspondance "champ JSON -> {code -> libellé}" (voir
+        /// CollectionStorageService.LoadValueLabels) : un champ scalaire
+        /// dont le nom et la valeur matchent s'affiche "Libellé (code)"
+        /// plutôt que le code brut.
+        public IReadOnlyDictionary<string, Dictionary<string, string>> ValueLabels =
+            new Dictionary<string, Dictionary<string, string>>();
     }
 
     /// Null si le texte n'est pas du JSON valide (l'appelant doit alors
-    /// se rabattre sur la vue brute).
+    /// se rabattre sur la vue brute). valueLabels : voir BuildContext.
     public static JsonCardViewResult?
     Build(
-        string json)
+        string json,
+        IReadOnlyDictionary<string, Dictionary<string, string>>? valueLabels = null)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -97,7 +105,11 @@ public static class JsonCardViewBuilder
         using (doc)
         {
             var root = doc.RootElement;
-            var ctx = new BuildContext();
+
+            var ctx = new BuildContext
+            {
+                ValueLabels = valueLabels ?? new Dictionary<string, Dictionary<string, string>>()
+            };
 
             UIElement rootElement =
                 root.ValueKind switch
@@ -214,7 +226,7 @@ public static class JsonCardViewBuilder
             grid.Children.Add(keyWrapper);
 
             var valueElement =
-                BuildScalarValueElement(prop.Name, prop.Value);
+                BuildScalarValueElement(prop.Name, prop.Value, ctx);
 
             var valueWrapper = WrapForSearch(GetDisplayText(valueElement), valueElement, ctx);
             valueWrapper.Margin = new Thickness(0, 3, 0, 3);
@@ -233,7 +245,8 @@ public static class JsonCardViewBuilder
     private static FrameworkElement
     BuildScalarValueElement(
         string propertyName,
-        JsonElement value)
+        JsonElement value,
+        BuildContext ctx)
     {
         switch (value.ValueKind)
         {
@@ -251,7 +264,15 @@ public static class JsonCardViewBuilder
 
             case JsonValueKind.Number:
 
-                return new TextBlock { Text = value.GetRawText(), Foreground = TextPrimaryBrush, FontSize = 12 };
+                var rawNumber = value.GetRawText();
+                var numberLabel = TryGetValueLabel(ctx, propertyName, rawNumber);
+
+                return new TextBlock
+                {
+                    Text = numberLabel != null ? $"{numberLabel} ({rawNumber})" : rawNumber,
+                    Foreground = TextPrimaryBrush,
+                    FontSize = 12
+                };
 
             case JsonValueKind.Array:
 
@@ -284,15 +305,30 @@ public static class JsonCardViewBuilder
                     return BuildBadge(text, GetStateColor(text));
                 }
 
+                var stringLabel = TryGetValueLabel(ctx, propertyName, text);
+
                 return new TextBlock
                 {
-                    Text = FormatDateIfLooksLikeOne(text),
+                    Text = stringLabel != null ? $"{stringLabel} ({text})" : FormatDateIfLooksLikeOne(text),
                     Foreground = TextPrimaryBrush,
                     FontSize = 12,
                     TextWrapping = TextWrapping.Wrap
                 };
         }
     }
+
+    /// Voir BuildContext.ValueLabels : null si aucune correspondance
+    /// n'est configurée pour ce champ+valeur.
+    private static string?
+    TryGetValueLabel(
+        BuildContext ctx,
+        string propertyName,
+        string rawValue) =>
+        ctx.ValueLabels.TryGetValue(propertyName, out var codes)
+        && codes.TryGetValue(rawValue, out var label)
+        && !string.IsNullOrWhiteSpace(label)
+            ? label
+            : null;
 
     private static string
     FormatScalarElement(

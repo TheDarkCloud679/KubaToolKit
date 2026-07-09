@@ -719,6 +719,27 @@ public partial class ApiClientView
             });
     }
 
+    /// Ouvre ValueLabels.json (créé avec un exemple s'il n'existe pas
+    /// encore, voir CollectionStorageService.LoadValueLabels) dans
+    /// l'application associée (Bloc-notes par défaut) : ce fichier
+    /// s'édite à la main, pas via l'UI de KubaToolKit. Rechargé à chaque
+    /// réponse affichée en Cartes, donc les changements sont pris en
+    /// compte au prochain envoi sans redémarrer l'appli.
+    private void
+    OpenValueLabels_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _collectionStorage.LoadValueLabels();
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = CollectionStorageService.ValueLabelsFile,
+                UseShellExecute = true
+            });
+    }
+
     private void
     ReloadEnvironments_Click(
         object sender,
@@ -1866,7 +1887,10 @@ public partial class ApiClientView
             ResponseBodyEditor.Visibility = Visibility.Collapsed;
             ResponsePrettyContainer.Visibility = Visibility.Visible;
 
-            _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody);
+            _lastCardsView =
+                JsonCardViewBuilder.Build(
+                    _lastResponseBody,
+                    _collectionStorage.LoadValueLabels());
 
             ResponsePrettyContent.Content =
                 _lastCardsView?.Root
