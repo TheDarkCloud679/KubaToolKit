@@ -1887,10 +1887,19 @@ public partial class ApiClientView
             ResponseBodyEditor.Visibility = Visibility.Collapsed;
             ResponsePrettyContainer.Visibility = Visibility.Visible;
 
-            _lastCardsView =
-                JsonCardViewBuilder.Build(
-                    _lastResponseBody,
-                    _collectionStorage.LoadValueLabels());
+            var valueLabels = _collectionStorage.LoadValueLabels();
+
+            ValueLabelsWarningText.Visibility =
+                _collectionStorage.LastValueLabelsError != null
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            ValueLabelsWarningText.ToolTip =
+                _collectionStorage.LastValueLabelsError != null
+                    ? $"ValueLabels.json invalide, aucune traduction appliquée : {_collectionStorage.LastValueLabelsError}"
+                    : null;
+
+            _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody, valueLabels);
 
             ResponsePrettyContent.Content =
                 _lastCardsView?.Root

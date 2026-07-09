@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ApiClient.Models;
+using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
@@ -359,15 +360,26 @@ public class CollectionStorageService
         return environments;
     }
 
+    /// Renseigné après chaque LoadValueLabels() : message d'erreur si le
+    /// fichier n'a pas pu être lu tel quel (JSON invalide...), sinon
+    /// null. Le chargement retombe silencieusement sur "aucune
+    /// correspondance" dans ce cas -- ce message sert uniquement à
+    /// prévenir l'utilisateur que ses libellés ne sont pas appliqués, au
+    /// lieu de le laisser deviner pourquoi "9" ne devient jamais "Limoges (9)".
+    public string? LastValueLabelsError { get; private set; }
+
     /// Charge ValueLabels.json : { "champ JSON": { "code": "libellé" } }.
     /// Créé au premier appel avec un exemple commenté si absent, pour ne
     /// pas laisser l'utilisateur deviner le format. Jamais bloquant : un
     /// fichier absent/invalide retombe sur "aucune correspondance" plutôt
-    /// que de faire planter l'affichage de la réponse.
+    /// que de faire planter l'affichage de la réponse (voir
+    /// LastValueLabelsError pour le signaler côté UI).
     public Dictionary<string, Dictionary<string, string>>
     LoadValueLabels()
     {
         EnsureFoldersExist();
+
+        LastValueLabelsError = null;
 
         if (!File.Exists(ValueLabelsFile))
         {
@@ -399,13 +411,26 @@ public class CollectionStorageService
         {
             var json = File.ReadAllText(ValueLabelsFile);
 
+            // Tolérant aux virgules trainantes/commentaires : ce fichier
+            // s'édite à la main, une virgule oubliée en fin de liste est
+            // l'erreur la plus probable et ne doit pas invalider tout le
+            // fichier silencieusement.
+            var documentOptions =
+                new JsonDocumentOptions
+                {
+                    AllowTrailingCommas = true,
+                    CommentHandling = JsonCommentHandling.Skip
+                };
+
             // JsonNode plutôt qu'une désérialisation forte-typée : "_comment"
             // vaut une simple chaîne (pas un objet {code: libellé}), ce
             // qu'un Dictionary<string, Dictionary<string,string>> rejetterait
             // en bloc. Ignorer silencieusement toute entrée qui n'a pas la
             // forme attendue est plus utile qu'un fichier entier invalidé.
-            if (JsonNode.Parse(json) is not JsonObject root)
+            if (JsonNode.Parse(json, documentOptions: documentOptions) is not JsonObject root)
             {
+                LastValueLabelsError = "Le fichier ne contient pas un objet JSON valide.";
+
                 return result;
             }
 
@@ -429,9 +454,11 @@ public class CollectionStorageService
                 result[field] = labels;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Non bloquant : voir le commentaire de la méthode.
+            LastValueLabelsError = ex.Message;
+
+            Logger.Error("CollectionStorageService: échec du chargement de ValueLabels.json.", ex);
         }
 
         return result;
