@@ -1713,26 +1713,225 @@ public partial class ApiClientView
         {
             ResponseBodyEditor.Visibility = Visibility.Visible;
             ResponsePrettyContainer.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ResponseBodyEditor.Visibility = Visibility.Collapsed;
+            ResponsePrettyContainer.Visibility = Visibility.Visible;
+
+            _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody);
+
+            ResponsePrettyContent.Content =
+                _lastCardsView?.Root
+                ?? new TextBlock
+                {
+                    Text = "Réponse non-JSON : voir la vue \"Brut\".",
+                    FontStyle = FontStyles.Italic,
+                    Foreground = (Brush)FindResource("TextMutedBrush"),
+                    Margin = new Thickness(8)
+                };
+
+            BuildResponseAnchorsBar(_lastCardsView?.Anchors);
+        }
+
+        // Le contenu vient d'être reconstruit (nouvelle réponse, ou
+        // changement de mode) : toute référence à un élément mis en
+        // surbrillance précédemment est maintenant obsolète.
+        RunResponseSearch();
+    }
+
+    private JsonCardViewResult? _lastCardsView;
+    private List<JsonCardSearchEntry> _cardSearchMatches = new();
+    private readonly List<int> _rawSearchMatchOffsets = new();
+    private int _searchMatchIndex = -1;
+    private static readonly Brush SearchMatchBrush = CreateSearchMatchBrush();
+
+    private static Brush
+    CreateSearchMatchBrush()
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(0xFF, 0xE9, 0x8A));
+        brush.Freeze();
+
+        return brush;
+    }
+
+    private void
+    ResponseSearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        RunResponseSearch();
+
+    private void
+    ResponseSearchBox_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Enter:
+
+                MoveToSearchMatch(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+                e.Handled = true;
+
+                break;
+
+            case Key.Escape:
+
+                ResponseSearchBox.Text = "";
+                e.Handled = true;
+
+                break;
+        }
+    }
+
+    private void
+    ResponseSearchPrev_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        MoveToSearchMatch(-1);
+
+    private void
+    ResponseSearchNext_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        MoveToSearchMatch(1);
+
+    /// Recherche mode-consciente : en vue Cartes, filtre les entrées
+    /// indexées par JsonCardViewBuilder (clés, valeurs, badges, titres
+    /// de bloc) et surligne le résultat courant ; en vue Brut, cherche
+    /// directement dans le texte de l'éditeur AvalonEdit et sélectionne
+    /// le résultat courant. Les deux se pilotent avec les mêmes boutons
+    /// ▲/▼ et le même compteur.
+    private void
+    RunResponseSearch()
+    {
+        ClearSearchHighlight();
+
+        var query = ResponseSearchBox.Text?.Trim() ?? "";
+
+        _cardSearchMatches = new List<JsonCardSearchEntry>();
+        _rawSearchMatchOffsets.Clear();
+        _searchMatchIndex = -1;
+
+        if (string.IsNullOrEmpty(query))
+        {
+            ResponseSearchCountText.Visibility = Visibility.Collapsed;
+            ResponseSearchPrevButton.Visibility = Visibility.Collapsed;
+            ResponseSearchNextButton.Visibility = Visibility.Collapsed;
 
             return;
         }
 
-        ResponseBodyEditor.Visibility = Visibility.Collapsed;
-        ResponsePrettyContainer.Visibility = Visibility.Visible;
+        var isRawMode = ResponseViewRawRadio?.IsChecked == true;
 
-        var cardsView = JsonCardViewBuilder.Build(_lastResponseBody);
+        if (isRawMode)
+        {
+            var text = ResponseBodyEditor.Text ?? "";
+            var searchFrom = 0;
 
-        ResponsePrettyContent.Content =
-            cardsView?.Root
-            ?? new TextBlock
+            while (true)
             {
-                Text = "Réponse non-JSON : voir la vue \"Brut\".",
-                FontStyle = FontStyles.Italic,
-                Foreground = (Brush)FindResource("TextMutedBrush"),
-                Margin = new Thickness(8)
-            };
+                var found = text.IndexOf(query, searchFrom, StringComparison.OrdinalIgnoreCase);
 
-        BuildResponseAnchorsBar(cardsView?.Anchors);
+                if (found < 0)
+                {
+                    break;
+                }
+
+                _rawSearchMatchOffsets.Add(found);
+                searchFrom = found + Math.Max(query.Length, 1);
+            }
+
+            _searchMatchIndex = _rawSearchMatchOffsets.Count > 0 ? 0 : -1;
+        }
+        else
+        {
+            _cardSearchMatches =
+                _lastCardsView?.SearchEntries
+                    .Where(entry => entry.Text.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList()
+                ?? new List<JsonCardSearchEntry>();
+
+            _searchMatchIndex = _cardSearchMatches.Count > 0 ? 0 : -1;
+        }
+
+        var totalMatches = isRawMode ? _rawSearchMatchOffsets.Count : _cardSearchMatches.Count;
+
+        ResponseSearchCountText.Visibility = Visibility.Visible;
+        ResponseSearchPrevButton.Visibility = Visibility.Visible;
+        ResponseSearchNextButton.Visibility = Visibility.Visible;
+        ResponseSearchPrevButton.IsEnabled = totalMatches > 0;
+        ResponseSearchNextButton.IsEnabled = totalMatches > 0;
+
+        UpdateSearchCountText(totalMatches);
+        ShowCurrentSearchMatch(query.Length);
+    }
+
+    private void
+    MoveToSearchMatch(
+        int direction)
+    {
+        var isRawMode = ResponseViewRawRadio?.IsChecked == true;
+        var total = isRawMode ? _rawSearchMatchOffsets.Count : _cardSearchMatches.Count;
+
+        if (total == 0)
+        {
+            return;
+        }
+
+        ClearSearchHighlight();
+
+        _searchMatchIndex = (_searchMatchIndex + direction + total) % total;
+
+        UpdateSearchCountText(total);
+        ShowCurrentSearchMatch(ResponseSearchBox.Text?.Trim().Length ?? 0);
+    }
+
+    private void
+    ShowCurrentSearchMatch(
+        int queryLength)
+    {
+        if (_searchMatchIndex < 0)
+        {
+            return;
+        }
+
+        if (ResponseViewRawRadio?.IsChecked == true)
+        {
+            var offset = _rawSearchMatchOffsets[_searchMatchIndex];
+
+            ResponseBodyEditor.Select(offset, queryLength);
+            ResponseBodyEditor.ScrollToLine(
+                ResponseBodyEditor.Document.GetLineByOffset(offset).LineNumber);
+
+            return;
+        }
+
+        var match = _cardSearchMatches[_searchMatchIndex];
+
+        match.Element.Background = SearchMatchBrush;
+
+        ExpandAndScrollTo(match.Element);
+    }
+
+    private void
+    ClearSearchHighlight()
+    {
+        if (_searchMatchIndex >= 0
+            && _searchMatchIndex < _cardSearchMatches.Count)
+        {
+            _cardSearchMatches[_searchMatchIndex].Element.Background = Brushes.Transparent;
+        }
+    }
+
+    private void
+    UpdateSearchCountText(
+        int totalMatches)
+    {
+        ResponseSearchCountText.Text =
+            totalMatches == 0
+                ? "0/0"
+                : $"{_searchMatchIndex + 1}/{totalMatches}";
     }
 
     /// Barre de raccourcis au-dessus de la vue Cartes : un chip par bloc

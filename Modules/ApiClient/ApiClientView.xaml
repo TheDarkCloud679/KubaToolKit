@@ -1003,6 +1003,47 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBox
+                                x:Name="ResponseSearchBox"
+                                Width="150"
+                                Height="24"
+                                FontSize="11"
+                                Padding="6,0"
+                                VerticalContentAlignment="Center"
+                                ToolTip="Rechercher dans la réponse (Entrée : suivant, Maj+Entrée : précédent, Échap : effacer)"
+                                TextChanged="ResponseSearchBox_TextChanged"
+                                PreviewKeyDown="ResponseSearchBox_PreviewKeyDown"/>
+
+                            <TextBlock
+                                x:Name="ResponseSearchCountText"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Margin="6,0,0,0"
+                                Visibility="Collapsed"/>
+
+                            <Button
+                                x:Name="ResponseSearchPrevButton"
+                                Content="▲"
+                                Click="ResponseSearchPrev_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="6,0"
+                                Height="22"
+                                FontSize="9"
+                                Margin="6,0,0,0"
+                                Visibility="Collapsed"/>
+
+                            <Button
+                                x:Name="ResponseSearchNextButton"
+                                Content="▼"
+                                Click="ResponseSearchNext_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="6,0"
+                                Height="22"
+                                FontSize="9"
+                                Margin="2,0,16,0"
+                                Visibility="Collapsed"/>
+
                             <Button
                                 x:Name="PrevPageButton"
                                 Content="◀ Précédente"

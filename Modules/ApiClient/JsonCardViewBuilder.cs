@@ -14,9 +14,18 @@ public sealed record JsonCardAnchor(
     string Label,
     FrameworkElement Element);
 
+/// Une entrée cherchable de la vue Cartes (clé, valeur, badge ou titre
+/// de bloc) : Element est un conteneur dédié (Border transparent) dont
+/// on peut basculer Background sans jamais perturber l'apparence
+/// d'origine de son contenu (y compris un badge déjà coloré).
+public sealed record JsonCardSearchEntry(
+    string Text,
+    Border Element);
+
 public sealed record JsonCardViewResult(
     UIElement Root,
-    IReadOnlyList<JsonCardAnchor> Anchors);
+    IReadOnlyList<JsonCardAnchor> Anchors,
+    IReadOnlyList<JsonCardSearchEntry> SearchEntries);
 
 /// Transforme un corps de réponse JSON en une arborescence de "cartes"
 /// WPF lisibles (un bloc par objet/élément de tableau, badges colorés
@@ -39,6 +48,15 @@ public static class JsonCardViewBuilder
     private static readonly Brush TextPrimaryBrush = MakeBrush(0x1E, 0x24, 0x30);
     private static readonly Brush TextSecondaryBrush = MakeBrush(0x68, 0x70, 0x7E);
     private static readonly Brush TextMutedBrush = MakeBrush(0x98, 0xA1, 0xAF);
+
+    /// Contexte de construction interne, filé à travers la récursion :
+    /// évite deux paramètres de liste séparés (anchors/searchEntries) à
+    /// répéter dans chaque signature.
+    private sealed class BuildContext
+    {
+        public readonly List<JsonCardAnchor> Anchors = new();
+        public readonly List<JsonCardSearchEntry> SearchEntries = new();
+    }
 
     /// Null si le texte n'est pas du JSON valide (l'appelant doit alors
     /// se rabattre sur la vue brute).
@@ -65,17 +83,17 @@ public static class JsonCardViewBuilder
         using (doc)
         {
             var root = doc.RootElement;
-            var anchors = new List<JsonCardAnchor>();
+            var ctx = new BuildContext();
 
             UIElement rootElement =
                 root.ValueKind switch
                 {
-                    JsonValueKind.Object => BuildObjectBody(root, 0, anchors),
-                    JsonValueKind.Array => BuildArrayItemsPanel(root, 0, anchors),
+                    JsonValueKind.Object => BuildObjectBody(root, 0, ctx),
+                    JsonValueKind.Array => BuildArrayItemsPanel(root, 0, ctx),
                     _ => MutedText(root.GetRawText())
                 };
 
-            return new JsonCardViewResult(rootElement, anchors);
+            return new JsonCardViewResult(rootElement, ctx.Anchors, ctx.SearchEntries);
         }
     }
 
@@ -83,7 +101,7 @@ public static class JsonCardViewBuilder
     BuildObjectBody(
         JsonElement obj,
         int depth,
-        List<JsonCardAnchor> anchors)
+        BuildContext ctx)
     {
         var panel = new StackPanel();
 
@@ -119,12 +137,12 @@ public static class JsonCardViewBuilder
 
         if (scalarProps.Count > 0)
         {
-            panel.Children.Add(BuildFieldsGrid(scalarProps));
+            panel.Children.Add(BuildFieldsGrid(scalarProps, ctx));
         }
 
         foreach (var prop in complexProps)
         {
-            var block = BuildComplexBlock(prop.Name, prop.Value, depth, anchors);
+            var block = BuildComplexBlock(prop.Name, prop.Value, depth, ctx);
 
             block.Margin = new Thickness(0, scalarProps.Count > 0 || panel.Children.Count > 1 ? 10 : 0, 0, 0);
 
@@ -148,7 +166,8 @@ public static class JsonCardViewBuilder
 
     private static Grid
     BuildFieldsGrid(
-        IEnumerable<JsonProperty> props)
+        IEnumerable<JsonProperty> props,
+        BuildContext ctx)
     {
         var grid = new Grid();
 
@@ -161,30 +180,35 @@ public static class JsonCardViewBuilder
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
+            var keyText = Humanize(prop.Name);
+
             var keyBlock =
                 new TextBlock
                 {
-                    Text = Humanize(prop.Name),
+                    Text = keyText,
                     Foreground = TextSecondaryBrush,
                     FontSize = 12,
-                    Margin = new Thickness(0, 3, 10, 3),
                     TextWrapping = TextWrapping.Wrap,
                     VerticalAlignment = VerticalAlignment.Top
                 };
 
-            Grid.SetRow(keyBlock, row);
-            Grid.SetColumn(keyBlock, 0);
-            grid.Children.Add(keyBlock);
+            var keyWrapper = WrapForSearch(keyText, keyBlock, ctx);
+            keyWrapper.Margin = new Thickness(0, 3, 10, 3);
+
+            Grid.SetRow(keyWrapper, row);
+            Grid.SetColumn(keyWrapper, 0);
+            grid.Children.Add(keyWrapper);
 
             var valueElement =
                 BuildScalarValueElement(prop.Name, prop.Value);
 
-            valueElement.Margin = new Thickness(0, 3, 0, 3);
-            valueElement.HorizontalAlignment = HorizontalAlignment.Left;
+            var valueWrapper = WrapForSearch(GetDisplayText(valueElement), valueElement, ctx);
+            valueWrapper.Margin = new Thickness(0, 3, 0, 3);
+            valueWrapper.HorizontalAlignment = HorizontalAlignment.Left;
 
-            Grid.SetRow(valueElement, row);
-            Grid.SetColumn(valueElement, 1);
-            grid.Children.Add(valueElement);
+            Grid.SetRow(valueWrapper, row);
+            Grid.SetColumn(valueWrapper, 1);
+            grid.Children.Add(valueWrapper);
 
             row++;
         }
@@ -277,22 +301,23 @@ public static class JsonCardViewBuilder
         string propertyName,
         JsonElement value,
         int depth,
-        List<JsonCardAnchor> anchors)
+        BuildContext ctx)
     {
         var label = Humanize(propertyName);
 
         Expander card =
             value.ValueKind == JsonValueKind.Object
-                ? BuildCard(label, null, BuildObjectBody(value, depth + 1, anchors), depth)
+                ? BuildCard(label, null, BuildObjectBody(value, depth + 1, ctx), depth, ctx)
                 : BuildCard(
                     $"{label} ({value.GetArrayLength()})",
                     null,
-                    BuildArrayItemsPanel(value, depth + 1, anchors),
-                    depth);
+                    BuildArrayItemsPanel(value, depth + 1, ctx),
+                    depth,
+                    ctx);
 
         if (depth <= MaxAnchorDepth)
         {
-            anchors.Add(new JsonCardAnchor(label, card));
+            ctx.Anchors.Add(new JsonCardAnchor(label, card));
         }
 
         return card;
@@ -302,7 +327,7 @@ public static class JsonCardViewBuilder
     BuildArrayItemsPanel(
         JsonElement array,
         int depth,
-        List<JsonCardAnchor> anchors)
+        BuildContext ctx)
     {
         var itemsPanel = new StackPanel();
         var items = array.EnumerateArray().ToList();
@@ -326,21 +351,28 @@ public static class JsonCardViewBuilder
             {
                 var (headerText, badge) = BuildArrayItemHeader(item, i);
 
-                child = BuildCard(headerText, badge, BuildObjectBody(item, depth + 1, anchors), depth);
+                child = BuildCard(headerText, badge, BuildObjectBody(item, depth + 1, ctx), depth, ctx);
             }
             else if (item.ValueKind == JsonValueKind.Array)
             {
-                child = BuildCard($"[{i}]", null, BuildArrayItemsPanel(item, depth + 1, anchors), depth);
+                child = BuildCard($"[{i}]", null, BuildArrayItemsPanel(item, depth + 1, ctx), depth, ctx);
             }
             else
             {
-                child = new TextBlock
-                {
-                    Text = FormatScalarElement(item),
-                    Foreground = TextPrimaryBrush,
-                    FontSize = 12,
-                    Margin = new Thickness(0, 0, 0, 4)
-                };
+                var text = FormatScalarElement(item);
+
+                var scalarBlock =
+                    new TextBlock
+                    {
+                        Text = text,
+                        Foreground = TextPrimaryBrush,
+                        FontSize = 12
+                    };
+
+                var wrapper = WrapForSearch(text, scalarBlock, ctx);
+                wrapper.Margin = new Thickness(0, 0, 0, 4);
+
+                child = wrapper;
             }
 
             itemsPanel.Children.Add(child);
@@ -499,11 +531,12 @@ public static class JsonCardViewBuilder
         string header,
         UIElement? badge,
         UIElement content,
-        int depth)
+        int depth,
+        BuildContext ctx)
     {
         var headerPanel = new StackPanel { Orientation = Orientation.Horizontal };
 
-        headerPanel.Children.Add(
+        var titleBlock =
             new TextBlock
             {
                 Text = header,
@@ -512,13 +545,20 @@ public static class JsonCardViewBuilder
                 Foreground = TextPrimaryBrush,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
-            });
+            };
+
+        headerPanel.Children.Add(WrapForSearch(header, titleBlock, ctx));
 
         if (badge != null)
         {
-            ((FrameworkElement)badge).Margin = new Thickness(8, 0, 0, 0);
-            ((FrameworkElement)badge).VerticalAlignment = VerticalAlignment.Center;
-            headerPanel.Children.Add(badge);
+            var badgeElement = (FrameworkElement)badge;
+
+            badgeElement.VerticalAlignment = VerticalAlignment.Center;
+
+            var badgeWrapper = WrapForSearch(GetDisplayText(badgeElement), badgeElement, ctx);
+            badgeWrapper.Margin = new Thickness(8, 0, 0, 0);
+
+            headerPanel.Children.Add(badgeWrapper);
         }
 
         return new Expander
@@ -569,6 +609,43 @@ public static class JsonCardViewBuilder
             }
         };
     }
+
+    /// Enveloppe un élément dans un Border transparent dédié et
+    /// enregistre (texte affiché, wrapper) comme entrée cherchable : le
+    /// wrapper peut ensuite être surligné (Background) par la recherche
+    /// sans jamais avoir à mémoriser/restaurer l'apparence d'origine de
+    /// son contenu (y compris un badge déjà coloré).
+    private static Border
+    WrapForSearch(
+        string text,
+        FrameworkElement element,
+        BuildContext ctx)
+    {
+        var wrapper =
+            new Border
+            {
+                Background = Brushes.Transparent,
+                CornerRadius = new CornerRadius(3),
+                Child = element
+            };
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            ctx.SearchEntries.Add(new JsonCardSearchEntry(text, wrapper));
+        }
+
+        return wrapper;
+    }
+
+    private static string
+    GetDisplayText(
+        FrameworkElement element) =>
+        element switch
+        {
+            TextBlock textBlock => textBlock.Text,
+            Border { Child: TextBlock innerText } => innerText.Text,
+            _ => ""
+        };
 
     private static Brush
     MakeBrush(
