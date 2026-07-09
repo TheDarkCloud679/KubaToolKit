@@ -1871,8 +1871,7 @@ public partial class ApiClientView
         // dans l'arbre) n'existent encore.
         if (ResponseBodyEditor == null
             || ResponsePrettyContainer == null
-            || ResponsePrettyContent == null
-            || ResponseAnchorsPanel == null)
+            || ResponsePrettyContent == null)
         {
             return;
         }
@@ -1910,8 +1909,6 @@ public partial class ApiClientView
                     Foreground = (Brush)FindResource("TextMutedBrush"),
                     Margin = new Thickness(8)
                 };
-
-            BuildResponseAnchorsBar(_lastCardsView?.Anchors);
         }
 
         // Le contenu vient d'être reconstruit (nouvelle réponse, ou
@@ -2112,56 +2109,6 @@ public partial class ApiClientView
             totalMatches == 0
                 ? "0/0"
                 : $"{_searchMatchIndex + 1}/{totalMatches}";
-    }
-
-    /// Barre de raccourcis au-dessus de la vue Cartes : un chip par bloc
-    /// nommé (transitAccount, productContainers...) qui fait défiler
-    /// directement jusqu'à ce bloc via BringIntoView(), plutôt que de
-    /// devoir tout parcourir à la molette pour une réponse volumineuse.
-    private void
-    BuildResponseAnchorsBar(
-        IReadOnlyList<JsonCardAnchor>? anchors)
-    {
-        ResponseAnchorsPanel.Children.Clear();
-
-        if (anchors == null
-            || anchors.Count == 0)
-        {
-            ResponseAnchorsPanel.Visibility = Visibility.Collapsed;
-
-            return;
-        }
-
-        ResponseAnchorsPanel.Visibility = Visibility.Visible;
-
-        foreach (var anchor in anchors)
-        {
-            var target = anchor.Element;
-
-            var chip =
-                new Border
-                {
-                    Background = (Brush)FindResource("AccentSoftBrush"),
-                    CornerRadius = new CornerRadius(12),
-                    Padding = new Thickness(10, 4, 10, 4),
-                    Margin = new Thickness(0, 0, 6, 6),
-                    Cursor = Cursors.Hand,
-                    Child = new TextBlock
-                    {
-                        Text = anchor.Label,
-                        FontSize = 12,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = (Brush)FindResource("AccentBrush")
-                    }
-                };
-
-            var ancestors = anchor.Ancestors;
-
-            chip.MouseLeftButtonUp +=
-                (_, _) => ExpandAndScrollTo(target, ancestors);
-
-            ResponseAnchorsPanel.Children.Add(chip);
-        }
     }
 
     /// Les blocs de la vue Cartes sont repliés par défaut (voir

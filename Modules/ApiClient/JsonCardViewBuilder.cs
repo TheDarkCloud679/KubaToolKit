@@ -7,23 +7,15 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ApiClient;
 
-/// Un raccourci de navigation vers un bloc de la vue Cartes (voir
-/// JsonCardViewBuilder.Build) : Element.BringIntoView() fait défiler
-/// automatiquement le ScrollViewer ambiant jusqu'à ce bloc. Ancestors
-/// liste les Expander parents (du plus extérieur au plus proche) à
-/// déplier avant de défiler -- capturés explicitement à la construction
-/// plutôt que remontés depuis l'arbre visuel à l'exécution, qui peut ne
-/// pas être entièrement connecté tant qu'un Expander reste replié.
-public sealed record JsonCardAnchor(
-    string Label,
-    Expander Element,
-    IReadOnlyList<Expander> Ancestors);
-
 /// Une entrée cherchable de la vue Cartes (clé, valeur, badge ou titre
 /// de bloc) : Element est un conteneur dédié (Border transparent) dont
 /// on peut basculer Background sans jamais perturber l'apparence
-/// d'origine de son contenu (y compris un badge déjà coloré). Ancestors :
-/// voir JsonCardAnchor.
+/// d'origine de son contenu (y compris un badge déjà coloré). Ancestors
+/// liste les Expander parents (du plus extérieur au plus proche) à
+/// déplier avant de défiler jusqu'à Element -- capturés explicitement à
+/// la construction plutôt que remontés depuis l'arbre visuel à
+/// l'exécution, qui peut ne pas être entièrement connecté tant qu'un
+/// Expander reste replié.
 public sealed record JsonCardSearchEntry(
     string Text,
     Border Element,
@@ -31,7 +23,6 @@ public sealed record JsonCardSearchEntry(
 
 public sealed record JsonCardViewResult(
     UIElement Root,
-    IReadOnlyList<JsonCardAnchor> Anchors,
     IReadOnlyList<JsonCardSearchEntry> SearchEntries);
 
 /// Transforme un corps de réponse JSON en une arborescence de "cartes"
@@ -57,11 +48,9 @@ public static class JsonCardViewBuilder
     private static readonly Brush TextMutedBrush = MakeBrush(0x98, 0xA1, 0xAF);
 
     /// Contexte de construction interne, filé à travers la récursion :
-    /// évite deux paramètres de liste séparés (anchors/searchEntries) à
-    /// répéter dans chaque signature.
+    /// évite de répéter plusieurs paramètres dans chaque signature.
     private sealed class BuildContext
     {
-        public readonly List<JsonCardAnchor> Anchors = new();
         public readonly List<JsonCardSearchEntry> SearchEntries = new();
 
         /// Pile des Expander "en cours" pendant la récursion : chaque
@@ -119,7 +108,7 @@ public static class JsonCardViewBuilder
                     _ => MutedText(root.GetRawText())
                 };
 
-            return new JsonCardViewResult(rootElement, ctx.Anchors, ctx.SearchEntries);
+            return new JsonCardViewResult(rootElement, ctx.SearchEntries);
         }
     }
 
@@ -358,12 +347,6 @@ public static class JsonCardViewBuilder
         return label != null ? $"{label} ({raw})" : raw;
     }
 
-    /// Les blocs "nommés" (propriété d'objet -> objet ou tableau) jusqu'à
-    /// une profondeur de 1 deviennent des raccourcis dans la barre de
-    /// navigation rapide au-dessus de la réponse ; au-delà, une réponse
-    /// très imbriquée en produirait beaucoup trop pour être utile.
-    private const int MaxAnchorDepth = 1;
-
     private static Expander
     BuildComplexBlock(
         string propertyName,
@@ -378,21 +361,12 @@ public static class JsonCardViewBuilder
                 ? label
                 : $"{label} ({value.GetArrayLength()})";
 
-        // Capturé avant de pousser cette carte sur la pile : ce sont ses
-        // propres ancêtres, pas elle-même.
-        var ancestorsForAnchor = ctx.AncestorStack.ToArray();
-
         var card = BeginCard(headerText, null, depth, ctx);
 
         card.Content =
             value.ValueKind == JsonValueKind.Object
                 ? BuildCardContent(card, ctx, () => BuildObjectBody(value, depth + 1, ctx))
                 : BuildCardContent(card, ctx, () => BuildArrayItemsPanel(value, depth + 1, ctx));
-
-        if (depth <= MaxAnchorDepth)
-        {
-            ctx.Anchors.Add(new JsonCardAnchor(label, card, ancestorsForAnchor));
-        }
 
         return card;
     }
