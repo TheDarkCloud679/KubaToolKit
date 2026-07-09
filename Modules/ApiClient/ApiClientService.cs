@@ -98,7 +98,7 @@ public class ApiClientService
                 "*/*");
         }
 
-        ApplyAuth(request, auth);
+        ApplyAuth(request, auth, variables);
 
         var stopwatch =
             Stopwatch.StartNew();
@@ -278,28 +278,38 @@ public class ApiClientService
     private static void
     ApplyAuth(
         HttpRequestMessage request,
-        AuthConfig auth)
+        AuthConfig auth,
+        Dictionary<string, string>? variables)
     {
         switch (auth.Type)
         {
             case AuthType.Bearer:
 
-                if (!string.IsNullOrWhiteSpace(auth.BearerToken))
+                var token =
+                    SubstituteVariables(auth.BearerToken, variables);
+
+                if (!string.IsNullOrWhiteSpace(token))
                 {
                     request.Headers.Authorization =
                         new AuthenticationHeaderValue(
                             "Bearer",
-                            auth.BearerToken);
+                            token);
                 }
 
                 break;
 
             case AuthType.Basic:
 
+                var username =
+                    SubstituteVariables(auth.Username, variables);
+
+                var password =
+                    SubstituteVariables(auth.Password, variables);
+
                 var credentials =
                     Convert.ToBase64String(
                         Encoding.UTF8.GetBytes(
-                            $"{auth.Username}:{auth.Password}"));
+                            $"{username}:{password}"));
 
                 request.Headers.Authorization =
                     new AuthenticationHeaderValue(
@@ -312,9 +322,12 @@ public class ApiClientService
 
                 if (!string.IsNullOrWhiteSpace(auth.ApiKeyName))
                 {
+                    var apiKeyValue =
+                        SubstituteVariables(auth.ApiKeyValue, variables);
+
                     request.Headers.TryAddWithoutValidation(
                         auth.ApiKeyName,
-                        auth.ApiKeyValue);
+                        apiKeyValue);
                 }
 
                 break;
