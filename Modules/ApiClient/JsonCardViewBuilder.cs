@@ -272,7 +272,7 @@ public static class JsonCardViewBuilder
     /// très imbriquée en produirait beaucoup trop pour être utile.
     private const int MaxAnchorDepth = 1;
 
-    private static Border
+    private static Expander
     BuildComplexBlock(
         string propertyName,
         JsonElement value,
@@ -281,7 +281,7 @@ public static class JsonCardViewBuilder
     {
         var label = Humanize(propertyName);
 
-        Border card =
+        Expander card =
             value.ValueKind == JsonValueKind.Object
                 ? BuildCard(label, null, BuildObjectBody(value, depth + 1, anchors), depth)
                 : BuildCard(
@@ -489,7 +489,12 @@ public static class JsonCardViewBuilder
             : text;
     }
 
-    private static Border
+    /// Un Expander (style global de l'appli : coins arrondis, flèche,
+    /// déjà utilisé pour "Response Headers"/"Body"/etc.) plutôt qu'un
+    /// simple Border : replié par défaut, la réponse peut compter des
+    /// dizaines de blocs imbriqués et les afficher tous dépliés d'un
+    /// coup serait illisible.
+    private static Expander
     BuildCard(
         string header,
         UIElement? badge,
@@ -516,22 +521,15 @@ public static class JsonCardViewBuilder
             headerPanel.Children.Add(badge);
         }
 
-        var stack = new StackPanel();
-
-        stack.Children.Add(headerPanel);
-
-        stack.Children.Add(
-            new Border { Margin = new Thickness(0, 8, 0, 0), Child = content });
-
-        return new Border
+        return new Expander
         {
+            Header = headerPanel,
+            IsExpanded = false,
+            Background = depth % 2 == 0 ? SurfaceBrush : SurfaceAltBrush,
             BorderBrush = BorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Background = depth % 2 == 0 ? SurfaceBrush : SurfaceAltBrush,
-            Padding = new Thickness(12),
             Margin = new Thickness(0, 0, 0, 8),
-            Child = stack
+            Content = content
         };
     }
 

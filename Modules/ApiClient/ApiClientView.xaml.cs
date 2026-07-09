@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -1776,10 +1777,36 @@ public partial class ApiClientView
                 };
 
             chip.MouseLeftButtonUp +=
-                (_, _) => target.BringIntoView();
+                (_, _) => ExpandAndScrollTo(target);
 
             ResponseAnchorsPanel.Children.Add(chip);
         }
+    }
+
+    /// Les blocs de la vue Cartes sont repliés par défaut (voir
+    /// JsonCardViewBuilder.BuildCard) : sauter directement dessus ne
+    /// sert à rien tant qu'il reste replié, ou que l'un de ses parents
+    /// (lui aussi replié) le cache. Déplie toute la chaîne, puis attend
+    /// que la mise en page ait pris en compte la nouvelle hauteur avant
+    /// de défiler (BringIntoView() juste après IsExpanded=true utiliserait
+    /// encore les anciennes dimensions, repliées).
+    private static void
+    ExpandAndScrollTo(
+        FrameworkElement target)
+    {
+        for (DependencyObject? node = target;
+             node != null;
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is Expander expander)
+            {
+                expander.IsExpanded = true;
+            }
+        }
+
+        target.Dispatcher.BeginInvoke(
+            DispatcherPriority.ContextIdle,
+            new Action(() => target.BringIntoView()));
     }
 
     /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
