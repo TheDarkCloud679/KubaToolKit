@@ -57,20 +57,33 @@ public static class SmoothExpandBehavior
     Expand(
         FrameworkElement element)
     {
+        // Measure(new Size(width, double.PositiveInfinity)) donnait des
+        // hauteurs aberrantes dès que le contenu incluait un DataGrid (une
+        // largeur/hauteur non contrainte perturbe son calcul de layout,
+        // menant à une carte qui restait bien plus haute que son contenu
+        // une fois "dépliée"). UpdateLayout() force à la place une vraie
+        // passe de mise en page, avec les contraintes réelles de l'arbre
+        // visuel (largeur du parent, etc.), donc une ActualHeight fiable
+        // quel que soit le contenu.
+        element.BeginAnimation(FrameworkElement.HeightProperty, null);
+        element.Opacity = 0;
         element.Visibility = Visibility.Visible;
+        element.Height = double.NaN;
+        element.UpdateLayout();
 
-        // Mesure la hauteur "naturelle" du contenu (Height reste à Auto
-        // jusqu'ici) pour savoir jusqu'où animer -- indispensable puisque
-        // ce contenu n'a jamais été affiché et n'a donc pas d'ActualHeight
-        // exploitable avant cette mesure explicite.
-        element.Measure(
-            new Size(
-                element.ActualWidth > 0 ? element.ActualWidth : double.PositiveInfinity,
-                double.PositiveInfinity));
-
-        var targetHeight = element.DesiredSize.Height;
+        var targetHeight = element.ActualHeight;
 
         element.Height = 0;
+
+        var opacityAnimation =
+            new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = new Duration(TimeSpan.FromMilliseconds(ExpandMs))
+            };
+
+        element.BeginAnimation(UIElement.OpacityProperty, opacityAnimation);
 
         var animation =
             new DoubleAnimation
