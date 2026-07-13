@@ -12,11 +12,11 @@
 
         <!-- Bucket -->
         <Border
-            Padding="14,10"
+            Padding="{StaticResource CardPadding}"
             Margin="0,0,0,10"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource SurfaceBrush}"
             Effect="{StaticResource CardShadowEffect}">
             <StackPanel Orientation="Horizontal">
@@ -98,7 +98,7 @@ Margin="0,0,0,10">
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
-                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -106,10 +106,10 @@ Margin="0,0,0,10">
             <Border
         BorderBrush="{StaticResource BorderBrush}"
         BorderThickness="1"
-        CornerRadius="8"
+        CornerRadius="{StaticResource RadiusMedium}"
         Background="{StaticResource SurfaceBrush}"
         Effect="{StaticResource CardShadowEffect}"
-        Padding="10">
+        Padding="{StaticResource CardPadding}">
                 <TreeView
                     x:Name="S3TreeView"
                     SelectedItemChanged="S3TreeView_SelectedItemChanged">
@@ -161,7 +161,7 @@ Margin="0,0,0,10">
             <!-- Splitter -->
             <GridSplitter
                 Grid.Column="1"
-                Width="10"
+                Width="6"
                 HorizontalAlignment="Stretch"/>
 
             <!-- Right panel -->
@@ -169,10 +169,10 @@ Margin="0,0,0,10">
 Grid.Column="2"
 BorderBrush="{StaticResource BorderBrush}"
 BorderThickness="1"
-CornerRadius="8"
+CornerRadius="{StaticResource RadiusMedium}"
 Background="{StaticResource SurfaceBrush}"
 Effect="{StaticResource CardShadowEffect}"
-Padding="10">
+Padding="{StaticResource CardPadding}">
 
                 <Grid>
 

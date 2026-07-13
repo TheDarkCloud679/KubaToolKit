@@ -54,10 +54,10 @@
             Grid.Row="1"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource SurfaceBrush}"
             Effect="{StaticResource CardShadowEffect}"
-            Padding="8">
+            Padding="{StaticResource CardPadding}">
 
             <DataGrid
                 x:Name="QueuesGrid"

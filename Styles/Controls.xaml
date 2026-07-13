@@ -638,6 +638,16 @@
         <Setter Property="Padding" Value="2"/>
     </Style>
 
+    <!--
+        Un template personnalisé (flèche pivotante + ItemsPresenter animé
+        via SmoothExpandBehavior) a été tenté ici pour animer le dépli de
+        l'arborescence des buckets S3/collections API Client/groupes de
+        logs CloudWatch, mais cassait l'alignement des lignes dans
+        certains arbres (CloudWatch notamment, dont le HeaderTemplate
+        contient sa propre CheckBox). Revenu au template OS par défaut
+        (juste ces trois Setters, sans Template personnalisé) le temps de
+        retravailler l'animation sans casser l'existant.
+    -->
     <Style TargetType="TreeViewItem">
         <Setter Property="Padding" Value="4,3"/>
         <Setter Property="FontSize" Value="13"/>
@@ -718,12 +728,13 @@
                                 Content="{TemplateBinding Content}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}"
                                 Margin="10,0,10,10"
-                                Visibility="Collapsed"/>
+                                Visibility="Collapsed"
+                                ClipToBounds="True"/>
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
-                            <Setter TargetName="ExpanderContent" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="ExpanderContent" Property="behaviors:SmoothExpandBehavior.IsExpanded" Value="True"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -735,6 +746,14 @@
          PROGRESS BAR
          ===================================================== -->
 
+    <!--
+        PART_Indicator (déterminé, Width bindée par ProgressBar lui-même)
+        était le seul visuel présent : en mode IsIndeterminate=True, rien
+        ne pilotait sa largeur, donc la barre ne montrait tout simplement
+        rien qui bouge pendant un chargement. IndeterminateIndicator est
+        un second rectangle, cette fois animé en boucle (glissement de
+        gauche à droite), affiché uniquement quand IsIndeterminate=True.
+    -->
     <Style TargetType="ProgressBar">
         <Setter Property="Height" Value="6"/>
         <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
@@ -743,7 +762,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
-                    <Grid x:Name="PART_Track">
+                    <Grid x:Name="PART_Track" ClipToBounds="True">
                         <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
                         <Border
                             x:Name="PART_Indicator"
@@ -751,7 +770,40 @@
                             CornerRadius="3"
                             HorizontalAlignment="Left"
                             Width="0"/>
+                        <Border
+                            x:Name="IndeterminateIndicator"
+                            Background="{TemplateBinding Foreground}"
+                            CornerRadius="3"
+                            Width="90"
+                            HorizontalAlignment="Left"
+                            Visibility="Collapsed">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="IndeterminateTransform" X="-90"/>
+                            </Border.RenderTransform>
+                        </Border>
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="IndeterminateIndicator" Property="Visibility" Value="Visible"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="IndeterminateStoryboard">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="IndeterminateTransform"
+                                            Storyboard.TargetProperty="X"
+                                            From="-90"
+                                            To="500"
+                                            Duration="0:0:1.2"
+                                            RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="IndeterminateStoryboard"/>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

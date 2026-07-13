@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -27,6 +28,7 @@ public partial class ApiClientView
     private bool _collectionsSortDescending;
     private bool _showAutoHeaders = true;
     private string? _binaryFilePath;
+    private string _lastResponseBody = "";
 
     // Le nœud dont le contenu est actuellement chargé dans l'éditeur (null
     // pour une requête ad hoc jamais enregistrée) : sert à résoudre "Inherit
@@ -713,6 +715,27 @@ public partial class ApiClientView
             new ProcessStartInfo
             {
                 FileName = CollectionStorageService.EnvironmentsFolder,
+                UseShellExecute = true
+            });
+    }
+
+    /// Ouvre ValueLabels.json (créé avec un exemple s'il n'existe pas
+    /// encore, voir CollectionStorageService.LoadValueLabels) dans
+    /// l'application associée (Bloc-notes par défaut) : ce fichier
+    /// s'édite à la main, pas via l'UI de KubaToolKit. Rechargé à chaque
+    /// réponse affichée en Cartes, donc les changements sont pris en
+    /// compte au prochain envoi sans redémarrer l'appli.
+    private void
+    OpenValueLabels_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _collectionStorage.LoadValueLabels();
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = CollectionStorageService.ValueLabelsFile,
                 UseShellExecute = true
             });
     }
@@ -1471,6 +1494,8 @@ public partial class ApiClientView
     LoadResponseBody(
         string body)
     {
+        _lastResponseBody = body;
+
         ResponseBodyEditor.Text =
             JsonFormattingHelper.FormatJson(body);
 
@@ -1487,6 +1512,630 @@ public partial class ApiClientView
         ResponseBodyEditor.TextArea
             .TextView
             .Redraw();
+
+        RefreshResponseView();
+        UpdatePaginationControls();
+        UpdateSizeSortControls();
+    }
+
+    /// Détecte comment paginer la requête actuelle à partir de ses
+    /// propres Params (jamais de la réponse : c'est la requête qui porte
+    /// les paramètres à modifier pour changer de page) : "offset" (avec
+    /// un pas déduit de size/limit/pageSize, ou de la réponse à défaut)
+    /// ou "page"/"pageNumber"/"pageIndex" (pas de 1). Retourne null si
+    /// aucun des deux schémas n'est présent dans les Params.
+    private (HeaderItem Param, string Mode, int Step)?
+    DetectPagination()
+    {
+        var offsetParam =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && string.Equals(p.Key?.Trim(), "offset", StringComparison.OrdinalIgnoreCase));
+
+        if (offsetParam != null)
+        {
+            var step =
+                TryGetIntParam("size")
+                ?? TryGetIntParam("limit")
+                ?? TryGetIntParam("pageSize")
+                ?? TryGetResponseIntField("size")
+                ?? TryGetResponseIntField("pageSize")
+                ?? 20;
+
+            return (offsetParam, "offset", step);
+        }
+
+        var pageKeys = new[] { "page", "pagenumber", "pageindex" };
+
+        var pageParam =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && p.Key != null
+                && pageKeys.Contains(p.Key.Trim().ToLowerInvariant()));
+
+        return pageParam != null
+            ? (pageParam, "page", 1)
+            : null;
+    }
+
+    private int?
+    TryGetIntParam(
+        string key)
+    {
+        var param =
+            _params.FirstOrDefault(p =>
+                p.Enabled
+                && string.Equals(p.Key?.Trim(), key, StringComparison.OrdinalIgnoreCase));
+
+        return param != null && int.TryParse(param.Value, out var value)
+            ? value
+            : null;
+    }
+
+    private int?
+    TryGetResponseIntField(
+        string key)
+    {
+        if (string.IsNullOrWhiteSpace(_lastResponseBody))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(_lastResponseBody);
+
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty(key, out var element)
+                && element.ValueKind == JsonValueKind.Number
+                    ? element.GetInt32()
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// Affiche/active les boutons Page précédente/suivante selon ce que
+    /// DetectPagination() trouve dans les Params actuels, et essaie
+    /// d'estimer s'il reste une page suivante à partir de champs
+    /// habituels de la réponse (items/total/totalItems/count, ou
+    /// pages/totalPages) -- purement indicatif, jamais bloquant si ces
+    /// champs sont absents ou nommés différemment par l'API.
+    private void
+    UpdatePaginationControls()
+    {
+        var pagination = DetectPagination();
+
+        if (pagination == null)
+        {
+            PrevPageButton.Visibility = Visibility.Collapsed;
+            NextPageButton.Visibility = Visibility.Collapsed;
+            PageInfoTextBlock.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        var (param, mode, step) = pagination.Value;
+
+        int.TryParse(param.Value, out var current);
+
+        PrevPageButton.Visibility = Visibility.Visible;
+        NextPageButton.Visibility = Visibility.Visible;
+        PageInfoTextBlock.Visibility = Visibility.Visible;
+
+        PrevPageButton.IsEnabled = current > 0;
+
+        if (mode == "offset")
+        {
+            var total =
+                TryGetResponseIntField("items")
+                ?? TryGetResponseIntField("total")
+                ?? TryGetResponseIntField("totalItems")
+                ?? TryGetResponseIntField("count");
+
+            NextPageButton.IsEnabled = !total.HasValue || current + step < total.Value;
+
+            PageInfoTextBlock.Text =
+                total.HasValue
+                    ? $"offset {current} / {total.Value}"
+                    : $"offset {current}";
+        }
+        else
+        {
+            var totalPages =
+                TryGetResponseIntField("pages")
+                ?? TryGetResponseIntField("totalPages");
+
+            NextPageButton.IsEnabled = !totalPages.HasValue || current + 1 < totalPages.Value;
+
+            PageInfoTextBlock.Text =
+                totalPages.HasValue
+                    ? $"page {current} / {totalPages.Value}"
+                    : $"page {current}";
+        }
+    }
+
+    private async void
+    PrevPage_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await GoToAdjacentPageAsync(-1);
+
+    private async void
+    NextPage_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await GoToAdjacentPageAsync(1);
+
+    private async Task
+    GoToAdjacentPageAsync(
+        int direction)
+    {
+        var pagination = DetectPagination();
+
+        if (pagination == null)
+        {
+            return;
+        }
+
+        var (param, mode, step) = pagination.Value;
+
+        int.TryParse(param.Value, out var current);
+
+        var next =
+            mode == "offset"
+                ? current + direction * step
+                : current + direction;
+
+        if (next < 0)
+        {
+            next = 0;
+        }
+
+        param.Value = next.ToString();
+
+        // HeaderItem n'implémente pas INotifyPropertyChanged (mutation
+        // depuis le code, pas depuis une cellule éditée) : forcer le
+        // DataGrid à relire la valeur affichée.
+        ParamsGrid.Items.Refresh();
+
+        SyncUrlFromParams();
+
+        await SendAsync();
+    }
+
+    /// Un param de taille de page parmi les mêmes noms déjà reconnus
+    /// comme pas d'"offset" dans DetectPagination (size/limit/pageSize).
+    private HeaderItem?
+    DetectSizeParam()
+    {
+        var sizeKeys = new[] { "size", "limit", "pagesize" };
+
+        return _params.FirstOrDefault(p =>
+            p.Enabled
+            && p.Key != null
+            && sizeKeys.Contains(p.Key.Trim().ToLowerInvariant()));
+    }
+
+    /// Un param de tri parmi les noms usuels, dont la valeur actuelle
+    /// ressemble déjà à "asc"/"desc" -- sinon impossible de savoir sans
+    /// se tromper si l'API attend "1"/"-1", "+champ"/"-champ", etc.
+    private HeaderItem?
+    DetectSortParam()
+    {
+        var sortKeys = new[] { "sort", "order", "direction", "sortdirection", "sortorder" };
+
+        return _params.FirstOrDefault(p =>
+            p.Enabled
+            && p.Key != null
+            && sortKeys.Contains(p.Key.Trim().ToLowerInvariant())
+            && p.Value != null
+            && (string.Equals(p.Value.Trim(), "asc", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.Value.Trim(), "desc", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private void
+    UpdateSizeSortControls()
+    {
+        var sizeParam = DetectSizeParam();
+
+        PageSizeLabel.Visibility = sizeParam != null ? Visibility.Visible : Visibility.Collapsed;
+        PageSizeBox.Visibility = sizeParam != null ? Visibility.Visible : Visibility.Collapsed;
+
+        if (sizeParam != null)
+        {
+            PageSizeBox.Text = sizeParam.Value;
+        }
+
+        var sortParam = DetectSortParam();
+
+        SortToggleButton.Visibility = sortParam != null ? Visibility.Visible : Visibility.Collapsed;
+
+        if (sortParam != null)
+        {
+            var isDescending = string.Equals(sortParam.Value?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+
+            SortToggleButton.Content = isDescending ? "Tri ▼ Décroissant" : "Tri ▲ Croissant";
+        }
+    }
+
+    /// Changer la taille de page ou le tri invalide la position actuelle
+    /// dans la liste : repartir de la première page évite un décalage
+    /// incohérent (offset 40 avec une taille de page qui vient de
+    /// changer, par exemple).
+    private void
+    ResetPageToStart()
+    {
+        var pagination = DetectPagination();
+
+        if (pagination != null)
+        {
+            pagination.Value.Param.Value = "0";
+        }
+    }
+
+    private async void
+    PageSizeBox_KeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        await ApplyPageSizeAsync();
+    }
+
+    private async void
+    PageSizeBox_LostFocus(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyPageSizeAsync();
+
+    private async Task
+    ApplyPageSizeAsync()
+    {
+        var sizeParam = DetectSizeParam();
+
+        if (sizeParam == null)
+        {
+            return;
+        }
+
+        if (!int.TryParse(PageSizeBox.Text.Trim(), out var newSize)
+            || newSize <= 0)
+        {
+            PageSizeBox.Text = sizeParam.Value;
+
+            return;
+        }
+
+        if (sizeParam.Value == newSize.ToString())
+        {
+            return;
+        }
+
+        sizeParam.Value = newSize.ToString();
+
+        ResetPageToStart();
+        ParamsGrid.Items.Refresh();
+        SyncUrlFromParams();
+
+        await SendAsync();
+    }
+
+    private async void
+    SortToggle_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var sortParam = DetectSortParam();
+
+        if (sortParam == null)
+        {
+            return;
+        }
+
+        var isDescending = string.Equals(sortParam.Value?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+
+        sortParam.Value = isDescending ? "asc" : "desc";
+
+        ResetPageToStart();
+        ParamsGrid.Items.Refresh();
+        SyncUrlFromParams();
+
+        await SendAsync();
+    }
+
+    private void
+    ResponseViewMode_Changed(
+        object sender,
+        RoutedEventArgs e) =>
+        RefreshResponseView();
+
+    /// Bascule entre la vue "Brut" (JSON tel quel, avec coloration) et la
+    /// vue "Cartes" (un bloc par objet/élément de tableau, voir
+    /// JsonCardViewBuilder). Reconstruit la vue Cartes à chaque appel :
+    /// pas de cache, la réponse ne change qu'après un nouvel envoi.
+    private void
+    RefreshResponseView()
+    {
+        // Le RadioButton "Cartes" a IsChecked="True" dans le XAML : son
+        // événement Checked se déclenche pendant InitializeComponent(),
+        // avant que ResponseBodyEditor/ResponsePrettyContainer (plus bas
+        // dans l'arbre) n'existent encore.
+        if (ResponseBodyEditor == null
+            || ResponsePrettyContainer == null
+            || ResponsePrettyContent == null)
+        {
+            return;
+        }
+
+        if (ResponseViewRawRadio?.IsChecked == true)
+        {
+            ResponseBodyEditor.Visibility = Visibility.Visible;
+            ResponsePrettyContainer.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ResponseBodyEditor.Visibility = Visibility.Collapsed;
+            ResponsePrettyContainer.Visibility = Visibility.Visible;
+
+            var valueLabels = _collectionStorage.LoadValueLabels();
+
+            ValueLabelsWarningText.Visibility =
+                _collectionStorage.LastValueLabelsError != null
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            ValueLabelsWarningText.ToolTip =
+                _collectionStorage.LastValueLabelsError != null
+                    ? $"ValueLabels.json invalide, aucune traduction appliquée : {_collectionStorage.LastValueLabelsError}"
+                    : null;
+
+            _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody, valueLabels);
+
+            ResponsePrettyContent.Content =
+                _lastCardsView?.Root
+                ?? new TextBlock
+                {
+                    Text = "Réponse non-JSON : voir la vue \"Brut\".",
+                    FontStyle = FontStyles.Italic,
+                    Foreground = (Brush)FindResource("TextMutedBrush"),
+                    Margin = new Thickness(8)
+                };
+        }
+
+        // Le contenu vient d'être reconstruit (nouvelle réponse, ou
+        // changement de mode) : toute référence à un élément mis en
+        // surbrillance précédemment est maintenant obsolète.
+        RunResponseSearch();
+    }
+
+    private JsonCardViewResult? _lastCardsView;
+    private List<JsonCardSearchEntry> _cardSearchMatches = new();
+    private readonly List<int> _rawSearchMatchOffsets = new();
+    private int _searchMatchIndex = -1;
+    private static readonly Brush SearchMatchBrush = CreateSearchMatchBrush();
+
+    private static Brush
+    CreateSearchMatchBrush()
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(0xFF, 0xE9, 0x8A));
+        brush.Freeze();
+
+        return brush;
+    }
+
+    private void
+    ResponseSearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        RunResponseSearch();
+
+    private void
+    ResponseSearchBox_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Enter:
+
+                MoveToSearchMatch(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+                e.Handled = true;
+
+                break;
+
+            case Key.Escape:
+
+                ResponseSearchBox.Text = "";
+                e.Handled = true;
+
+                break;
+        }
+    }
+
+    private void
+    ResponseSearchPrev_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        MoveToSearchMatch(-1);
+
+    private void
+    ResponseSearchNext_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        MoveToSearchMatch(1);
+
+    /// Recherche mode-consciente : en vue Cartes, filtre les entrées
+    /// indexées par JsonCardViewBuilder (clés, valeurs, badges, titres
+    /// de bloc) et surligne le résultat courant ; en vue Brut, cherche
+    /// directement dans le texte de l'éditeur AvalonEdit et sélectionne
+    /// le résultat courant. Les deux se pilotent avec les mêmes boutons
+    /// ▲/▼ et le même compteur.
+    private void
+    RunResponseSearch()
+    {
+        ClearSearchHighlight();
+
+        var query = ResponseSearchBox.Text?.Trim() ?? "";
+
+        _cardSearchMatches = new List<JsonCardSearchEntry>();
+        _rawSearchMatchOffsets.Clear();
+        _searchMatchIndex = -1;
+
+        if (string.IsNullOrEmpty(query))
+        {
+            ResponseSearchCountText.Visibility = Visibility.Collapsed;
+            ResponseSearchPrevButton.Visibility = Visibility.Collapsed;
+            ResponseSearchNextButton.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        var isRawMode = ResponseViewRawRadio?.IsChecked == true;
+
+        if (isRawMode)
+        {
+            var text = ResponseBodyEditor.Text ?? "";
+            var searchFrom = 0;
+
+            while (true)
+            {
+                var found = text.IndexOf(query, searchFrom, StringComparison.OrdinalIgnoreCase);
+
+                if (found < 0)
+                {
+                    break;
+                }
+
+                _rawSearchMatchOffsets.Add(found);
+                searchFrom = found + Math.Max(query.Length, 1);
+            }
+
+            _searchMatchIndex = _rawSearchMatchOffsets.Count > 0 ? 0 : -1;
+        }
+        else
+        {
+            _cardSearchMatches =
+                _lastCardsView?.SearchEntries
+                    .Where(entry => entry.Text.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList()
+                ?? new List<JsonCardSearchEntry>();
+
+            _searchMatchIndex = _cardSearchMatches.Count > 0 ? 0 : -1;
+        }
+
+        var totalMatches = isRawMode ? _rawSearchMatchOffsets.Count : _cardSearchMatches.Count;
+
+        ResponseSearchCountText.Visibility = Visibility.Visible;
+        ResponseSearchPrevButton.Visibility = Visibility.Visible;
+        ResponseSearchNextButton.Visibility = Visibility.Visible;
+        ResponseSearchPrevButton.IsEnabled = totalMatches > 0;
+        ResponseSearchNextButton.IsEnabled = totalMatches > 0;
+
+        UpdateSearchCountText(totalMatches);
+        ShowCurrentSearchMatch(query.Length);
+    }
+
+    private void
+    MoveToSearchMatch(
+        int direction)
+    {
+        var isRawMode = ResponseViewRawRadio?.IsChecked == true;
+        var total = isRawMode ? _rawSearchMatchOffsets.Count : _cardSearchMatches.Count;
+
+        if (total == 0)
+        {
+            return;
+        }
+
+        ClearSearchHighlight();
+
+        _searchMatchIndex = (_searchMatchIndex + direction + total) % total;
+
+        UpdateSearchCountText(total);
+        ShowCurrentSearchMatch(ResponseSearchBox.Text?.Trim().Length ?? 0);
+    }
+
+    private void
+    ShowCurrentSearchMatch(
+        int queryLength)
+    {
+        if (_searchMatchIndex < 0)
+        {
+            return;
+        }
+
+        if (ResponseViewRawRadio?.IsChecked == true)
+        {
+            var offset = _rawSearchMatchOffsets[_searchMatchIndex];
+
+            ResponseBodyEditor.Select(offset, queryLength);
+            ResponseBodyEditor.ScrollToLine(
+                ResponseBodyEditor.Document.GetLineByOffset(offset).LineNumber);
+
+            return;
+        }
+
+        var match = _cardSearchMatches[_searchMatchIndex];
+
+        match.Element.Background = SearchMatchBrush;
+
+        ExpandAndScrollTo(match.Element, match.Ancestors);
+    }
+
+    private void
+    ClearSearchHighlight()
+    {
+        if (_searchMatchIndex >= 0
+            && _searchMatchIndex < _cardSearchMatches.Count)
+        {
+            _cardSearchMatches[_searchMatchIndex].Element.Background = Brushes.Transparent;
+        }
+    }
+
+    private void
+    UpdateSearchCountText(
+        int totalMatches)
+    {
+        ResponseSearchCountText.Text =
+            totalMatches == 0
+                ? "0/0"
+                : $"{_searchMatchIndex + 1}/{totalMatches}";
+    }
+
+    /// Les blocs de la vue Cartes sont repliés par défaut (voir
+    /// JsonCardViewBuilder.BuildCard) : sauter directement dessus ne
+    /// sert à rien tant qu'il reste replié, ou que l'un de ses parents
+    /// (lui aussi replié) le cache. Déplie toute la chaîne, puis attend
+    /// que la mise en page ait pris en compte la nouvelle hauteur avant
+    /// de défiler (BringIntoView() juste après IsExpanded=true utiliserait
+    /// encore les anciennes dimensions, repliées).
+    private static void
+    ExpandAndScrollTo(
+        FrameworkElement target,
+        IReadOnlyList<Expander> ancestors)
+    {
+        foreach (var ancestor in ancestors)
+        {
+            ancestor.IsExpanded = true;
+        }
+
+        if (target is Expander self)
+        {
+            self.IsExpanded = true;
+        }
+
+        target.Dispatcher.BeginInvoke(
+            DispatcherPriority.ContextIdle,
+            new Action(() => target.BringIntoView()));
     }
 
     /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :

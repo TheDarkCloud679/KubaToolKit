@@ -31,7 +31,7 @@
             Margin="0,0,0,10"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource HeaderBrush}"
             Effect="{StaticResource CardShadowEffect}">
             <Grid>
@@ -48,14 +48,20 @@
                     Orientation="Horizontal"
                     Margin="0,0,0,14">
                     <Border
-                        Width="28"
-                        Height="28"
-                        CornerRadius="7"
-                        Background="{StaticResource AccentBrush}">
+                        Width="34"
+                        Height="34"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        Effect="{StaticResource CardShadowEffect}">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
+                                <GradientStop Color="{StaticResource AccentPressedColor}" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
                         <TextBlock
                             Text="K"
                             FontWeight="Bold"
-                            FontSize="14"
+                            FontSize="16"
                             Foreground="{StaticResource TextOnAccentBrush}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"/>
@@ -67,7 +73,7 @@
                             FontSize="16"
                             Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock
-                            Text="AWS CloudWatch Logs &amp; S3 Explorer"
+                            Text="AWS Ops &amp; API Toolkit"
                             FontSize="11"
                             Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>

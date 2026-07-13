@@ -1,0 +1,60 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!--
+        Échelle d'espacement/rayons/mouvement partagée par tous les
+        modules : avant ce fichier, chaque module choisissait ses propres
+        valeurs de Padding/CornerRadius au cas par cas (8/10/12/14px selon
+        l'endroit), ce qui donnait une impression de patchwork plutôt que
+        d'un seul outil cohérent.
+    -->
+
+    <!-- =====================================================
+         ESPACEMENT (Thickness, directement utilisables en
+         Margin/Padding)
+         ===================================================== -->
+
+    <Thickness x:Key="SpaceXs">4</Thickness>
+    <Thickness x:Key="SpaceSm">8</Thickness>
+    <Thickness x:Key="SpaceMd">12</Thickness>
+    <Thickness x:Key="SpaceLg">16</Thickness>
+    <Thickness x:Key="SpaceXl">24</Thickness>
+
+    <!-- Padding standard d'une carte/panneau (Border qui entoure une
+         section : "Response", "Buckets", grille RDS...). Un seul endroit
+         à changer si la densité doit évoluer un jour. -->
+    <Thickness x:Key="CardPadding">14</Thickness>
+    <Thickness x:Key="CardPaddingCompact">10</Thickness>
+
+    <!-- =====================================================
+         RAYONS
+         ===================================================== -->
+
+    <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+    <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+    <CornerRadius x:Key="RadiusLarge">12</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <!-- =====================================================
+         DIMENSIONS PARTAGÉES
+         ===================================================== -->
+
+    <!-- Épaisseur standard d'un GridSplitter entre deux panneaux :
+         S3 Explorer utilisait 10px quand tous les autres modules
+         utilisaient 6px, ce qui se voyait au premier coup d'œil en
+         passant de l'un à l'autre. -->
+    <sys:Double x:Key="SplitterThickness">6</sys:Double>
+
+    <!-- =====================================================
+         MOUVEMENT
+         ===================================================== -->
+
+    <Duration x:Key="MotionFast">0:0:0.12</Duration>
+    <Duration x:Key="MotionNormal">0:0:0.2</Duration>
+
+    <CubicEase x:Key="MotionEaseOut" x:Shared="False" EasingMode="EaseOut"/>
+    <CubicEase x:Key="MotionEaseIn" x:Shared="False" EasingMode="EaseIn"/>
+
+</ResourceDictionary>

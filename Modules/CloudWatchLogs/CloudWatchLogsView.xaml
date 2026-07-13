@@ -33,11 +33,11 @@
         <Border
             x:Name="LogGroupsPanel"
             Grid.Row="0"
-            Padding="12"
+            Padding="{StaticResource CardPadding}"
             Margin="0,0,0,8"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource SurfaceBrush}"
             Effect="{StaticResource CardShadowEffect}">
             <Grid>
@@ -103,10 +103,10 @@
            x:Name="DebugModePanel"
            Grid.Row="2"
            Margin="0,0,0,8"
-           Padding="12"
+           Padding="{StaticResource CardPadding}"
            BorderBrush="{StaticResource BorderBrush}"
            BorderThickness="1"
-           CornerRadius="8"
+           CornerRadius="{StaticResource RadiusMedium}"
            Background="{StaticResource SurfaceBrush}"
            Effect="{StaticResource CardShadowEffect}">
             <Grid>
@@ -235,10 +235,10 @@
                  Grid.Row="1"
                  BorderBrush="{StaticResource BorderBrush}"
                  BorderThickness="1"
-                 CornerRadius="8"
+                 CornerRadius="{StaticResource RadiusMedium}"
                  Background="{StaticResource SurfaceBrush}"
                  Effect="{StaticResource CardShadowEffect}"
-                 Padding="8">
+                 Padding="{StaticResource CardPadding}">
                 <ScrollViewer
                         VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled"
