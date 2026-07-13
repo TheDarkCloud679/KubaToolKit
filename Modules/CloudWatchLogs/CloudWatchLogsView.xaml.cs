@@ -247,10 +247,10 @@ SearchAllLogsCheckBox_Changed(
         {
             if (node.IsChecked
                 &&
-                !string.IsNullOrWhiteSpace(
-                    node.FullPath)
+                node.IsLeaf
                 &&
-                !node.Children.Any())
+                !string.IsNullOrWhiteSpace(
+                    node.FullPath))
             {
                 result.Add(
                     node.FullPath);
@@ -826,7 +826,10 @@ BuildLogGroupTree(
                             logGroup,
 
                         FullPath =
-                            logGroup
+                            logGroup,
+
+                        IsLeaf =
+                            true
                     });
         }
     }
