@@ -639,14 +639,15 @@
     </Style>
 
     <!--
-        Un template personnalisé (flèche pivotante + ItemsPresenter animé
-        via SmoothExpandBehavior) a été tenté ici pour animer le dépli de
-        l'arborescence des buckets S3/collections API Client/groupes de
-        logs CloudWatch, mais cassait l'alignement des lignes dans
-        certains arbres (CloudWatch notamment, dont le HeaderTemplate
-        contient sa propre CheckBox). Revenu au template OS par défaut
-        (juste ces trois Setters, sans Template personnalisé) le temps de
-        retravailler l'animation sans casser l'existant.
+        Un template personnalisé (flèche pivotante + ItemsPresenter animé)
+        a été tenté ici pour animer le dépli de l'arborescence des buckets
+        S3/collections API Client/groupes de logs CloudWatch, mais cassait
+        l'alignement des lignes dans certains arbres (CloudWatch notamment,
+        dont le HeaderTemplate contient sa propre CheckBox). Revenu au
+        template OS par défaut (juste ces trois Setters, sans Template
+        personnalisé) : l'animation de hauteur s'est avérée peu fiable
+        avec ce genre de contenu (voir aussi le retour en arrière sur
+        l'Expander, pour la même raison).
     -->
     <Style TargetType="TreeViewItem">
         <Setter Property="Padding" Value="4,3"/>
@@ -728,13 +729,12 @@
                                 Content="{TemplateBinding Content}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}"
                                 Margin="10,0,10,10"
-                                Visibility="Collapsed"
-                                ClipToBounds="True"/>
+                                Visibility="Collapsed"/>
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
-                            <Setter TargetName="ExpanderContent" Property="behaviors:SmoothExpandBehavior.IsExpanded" Value="True"/>
+                            <Setter TargetName="ExpanderContent" Property="Visibility" Value="Visible"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
