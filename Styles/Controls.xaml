@@ -639,126 +639,19 @@
     </Style>
 
     <!--
-        Auparavant le template OS par défaut (aucun Template ici, juste
-        trois Setters) : correct visuellement, mais un dépli/repli
-        instantané. Ce template personnalisé reproduit le comportement
-        standard (flèche pivotante, mise en évidence sélection/survol,
-        indentation automatique des enfants) en y ajoutant l'animation de
-        SmoothExpandBehavior sur l'ItemsPresenter : c'est ce qui anime le
-        dépli de l'arborescence des buckets S3/collections API
-        Client/groupes de logs CloudWatch.
+        Un template personnalisé (flèche pivotante + ItemsPresenter animé
+        via SmoothExpandBehavior) a été tenté ici pour animer le dépli de
+        l'arborescence des buckets S3/collections API Client/groupes de
+        logs CloudWatch, mais cassait l'alignement des lignes dans
+        certains arbres (CloudWatch notamment, dont le HeaderTemplate
+        contient sa propre CheckBox). Revenu au template OS par défaut
+        (juste ces trois Setters, sans Template personnalisé) le temps de
+        retravailler l'animation sans casser l'existant.
     -->
     <Style TargetType="TreeViewItem">
         <Setter Property="Padding" Value="4,3"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TreeViewItem">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <ToggleButton
-                            x:Name="Expander"
-                            Grid.Row="0"
-                            Grid.Column="0"
-                            Width="16"
-                            Height="16"
-                            Margin="0,0,2,0"
-                            VerticalAlignment="Center"
-                            ClickMode="Press"
-                            Focusable="False"
-                            IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                            <ToggleButton.Style>
-                                <Style TargetType="ToggleButton">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ToggleButton">
-                                                <Border Background="Transparent" Width="16" Height="16" Cursor="Hand">
-                                                    <Path
-                                                        x:Name="Arrow"
-                                                        Data="M0,0 L4,4 L8,0"
-                                                        Stroke="{StaticResource TextSecondaryBrush}"
-                                                        StrokeThickness="1.6"
-                                                        StrokeStartLineCap="Round"
-                                                        StrokeEndLineCap="Round"
-                                                        StrokeLineJoin="Round"
-                                                        Width="8"
-                                                        Height="5"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        RenderTransformOrigin="0.5,0.5">
-                                                        <Path.RenderTransform>
-                                                            <RotateTransform Angle="-90"/>
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsChecked" Value="True">
-                                                        <Setter TargetName="Arrow" Property="RenderTransform">
-                                                            <Setter.Value>
-                                                                <RotateTransform Angle="0"/>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ToggleButton.Style>
-                        </ToggleButton>
-
-                        <Border
-                            x:Name="Bd"
-                            Grid.Row="0"
-                            Grid.Column="1"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="{StaticResource RadiusSmall}"
-                            Padding="{TemplateBinding Padding}"
-                            SnapsToDevicePixels="True">
-                            <ContentPresenter
-                                ContentSource="Header"
-                                HorizontalAlignment="Stretch"/>
-                        </Border>
-
-                        <ItemsPresenter
-                            x:Name="ItemsHost"
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Grid.ColumnSpan="2"
-                            Visibility="Collapsed"/>
-                    </Grid>
-
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="HasItems" Value="False">
-                            <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
-                        </Trigger>
-                        <Trigger Property="IsExpanded" Value="True">
-                            <Setter TargetName="ItemsHost" Property="behaviors:SmoothExpandBehavior.IsExpanded" Value="True"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
-                        </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsMouseOver" Value="True"/>
-                                <Condition Property="IsSelected" Value="False"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
-                        </MultiTrigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
     <!-- =====================================================
