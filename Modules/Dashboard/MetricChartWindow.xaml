@@ -49,10 +49,10 @@
             Grid.Row="3"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource SurfaceBrush}"
             Effect="{StaticResource CardShadowEffect}"
-            Padding="16">
+            Padding="{StaticResource SpaceLg}">
 
             <Grid x:Name="ChartHost" SizeChanged="ChartHost_SizeChanged">
                 <TextBlock
