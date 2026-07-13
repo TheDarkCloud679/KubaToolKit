@@ -67,11 +67,20 @@
                             VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock
-                            Text="KubaToolKit"
-                            FontWeight="Bold"
-                            FontSize="16"
-                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                Text="KubaToolKit"
+                                FontWeight="Bold"
+                                FontSize="16"
+                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock
+                                x:Name="VersionTextBlock"
+                                FontSize="10"
+                                Margin="6,0,0,2"
+                                VerticalAlignment="Bottom"
+                                Foreground="{StaticResource TextMutedBrush}"
+                                ToolTip="Version de KubaToolKit"/>
+                        </StackPanel>
                         <TextBlock
                             Text="AWS Ops &amp; API Toolkit"
                             FontSize="11"

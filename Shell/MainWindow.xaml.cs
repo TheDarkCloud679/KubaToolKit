@@ -52,6 +52,16 @@ public partial class MainWindow
 
         InitializeComponent();
 
+        // Lu depuis <Version> du csproj (KubaToolKit.csproj) plutôt que
+        // codé en dur ici : un seul endroit à modifier pour publier une
+        // nouvelle version.
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
+        VersionTextBlock.Text =
+            version != null
+                ? $"v{version.Major}.{version.Minor}.{version.Build}"
+                : "";
+
         _dashboardView = _modules.OfType<DashboardModule>().Single().TypedView;
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
@@ -1104,6 +1114,11 @@ FormatTimeTextBox(
         else if (isStepFunctions)
         {
             await _stepFunctionsView.OnProfileChanged(
+                ProfileCombo.SelectedItem?.ToString());
+        }
+        else if (isCloudWatch)
+        {
+            await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
     }
