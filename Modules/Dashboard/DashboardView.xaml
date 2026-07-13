@@ -111,10 +111,10 @@
                     MinHeight="120"
                     BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="{StaticResource RadiusMedium}"
                     Background="{StaticResource SurfaceBrush}"
                     Effect="{StaticResource CardShadowEffect}"
-                    Padding="8">
+                    Padding="{StaticResource CardPadding}">
 
                     <DataGrid
                         x:Name="RdsGrid"
@@ -250,10 +250,10 @@
                     MinHeight="120"
                     BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="{StaticResource RadiusMedium}"
                     Background="{StaticResource SurfaceBrush}"
                     Effect="{StaticResource CardShadowEffect}"
-                    Padding="8">
+                    Padding="{StaticResource CardPadding}">
 
                     <DataGrid
                         x:Name="Ec2Grid"
