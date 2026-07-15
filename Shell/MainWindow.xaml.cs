@@ -4,8 +4,6 @@ using KubaToolKit.Modules.ApiClient;
 using KubaToolKit.Modules.CloudTrail;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.Dashboard;
-using KubaToolKit.Modules.Pandora;
-using KubaToolKit.Modules.Pandora.Models;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
 using KubaToolKit.Modules.StepFunctions;
@@ -28,14 +26,10 @@ public partial class MainWindow
     private readonly DashboardView _dashboardView;
     private readonly CloudWatchLogsView _cloudWatchView;
     private readonly CloudTrailView _cloudTrailView;
-    private readonly PandoraView _pandoraView;
     private readonly S3ExplorerView _s3View;
     private readonly SqsView _sqsView;
     private readonly StepFunctionsView _stepFunctionsView;
     private readonly ApiClientView _apiClientView;
-
-    private readonly PandoraProfileService _pandoraProfileService = new();
-    private List<PandoraProfile> _pandoraProfiles = new();
 
     private bool _windowLoaded = false;
     private bool _waitingForEndDate = false;
@@ -71,7 +65,6 @@ public partial class MainWindow
         _dashboardView = _modules.OfType<DashboardModule>().Single().TypedView;
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
         _cloudTrailView = _modules.OfType<CloudTrailModule>().Single().TypedView;
-        _pandoraView = _modules.OfType<PandoraModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
@@ -104,7 +97,6 @@ MainWindow_Closing(object? sender, CancelEventArgs e)
         {
             _cloudWatchView.CancelSearch();
             _cloudTrailView.CancelSearch();
-            _pandoraView.CancelLoad();
             _s3View.CancelSearch();
         }
         catch { }
@@ -130,7 +122,6 @@ MainWindow_Loaded(
 
             LoadPatterns();
             LoadCloudTrailAttributes();
-            LoadPandoraProfiles();
             InitializeDates();
 
             _windowLoaded =
@@ -186,47 +177,6 @@ MainWindow_Loaded(
     {
         CloudTrailAttributeCombo.ItemsSource = CloudTrailAttributeOption.All;
         CloudTrailAttributeCombo.SelectedIndex = 0;
-    }
-
-    private void LoadPandoraProfiles()
-    {
-        try
-        {
-            _pandoraProfiles = _pandoraProfileService.LoadProfiles();
-        }
-        catch (Exception ex)
-        {
-            // Fichier présent mais invalide (JSON malformé) : on le signale
-            // clairement plutôt que de laisser planter tout le démarrage ou
-            // de basculer silencieusement sur une liste vide.
-            MessageBox.Show(
-                $"{_pandoraProfileService.GetProfilesFilePath()} existe mais n'a pas pu être lu :\n\n{ex.Message}",
-                "Pandora - fichier de profils invalide");
-
-            _pandoraProfiles = new();
-        }
-
-        if (_pandoraProfiles.Any())
-        {
-            // Pas de sélection automatique du premier profil : se
-            // connecter est une action explicite de l'utilisateur, pas
-            // quelque chose qui doit se déclencher tout seul en arrivant
-            // sur le module.
-            PandoraProfileCombo.IsEnabled = true;
-            PandoraProfileCombo.ItemsSource = _pandoraProfiles;
-            PandoraProfileCombo.SelectedIndex = -1;
-
-            return;
-        }
-
-        // Aucun profil trouvé : afficher où le fichier est attendu plutôt
-        // que de laisser un menu vide sans aucune explication.
-        PandoraProfileCombo.IsEnabled = false;
-
-        PandoraProfileCombo.ItemsSource =
-            new[] { $"Create {_pandoraProfileService.GetProfilesFilePath()}" };
-
-        PandoraProfileCombo.SelectedIndex = 0;
     }
 
     private void
@@ -305,18 +255,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
     }
 
-    private async void
-    PandoraProfileCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!_windowLoaded || PandoraModeRadio?.IsChecked != true)
-        {
-            return;
-        }
-
-        await LoadPandoraTreeAsync(
-            PandoraProfileCombo.SelectedItem as PandoraProfile);
-    }
-
     private async Task
     LoadCloudWatchLogGroupsAsync(string? profile)
     {
@@ -330,25 +268,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         finally
         {
             SearchButton.IsEnabled = true;
-            SearchButton.Content = "Search";
-        }
-    }
-
-    private async Task
-    LoadPandoraTreeAsync(PandoraProfile? profile)
-    {
-        // Contrairement à LoadCloudWatchLogGroupsAsync, le bouton reste
-        // actif (Content="Cancel") : le chargement peut inclure une
-        // fenêtre de connexion SSO, potentiellement longue, qu'il doit
-        // rester possible d'annuler.
-        SearchButton.Content = "Cancel";
-
-        try
-        {
-            await _pandoraView.LoadTreeAsync(profile, SearchTextBox.Text);
-        }
-        finally
-        {
             SearchButton.Content = "Search";
         }
     }
@@ -367,12 +286,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (_cloudTrailView.IsSearchRunning)
         {
             _cloudTrailView.CancelSearch();
-            return;
-        }
-
-        if (_pandoraView.IsLoading)
-        {
-            _pandoraView.CancelLoad();
             return;
         }
 
@@ -454,16 +367,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 {
                     SearchButton.IsEnabled = true;
                 }
-
-                return;
-            }
-
-            if (PandoraModeRadio?.IsChecked == true)
-            {
-                // Pas d'appel réseau ici : l'arbre est déjà chargé (au
-                // changement de profil), Search ne fait que filtrer ce qui
-                // est affiché par nom d'agent.
-                _pandoraView.ApplyFilter(SearchTextBox.Text);
 
                 return;
             }
@@ -819,13 +722,8 @@ StartDatePicker_SelectedDateChanged(
                 ?.IsChecked
             == true;
 
-        bool isPandora =
-            PandoraModeRadio
-                ?.IsChecked
-            == true;
-
         bool isCloudWatch =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isCloudTrail && !isPandora;
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isCloudTrail;
 
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
@@ -835,9 +733,6 @@ StartDatePicker_SelectedDateChanged(
 
         _cloudTrailView.Visibility =
             isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
-
-        _pandoraView.Visibility =
-            isPandora ? Visibility.Visible : Visibility.Collapsed;
 
         _s3View.Visibility =
             isS3 ? Visibility.Visible : Visibility.Collapsed;
@@ -854,26 +749,15 @@ StartDatePicker_SelectedDateChanged(
         ProfilePatternSearchRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
 
-        // Profile AWS et Profile Pandora partagent la même colonne : deux
-        // mondes d'identifiants totalement distincts, jamais utiles en
-        // même temps.
-        ProfileGroup.Visibility =
-            isPandora ? Visibility.Collapsed : Visibility.Visible;
-
-        PandoraProfileGroup.Visibility =
-            isPandora ? Visibility.Visible : Visibility.Collapsed;
-
         // Dates/heures servent au filtrage CloudWatch et CloudTrail (tous
-        // deux interrogent une plage temporelle) ; Pandora n'affiche que
-        // l'état courant, pas d'historique.
+        // deux interrogent une plage temporelle).
         DateRangeRow.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
         // Pattern ne sert qu'au filtrage CloudWatch ; Attribute ne sert
         // qu'à CloudTrail (les deux partagent la même colonne, jamais
         // visibles ensemble). Search sert aussi en S3 (recherche dans les
-        // dossiers) et en Pandora (filtre l'arbre déjà chargé par nom
-        // d'agent). Dashboard/SQS/Step Functions ont chacun leur propre
+        // dossiers). Dashboard/SQS/Step Functions ont chacun leur propre
         // bouton "Refresh" et n'utilisent ni le texte de recherche ni le
         // bouton d'action partagé : les deux disparaissent complètement
         // pour ces modules plutôt que d'occuper une ligne pour rien. Le
@@ -886,13 +770,13 @@ StartDatePicker_SelectedDateChanged(
             isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
         SearchGroup.Visibility =
-            isCloudWatch || isCloudTrail || isS3 || isPandora ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         DateFieldsGroup.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
         SearchButton.Visibility =
-            isCloudWatch || isCloudTrail || isS3 || isPandora ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {
@@ -919,9 +803,6 @@ StartDatePicker_SelectedDateChanged(
             await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
-        // isPandora : rien à charger automatiquement en arrivant sur le
-        // module -- PandoraProfileCombo_SelectionChanged s'en charge
-        // seulement quand l'utilisateur choisit explicitement un profil.
 
         // isCloudTrail : rien à précharger, la recherche se fait à la
         // demande (bouton Search).

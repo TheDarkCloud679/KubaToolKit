@@ -9,7 +9,7 @@
     <RootNamespace>KubaToolKit</RootNamespace>
     <AssemblyName>KubaToolKit</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>2.6.26</Version>
+    <Version>2.6.27</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,9 +22,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Config\loggroup-categories.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Config\pandora-profiles.json" Condition="Exists('Config\pandora-profiles.json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\app.ico" />
@@ -46,7 +43,6 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
     <PackageReference Include="Quicker.AvalonEdit" Version="6.3.1" />
     <PackageReference Include="SharpCompress" Version="0.49.1" />
     <PackageReference Include="SharpDevelopCodeCompletion" Version="1.33.2" />
