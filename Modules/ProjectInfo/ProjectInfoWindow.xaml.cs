@@ -62,16 +62,23 @@ public partial class ProjectInfoWindow
                 ? presetColumns.ToList()
                 : new List<string> { "Column 1" };
 
-        _project.Sections.Add(
+        var newSection =
             new ProjectInfoSection
             {
                 Name = name,
                 Columns = columns
-            });
+            };
+
+        _project.Sections.Add(newSection);
+
+        // N'ajoute que la nouvelle carte, ne touche pas aux sections
+        // existantes -- reconstruire tout le panneau à chaque changement
+        // pouvait détacher un DataGrid pendant qu'il finissait de valider
+        // une édition en cours ailleurs, ce que WPF supporte mal.
+        SectionsPanel.Children.Add(BuildSectionCard(newSection));
 
         NewSectionNameTextBox.Text = "";
 
-        RenderSections();
         Save();
     }
 
@@ -90,16 +97,17 @@ public partial class ProjectInfoWindow
     BuildSectionCard(
         ProjectInfoSection section)
     {
-        var card = new Border
-        {
-            BorderBrush = (Brush)FindResource("BorderBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = (CornerRadius)FindResource("RadiusMedium"),
-            Background = (Brush)FindResource("SurfaceBrush"),
-            Effect = (System.Windows.Media.Effects.Effect)FindResource("CardShadowEffect"),
-            Padding = (Thickness)FindResource("CardPadding"),
-            Margin = new Thickness(0, 0, 0, 12)
-        };
+        // Déclarés tôt et assignés plus bas : les gestionnaires de clic
+        // ci-dessous capturent ces variables (pas leur valeur au moment de
+        // la capture), donc elles voient bien la carte/grille finales une
+        // fois le clic effectif -- ça permet à "Delete section" et
+        // "+ Column" de ne toucher qu'à LEUR propre carte plutôt que de
+        // faire un RenderSections() complet qui recréait aussi les
+        // DataGrid des autres sections, y compris pendant qu'un autre
+        // pouvait être en train de valider une édition (source probable
+        // du plantage observé).
+        Border card = null!;
+        DataGrid grid = null!;
 
         var outer = new StackPanel();
 
@@ -146,7 +154,20 @@ public partial class ProjectInfoWindow
 
             section.Columns.Add(columnName);
 
-            RenderSections();
+            // Une nouvelle colonne change la structure de la table : cette
+            // carte précise doit être reconstruite, mais seulement elle --
+            // pas les autres sections, dont les DataGrid n'ont aucune
+            // raison d'être touchés pour ce changement.
+            TryCommitEdit(grid);
+
+            var index = SectionsPanel.Children.IndexOf(card);
+            var replacement = BuildSectionCard(section);
+
+            if (index >= 0)
+            {
+                SectionsPanel.Children[index] = replacement;
+            }
+
             Save();
         };
         Grid.SetColumn(addColumnButton, 2);
@@ -167,9 +188,15 @@ public partial class ProjectInfoWindow
                 return;
             }
 
-            _project.Sections.Remove(section);
+            // Valider une éventuelle édition en cours avant de détacher le
+            // DataGrid du visuel : WPF peut se plaindre si on le retire du
+            // panneau pendant qu'il essaie encore de valider une cellule
+            // ou la ligne d'ajout.
+            TryCommitEdit(grid);
 
-            RenderSections();
+            _project.Sections.Remove(section);
+            SectionsPanel.Children.Remove(card);
+
             Save();
         };
         Grid.SetColumn(deleteSectionButton, 3);
@@ -183,7 +210,7 @@ public partial class ProjectInfoWindow
 
         var table = BuildDataTable(section);
 
-        var grid = new DataGrid
+        grid = new DataGrid
         {
             ItemsSource = table.DefaultView,
             AutoGenerateColumns = true,
@@ -199,9 +226,40 @@ public partial class ProjectInfoWindow
         table.RowDeleted += (_, __) => SyncAndSave(section, table);
 
         outer.Children.Add(grid);
-        card.Child = outer;
+
+        card = new Border
+        {
+            BorderBrush = (Brush)FindResource("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = (CornerRadius)FindResource("RadiusMedium"),
+            Background = (Brush)FindResource("SurfaceBrush"),
+            Effect = (System.Windows.Media.Effects.Effect)FindResource("CardShadowEffect"),
+            Padding = (Thickness)FindResource("CardPadding"),
+            Margin = new Thickness(0, 0, 0, 12),
+            Child = outer
+        };
 
         return card;
+    }
+
+    /// Force la validation d'une édition de cellule/ligne en cours avant
+    /// de retirer le DataGrid du visuel -- sans ça, WPF peut tenter de la
+    /// valider lui-même pendant le détachement, ce qui a déjà provoqué un
+    /// plantage à la suppression d'une section.
+    private void
+    TryCommitEdit(
+        DataGrid grid)
+    {
+        try
+        {
+            grid.CommitEdit(DataGridEditingUnit.Cell, true);
+            grid.CommitEdit(DataGridEditingUnit.Row, true);
+        }
+        catch
+        {
+            // Rien d'exploitable à faire ici : la section est de toute
+            // façon en train d'être supprimée ou reconstruite.
+        }
     }
 
     private DataTable
