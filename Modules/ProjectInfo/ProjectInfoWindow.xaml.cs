@@ -33,6 +33,11 @@ public partial class ProjectInfoWindow
     private readonly Dictionary<ProjectInfoSection, (Border Card, DataGrid Grid, DataTable Table)>
         _sectionControls = new();
 
+    // Absente ici = dépliée (comportement par défaut) ; seul un repli
+    // explicite ajoute une entrée, préservée tant que la fenêtre reste
+    // ouverte même si la carte de la section est reconstruite.
+    private readonly Dictionary<ProjectInfoSection, bool> _sectionExpanded = new();
+
     private readonly List<(ProjectInfoSection Section, int RowIndex, string Column)>
         _searchMatches = new();
 
@@ -205,14 +210,41 @@ public partial class ProjectInfoWindow
         // du plantage observé).
         Border card = null!;
         DataGrid grid = null!;
+        StackPanel columnManageRow = null!;
+
+        // Repliées, seules l'en-tête et sa ligne d'actions restent
+        // visibles -- une section jamais explicitement repliée reste
+        // dépliée par défaut (comportement historique).
+        var isExpanded =
+            !_sectionExpanded.TryGetValue(section, out var storedExpanded)
+            || storedExpanded;
 
         var outer = new StackPanel();
 
         var header = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var toggleButton = new Button
+        {
+            Content = isExpanded ? "▼" : "▶",
+            Padding = new Thickness(6, 2, 6, 2),
+            Margin = new Thickness(0, 0, 6, 0),
+            ToolTip = "Déplier/replier la section"
+        };
+        Grid.SetColumn(toggleButton, 0);
+        toggleButton.Click += (_, __) =>
+        {
+            isExpanded = !isExpanded;
+            _sectionExpanded[section] = isExpanded;
+
+            toggleButton.Content = isExpanded ? "▼" : "▶";
+            columnManageRow.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
+            grid.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
+        };
 
         var nameText = new TextBlock
         {
@@ -222,7 +254,7 @@ public partial class ProjectInfoWindow
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)FindResource("AccentBrush")
         };
-        Grid.SetColumn(nameText, 0);
+        Grid.SetColumn(nameText, 1);
 
         var newColumnTextBox = new TextBox
         {
@@ -231,7 +263,7 @@ public partial class ProjectInfoWindow
             VerticalContentAlignment = VerticalAlignment.Center,
             ToolTip = "Nom de la nouvelle colonne"
         };
-        Grid.SetColumn(newColumnTextBox, 1);
+        Grid.SetColumn(newColumnTextBox, 2);
 
         var addColumnButton = new Button
         {
@@ -262,7 +294,7 @@ public partial class ProjectInfoWindow
 
             Save();
         };
-        Grid.SetColumn(addColumnButton, 2);
+        Grid.SetColumn(addColumnButton, 3);
 
         var deleteSectionButton = new Button
         {
@@ -289,11 +321,13 @@ public partial class ProjectInfoWindow
             _project.Sections.Remove(section);
             SectionsPanel.Children.Remove(card);
             _sectionControls.Remove(section);
+            _sectionExpanded.Remove(section);
 
             Save();
         };
-        Grid.SetColumn(deleteSectionButton, 3);
+        Grid.SetColumn(deleteSectionButton, 4);
 
+        header.Children.Add(toggleButton);
         header.Children.Add(nameText);
         header.Children.Add(newColumnTextBox);
         header.Children.Add(addColumnButton);
@@ -301,10 +335,11 @@ public partial class ProjectInfoWindow
 
         outer.Children.Add(header);
 
-        var columnManageRow = new StackPanel
+        columnManageRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 0, 0, 8)
+            Margin = new Thickness(0, 0, 0, 8),
+            Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
         };
 
         var columnSelectCombo = new ComboBox
@@ -435,7 +470,8 @@ public partial class ProjectInfoWindow
             HeadersVisibility = DataGridHeadersVisibility.Column,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             MaxHeight = 320,
-            SelectionUnit = DataGridSelectionUnit.Cell
+            SelectionUnit = DataGridSelectionUnit.Cell,
+            Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
         };
 
         table.RowChanged += (_, __) => SyncAndSave(section, table);
@@ -823,6 +859,15 @@ public partial class ProjectInfoWindow
         }
 
         var (card, grid, table) = controls;
+
+        // Une section repliée cache son DataGrid : le déplier d'abord,
+        // sinon ScrollIntoView/Focus ci-dessous n'ont aucun effet visible.
+        if (grid.Visibility != Visibility.Visible)
+        {
+            _sectionExpanded[section] = true;
+            ReplaceSectionCard(section, card);
+            (card, grid, table) = _sectionControls[section];
+        }
 
         if (rowIndex < 0 || rowIndex >= table.Rows.Count)
         {
