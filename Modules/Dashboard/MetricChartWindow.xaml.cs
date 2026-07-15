@@ -1,6 +1,7 @@
 using KubaToolKit.Shared.Services;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -22,6 +23,20 @@ public partial class MetricChartWindow
     private readonly string _subtitle;
     private readonly List<ChartSeriesRequest> _seriesRequests;
     private List<LoadedSeries> _series = new();
+
+    // Géométrie de la dernière zone de tracé dessinée, mémorisée pour
+    // convertir une position souris (survol / sélection) en instant --
+    // recalculée à chaque DrawChart() plutôt que dupliquée.
+    private bool _hasPlotArea;
+    private double _plotLeft;
+    private double _plotTop;
+    private double _plotWidth;
+    private double _plotHeight;
+    private DateTime _plotStartTimeUtc;
+    private double _plotTotalSeconds;
+
+    private bool _isSelecting;
+    private double _selectionStartX;
 
     public MetricChartWindow(
         string profile,
@@ -221,6 +236,9 @@ public partial class MetricChartWindow
     DrawChart()
     {
         ChartCanvas.Children.Clear();
+        HideCrosshair();
+        CancelSelection();
+        _hasPlotArea = false;
 
         double width =
             ChartCanvas.ActualWidth;
@@ -332,6 +350,14 @@ public partial class MetricChartWindow
 
         double totalSeconds =
             Math.Max(1, (endTime - startTime).TotalSeconds);
+
+        _hasPlotArea = true;
+        _plotLeft = plotLeft;
+        _plotTop = plotTop;
+        _plotWidth = plotWidth;
+        _plotHeight = plotHeight;
+        _plotStartTimeUtc = startTime;
+        _plotTotalSeconds = totalSeconds;
 
         bool singleSeries = _series.Count == 1;
 
@@ -445,6 +471,218 @@ public partial class MetricChartWindow
             secondaryBrush,
             HorizontalAlignment.Right,
             timeFormat);
+    }
+
+    // Survol : ligne verticale + infobulle date/heure et valeur de chaque
+    // courbe au point le plus proche. Glisser : dessine un rectangle de
+    // sélection puis, au relâchement, recharge le graphique borné à la
+    // plage survolée -- un "zoom" sans dupliquer les champs Start/End,
+    // qui restent la seule source de vérité de la plage affichée.
+    private void
+    OverlayCanvas_MouseMove(
+        object sender,
+        MouseEventArgs e)
+    {
+        if (!_hasPlotArea)
+        {
+            return;
+        }
+
+        var pos = e.GetPosition(OverlayCanvas);
+
+        if (_isSelecting)
+        {
+            UpdateSelection(pos.X);
+            return;
+        }
+
+        if (pos.X < _plotLeft
+            || pos.X > _plotLeft + _plotWidth
+            || pos.Y < _plotTop
+            || pos.Y > _plotTop + _plotHeight)
+        {
+            HideCrosshair();
+            return;
+        }
+
+        ShowCrosshair(pos.X);
+    }
+
+    private void
+    OverlayCanvas_MouseLeave(
+        object sender,
+        MouseEventArgs e)
+    {
+        if (!_isSelecting)
+        {
+            HideCrosshair();
+        }
+    }
+
+    private void
+    OverlayCanvas_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (!_hasPlotArea)
+        {
+            return;
+        }
+
+        HideCrosshair();
+
+        double x =
+            Math.Clamp(
+                e.GetPosition(OverlayCanvas).X,
+                _plotLeft,
+                _plotLeft + _plotWidth);
+
+        _isSelecting = true;
+        _selectionStartX = x;
+
+        Canvas.SetLeft(SelectionRectangle, x);
+        Canvas.SetTop(SelectionRectangle, _plotTop);
+        SelectionRectangle.Width = 0;
+        SelectionRectangle.Height = _plotHeight;
+        SelectionRectangle.Visibility = Visibility.Visible;
+
+        OverlayCanvas.CaptureMouse();
+    }
+
+    private async void
+    OverlayCanvas_MouseLeftButtonUp(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (!_isSelecting)
+        {
+            return;
+        }
+
+        _isSelecting = false;
+        OverlayCanvas.ReleaseMouseCapture();
+        SelectionRectangle.Visibility = Visibility.Collapsed;
+
+        double x =
+            Math.Clamp(
+                e.GetPosition(OverlayCanvas).X,
+                _plotLeft,
+                _plotLeft + _plotWidth);
+
+        double left = Math.Min(_selectionStartX, x);
+        double right = Math.Max(_selectionStartX, x);
+
+        // Un simple clic (pas un vrai glisser) ne doit pas déclencher de
+        // zoom sur une plage quasi nulle.
+        const double MinDragPixels = 6;
+
+        if (right - left < MinDragPixels)
+        {
+            return;
+        }
+
+        var zoomStartLocal = XToTimeUtc(left).ToLocalTime();
+        var zoomEndLocal = XToTimeUtc(right).ToLocalTime();
+
+        StartDatePicker.SelectedDate = zoomStartLocal.Date;
+        StartTimeTextBox.Text = zoomStartLocal.ToString("HH:mm");
+        EndDatePicker.SelectedDate = zoomEndLocal.Date;
+        EndTimeTextBox.Text = zoomEndLocal.ToString("HH:mm");
+
+        await LoadAsync();
+    }
+
+    private void
+    CancelSelection()
+    {
+        _isSelecting = false;
+        SelectionRectangle.Visibility = Visibility.Collapsed;
+    }
+
+    private void
+    UpdateSelection(
+        double currentX)
+    {
+        double x =
+            Math.Clamp(currentX, _plotLeft, _plotLeft + _plotWidth);
+
+        Canvas.SetLeft(SelectionRectangle, Math.Min(_selectionStartX, x));
+        SelectionRectangle.Width = Math.Abs(x - _selectionStartX);
+    }
+
+    private DateTime
+    XToTimeUtc(
+        double x)
+    {
+        double ratio = (x - _plotLeft) / _plotWidth;
+
+        return _plotStartTimeUtc.AddSeconds(ratio * _plotTotalSeconds);
+    }
+
+    private void
+    ShowCrosshair(
+        double x)
+    {
+        CrosshairLine.X1 = x;
+        CrosshairLine.X2 = x;
+        CrosshairLine.Y1 = _plotTop;
+        CrosshairLine.Y2 = _plotTop + _plotHeight;
+        CrosshairLine.Visibility = Visibility.Visible;
+
+        var timeUtc = XToTimeUtc(x);
+
+        TooltipTimeText.Text =
+            timeUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+
+        TooltipValuesPanel.Children.Clear();
+
+        bool showSeriesName = _series.Count > 1;
+
+        foreach (var series in _series)
+        {
+            if (series.Points.Count == 0)
+            {
+                continue;
+            }
+
+            var nearest =
+                series.Points
+                    .OrderBy(p =>
+                        Math.Abs((p.Timestamp - timeUtc).TotalSeconds))
+                    .First();
+
+            TooltipValuesPanel.Children.Add(
+                new TextBlock
+                {
+                    FontSize = 11,
+                    Foreground = new SolidColorBrush(series.Color),
+                    Text = showSeriesName
+                        ? $"{series.DisplayName}: {FormatValue(nearest.Value, series.Unit)}"
+                        : FormatValue(nearest.Value, series.Unit)
+                });
+        }
+
+        TooltipBorder.Visibility = Visibility.Visible;
+
+        TooltipBorder.Measure(
+            new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        double tooltipX = x + 10;
+
+        if (tooltipX + TooltipBorder.DesiredSize.Width > _plotLeft + _plotWidth)
+        {
+            tooltipX = x - 10 - TooltipBorder.DesiredSize.Width;
+        }
+
+        Canvas.SetLeft(TooltipBorder, tooltipX);
+        Canvas.SetTop(TooltipBorder, _plotTop + 4);
+    }
+
+    private void
+    HideCrosshair()
+    {
+        CrosshairLine.Visibility = Visibility.Collapsed;
+        TooltipBorder.Visibility = Visibility.Collapsed;
     }
 
     private void

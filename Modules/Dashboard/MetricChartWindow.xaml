@@ -110,6 +110,49 @@
                     Visibility="Collapsed"/>
 
                 <Canvas x:Name="ChartCanvas" ClipToBounds="True"/>
+
+                <Canvas
+                    x:Name="OverlayCanvas"
+                    Background="Transparent"
+                    MouseMove="OverlayCanvas_MouseMove"
+                    MouseLeave="OverlayCanvas_MouseLeave"
+                    MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
+                    MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp">
+
+                    <Rectangle
+                        x:Name="SelectionRectangle"
+                        Fill="{StaticResource AccentBrush}"
+                        Opacity="0.15"
+                        IsHitTestVisible="False"
+                        Visibility="Collapsed"/>
+
+                    <Line
+                        x:Name="CrosshairLine"
+                        Stroke="{StaticResource BorderBrush}"
+                        StrokeThickness="1"
+                        StrokeDashArray="2,2"
+                        IsHitTestVisible="False"
+                        Visibility="Collapsed"/>
+
+                    <Border
+                        x:Name="TooltipBorder"
+                        Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusSmall}"
+                        Padding="8,6"
+                        IsHitTestVisible="False"
+                        Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock
+                                x:Name="TooltipTimeText"
+                                FontSize="11"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <StackPanel x:Name="TooltipValuesPanel" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Canvas>
             </Grid>
         </Border>
     </Grid>
