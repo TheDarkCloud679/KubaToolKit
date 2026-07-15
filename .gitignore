@@ -6,5 +6,8 @@
 Config/config
 Config/credentials
 
+# Pandora FMS profiles (URL + login per site) -- contains credentials
+Config/pandora-profiles.json
+
 # Per-user Visual Studio project settings (machine-specific paths)
 *.csproj.user
