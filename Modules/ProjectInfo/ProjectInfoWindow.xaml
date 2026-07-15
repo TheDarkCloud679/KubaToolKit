@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -58,6 +59,47 @@
             Margin="0,0,0,14">
 
             <TextBlock
+                Text="Search"
+                VerticalAlignment="Center"
+                Margin="0,0,8,0"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextSecondaryBrush}"/>
+
+            <TextBox
+                x:Name="SearchTextBox"
+                Width="240"
+                VerticalContentAlignment="Center"
+                KeyDown="SearchTextBox_KeyDown"
+                ToolTip="Cherche dans toutes les sections/colonnes de ce projet. Entrée = résultat suivant, Maj+Entrée = précédent."/>
+
+            <Button
+                Content="▲"
+                Width="30"
+                Margin="6,0,0,0"
+                Click="SearchPreviousButton_Click"
+                ToolTip="Résultat précédent"/>
+
+            <Button
+                Content="▼"
+                Width="30"
+                Margin="4,0,0,0"
+                Click="SearchNextButton_Click"
+                ToolTip="Résultat suivant"/>
+
+            <TextBlock
+                x:Name="SearchResultsText"
+                VerticalAlignment="Center"
+                Margin="10,0,0,0"
+                FontSize="11"
+                Foreground="{StaticResource TextMutedBrush}"/>
+        </StackPanel>
+
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            Margin="0,0,0,14">
+
+            <TextBlock
                 Text="Add section"
                 VerticalAlignment="Center"
                 Margin="0,0,8,0"
@@ -85,7 +127,8 @@
         </StackPanel>
 
         <ScrollViewer
-            Grid.Row="3"
+            x:Name="SectionsScrollViewer"
+            Grid.Row="4"
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="SectionsPanel"/>
