@@ -1,5 +1,4 @@
 using KubaToolKit.Modules.Pandora.Models;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -8,53 +7,40 @@ namespace KubaToolKit.Modules.Pandora;
 /// Client pour l'API legacy de Pandora FMS (include/api.php), authentifié
 /// par cookie de session (voir PandoraLoginWindow) plutôt que par user/pass
 /// en query string : la console est derrière une SSO OAuth2 qui intercepte
-/// toute requête non authentifiée avant qu'elle n'atteigne l'API. Le
-/// format de réponse exact de l'API elle-même (tableau JSON brut vs
-/// {"data": [...]}, lignes en tableau positionnel vs objet à clés) n'a pas
-/// pu être vérifié contre un serveur réel depuis cet environnement --
-/// ReadRows/GetField lisent donc les deux formes possibles plutôt que de
-/// supposer une forme unique.
+/// toute requête non authentifiée avant qu'elle n'atteigne l'API. Les
+/// cookies capturés dans WebView2 sont rejoués tels quels sur un en-tête
+/// "Cookie" plutôt que confiés à un CookieContainer .NET -- ses règles de
+/// correspondance de domaine (point de tête pour les cookies de domaine,
+/// etc.) ne s'accordent pas toujours avec la façon dont Chromium les
+/// rapporte, ce qui silencieusement empêchait la session d'être réutilisée
+/// (redemandait une connexion à chaque recherche). Le format de réponse
+/// exact de l'API elle-même (tableau JSON brut vs {"data": [...]}, lignes
+/// en tableau positionnel vs objet à clés) n'a pas non plus pu être
+/// vérifié contre un serveur réel depuis cet environnement -- ReadRows/
+/// GetField lisent donc les deux formes possibles plutôt que de supposer
+/// une forme unique.
 public class PandoraService
 {
-    private readonly Dictionary<string, HttpClient> _sessions = new();
+    private static readonly HttpClient Http = new();
+
+    private readonly Dictionary<string, string> _sessionCookies = new();
 
     public bool
     HasSession(
         string profileUrl) =>
-        _sessions.ContainsKey(NormalizeKey(profileUrl));
+        _sessionCookies.ContainsKey(NormalizeKey(profileUrl));
 
     public void
     SetSession(
         string profileUrl,
         IEnumerable<PandoraCookie> cookies)
     {
-        var container = new CookieContainer();
+        var header =
+            string.Join(
+                "; ",
+                cookies.Select(c => $"{c.Name}={c.Value}"));
 
-        foreach (var cookie in cookies)
-        {
-            try
-            {
-                container.Add(
-                    new Cookie(cookie.Name, cookie.Value, cookie.Path, cookie.Domain));
-            }
-            catch
-            {
-                // Cookie dont le domaine/la valeur ne satisfait pas
-                // System.Net.Cookie : ignoré plutôt que de faire échouer
-                // toute la session pour un seul cookie secondaire.
-            }
-        }
-
-        var handler = new HttpClientHandler
-        {
-            CookieContainer = container,
-            UseCookies = true
-        };
-
-        var key = NormalizeKey(profileUrl);
-
-        _sessions.Remove(key);
-        _sessions[key] = new HttpClient(handler);
+        _sessionCookies[NormalizeKey(profileUrl)] = header;
     }
 
     public async Task<List<PandoraGroupNode>>
@@ -184,9 +170,13 @@ public class PandoraService
         string url,
         CancellationToken cancellationToken)
     {
-        var client = GetClient(profile.Url);
+        var cookieHeader = GetCookieHeader(profile.Url);
 
-        using var response = await client.GetAsync(url, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+
+        using var response = await Http.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         response.EnsureSuccessStatusCode();
@@ -194,16 +184,16 @@ public class PandoraService
         return body;
     }
 
-    private HttpClient
-    GetClient(
+    private string
+    GetCookieHeader(
         string profileUrl)
     {
-        if (!_sessions.TryGetValue(NormalizeKey(profileUrl), out var client))
+        if (!_sessionCookies.TryGetValue(NormalizeKey(profileUrl), out var header))
         {
             throw new PandoraAuthRequiredException();
         }
 
-        return client;
+        return header;
     }
 
     private string

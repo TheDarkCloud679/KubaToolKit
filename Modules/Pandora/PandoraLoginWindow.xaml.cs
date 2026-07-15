@@ -91,8 +91,14 @@ public partial class PandoraLoginWindow
 
         _completed = true;
 
+        // Filtré sur la racine du domaine plutôt que sur _startUrl (qui
+        // inclut le sous-chemin /pandora_console/) : un cookie posé sur un
+        // autre chemin pendant le retour de la SSO (page de callback,
+        // etc.) doit être capturé aussi, pas seulement ceux qui
+        // s'appliquent au chemin exact de départ.
         var rawCookies =
-            await WebView.CoreWebView2.CookieManager.GetCookiesAsync(_startUrl);
+            await WebView.CoreWebView2.CookieManager.GetCookiesAsync(
+                $"{current.Scheme}://{current.Host}");
 
         Cookies =
             rawCookies
