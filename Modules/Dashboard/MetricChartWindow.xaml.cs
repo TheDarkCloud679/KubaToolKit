@@ -413,27 +413,38 @@ public partial class MetricChartWindow
             ChartCanvas.Children.Add(polyline);
         }
 
-        // Labels d'axe temporel (début / milieu / fin)
+        // Labels d'axe temporel (début / milieu / fin) : sur une plage
+        // courte l'heure seule suffit, mais dès qu'elle dépasse une
+        // journée "HH:mm" seul devient ambigu (quel jour ?), donc on
+        // ajoute la date.
+        string timeFormat =
+            totalSeconds >= 24 * 3600
+                ? "dd/MM HH:mm"
+                : "HH:mm";
+
         AddTimeLabel(
             startTime,
             plotLeft,
             plotTop + plotHeight + 4,
             secondaryBrush,
-            HorizontalAlignment.Left);
+            HorizontalAlignment.Left,
+            timeFormat);
 
         AddTimeLabel(
             startTime.AddSeconds(totalSeconds / 2),
             plotLeft + plotWidth / 2,
             plotTop + plotHeight + 4,
             secondaryBrush,
-            HorizontalAlignment.Center);
+            HorizontalAlignment.Center,
+            timeFormat);
 
         AddTimeLabel(
             endTime,
             plotLeft + plotWidth,
             plotTop + plotHeight + 4,
             secondaryBrush,
-            HorizontalAlignment.Right);
+            HorizontalAlignment.Right,
+            timeFormat);
     }
 
     private void
@@ -442,11 +453,12 @@ public partial class MetricChartWindow
         double x,
         double y,
         Brush brush,
-        HorizontalAlignment align)
+        HorizontalAlignment align,
+        string format)
     {
         var label = new TextBlock
         {
-            Text = time.ToLocalTime().ToString("HH:mm"),
+            Text = time.ToLocalTime().ToString(format),
             FontSize = 10,
             Foreground = brush
         };
