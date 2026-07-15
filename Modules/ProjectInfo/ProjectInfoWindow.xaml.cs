@@ -253,29 +253,9 @@ public partial class ProjectInfoWindow
             // pas les autres sections, dont les DataGrid n'ont aucune
             // raison d'être touchés pour ce changement.
             TryCommitEdit(grid);
+            ReplaceSectionCard(section, card);
 
-            try
-            {
-                var index = SectionsPanel.Children.IndexOf(card);
-                var replacement = BuildSectionCard(section);
-
-                if (index >= 0)
-                {
-                    SectionsPanel.Children[index] = replacement;
-                }
-                else
-                {
-                    SectionsPanel.Children.Add(replacement);
-                }
-            }
-            catch
-            {
-                // WPF a déjà refusé ce remplacement ciblé dans de rares cas
-                // (index déjà associé à un autre visuel) -- un rendu complet
-                // reste toujours valide en repli, la colonne est de toute
-                // façon déjà enregistrée dans le modèle.
-                RenderSections();
-            }
+            newColumnTextBox.Text = "";
 
             Save();
         };
@@ -318,6 +298,128 @@ public partial class ProjectInfoWindow
 
         outer.Children.Add(header);
 
+        var columnManageRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+
+        var columnSelectCombo = new ComboBox
+        {
+            ItemsSource = section.Columns.ToList(),
+            Width = 140,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+
+        if (columnSelectCombo.Items.Count > 0)
+        {
+            columnSelectCombo.SelectedIndex = 0;
+        }
+
+        var renameColumnTextBox = new TextBox
+        {
+            Width = 140,
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            ToolTip = "Nouveau nom pour la colonne sélectionnée"
+        };
+
+        var renameColumnButton = new Button
+        {
+            Content = "Rename column",
+            Margin = new Thickness(6, 0, 0, 0),
+            Padding = new Thickness(10, 2, 10, 2)
+        };
+        renameColumnButton.Click += (_, __) =>
+        {
+            if (columnSelectCombo.SelectedItem is not string oldName)
+            {
+                return;
+            }
+
+            var newName = renameColumnTextBox.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(newName)
+                || (!string.Equals(newName, oldName, StringComparison.OrdinalIgnoreCase)
+                    && section.Columns.Contains(newName, StringComparer.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+
+            var columnIndex =
+                section.Columns.FindIndex(c => string.Equals(c, oldName, StringComparison.Ordinal));
+
+            if (columnIndex >= 0)
+            {
+                section.Columns[columnIndex] = newName;
+            }
+
+            foreach (var row in section.Rows)
+            {
+                if (row.Remove(oldName, out var value))
+                {
+                    row[newName] = value;
+                }
+            }
+
+            ReplaceSectionCard(section, card);
+
+            Save();
+        };
+
+        var deleteColumnButton = new Button
+        {
+            Content = "Delete column",
+            Margin = new Thickness(6, 0, 0, 0),
+            Padding = new Thickness(10, 2, 10, 2)
+        };
+        deleteColumnButton.Click += (_, __) =>
+        {
+            if (columnSelectCombo.SelectedItem is not string columnName)
+            {
+                return;
+            }
+
+            if (section.Columns.Count <= 1)
+            {
+                MessageBox.Show(
+                    "Une section doit garder au moins une colonne.",
+                    "Project Info");
+
+                return;
+            }
+
+            if (MessageBox.Show(
+                    $"Supprimer la colonne \"{columnName}\" et ses données ?",
+                    "Confirmer",
+                    MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+
+            section.Columns.Remove(columnName);
+
+            foreach (var row in section.Rows)
+            {
+                row.Remove(columnName);
+            }
+
+            ReplaceSectionCard(section, card);
+
+            Save();
+        };
+
+        columnManageRow.Children.Add(columnSelectCombo);
+        columnManageRow.Children.Add(renameColumnTextBox);
+        columnManageRow.Children.Add(renameColumnButton);
+        columnManageRow.Children.Add(deleteColumnButton);
+
+        outer.Children.Add(columnManageRow);
+
         var table = BuildDataTable(section);
 
         grid = new DataGrid
@@ -356,6 +458,39 @@ public partial class ProjectInfoWindow
         _sectionControls[section] = (card, grid, table);
 
         return card;
+    }
+
+    /// Reconstruit uniquement la carte d'une section (après ajout/
+    /// renommage/suppression de colonne) et la remet à sa place dans le
+    /// panneau -- jamais RenderSections() pour ce cas, qui toucherait
+    /// aussi les DataGrid des autres sections.
+    private void
+    ReplaceSectionCard(
+        ProjectInfoSection section,
+        Border card)
+    {
+        try
+        {
+            var index = SectionsPanel.Children.IndexOf(card);
+            var replacement = BuildSectionCard(section);
+
+            if (index >= 0)
+            {
+                SectionsPanel.Children[index] = replacement;
+            }
+            else
+            {
+                SectionsPanel.Children.Add(replacement);
+            }
+        }
+        catch
+        {
+            // WPF a déjà refusé ce remplacement ciblé dans de rares cas
+            // (index déjà associé à un autre visuel) -- un rendu complet
+            // reste toujours valide en repli, le changement est de toute
+            // façon déjà enregistré dans le modèle.
+            RenderSections();
+        }
     }
 
     /// Force la validation d'une édition de cellule/ligne en cours avant
