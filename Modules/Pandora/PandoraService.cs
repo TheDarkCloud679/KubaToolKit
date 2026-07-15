@@ -4,12 +4,16 @@ using System.Text.Json;
 
 namespace KubaToolKit.Modules.Pandora;
 
-/// Client pour l'API legacy de Pandora FMS (include/api.php), authentifié
-/// par cookie de session (voir PandoraLoginWindow) plutôt que par user/pass
-/// en query string : la console est derrière une SSO OAuth2 qui intercepte
-/// toute requête non authentifiée avant qu'elle n'atteigne l'API. Les
-/// cookies capturés dans WebView2 sont rejoués tels quels sur un en-tête
-/// "Cookie" plutôt que confiés à un CookieContainer .NET -- ses règles de
+/// Client pour l'API legacy de Pandora FMS (include/api.php). Deux couches
+/// d'authentification distinctes, l'une ne remplace pas l'autre : le
+/// cookie de session (voir PandoraLoginWindow) fait passer la SSO OAuth2
+/// qui protège l'ensemble du site, mais api.php a ensuite sa propre
+/// vérification interne (user/pass/apipass, cf. PandoraProfile) totalement
+/// indépendante de cette session -- observé en pratique : sans le cookie,
+/// la réponse est une redirection HTML vers la SSO ; avec le cookie seul
+/// mais sans ces identifiants, l'API répond "auth error". Les cookies
+/// capturés dans WebView2 sont rejoués tels quels sur un en-tête "Cookie"
+/// plutôt que confiés à un CookieContainer .NET -- ses règles de
 /// correspondance de domaine (point de tête pour les cookies de domaine,
 /// etc.) ne s'accordent pas toujours avec la façon dont Chromium les
 /// rapporte, ce qui silencieusement empêchait la session d'être réutilisée
@@ -158,10 +162,31 @@ public class PandoraService
     {
         var baseUrl = profile.Url.TrimEnd('/');
 
-        return
+        var url =
             $"{baseUrl}/include/api.php"
             + $"?op={op}&op2={op2}"
             + "&return_type=json";
+
+        // Le cookie de session (SSO) fait passer la barrière du reverse
+        // proxy, mais api.php a sa propre vérification interne
+        // indépendante de cette session -- ces champs restent nécessaires
+        // en plus du cookie si le serveur les exige.
+        if (!string.IsNullOrWhiteSpace(profile.User))
+        {
+            url += $"&user={Uri.EscapeDataString(profile.User)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.Pass))
+        {
+            url += $"&pass={Uri.EscapeDataString(profile.Pass)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.ApiPassword))
+        {
+            url += $"&apipass={Uri.EscapeDataString(profile.ApiPassword)}";
+        }
+
+        return url;
     }
 
     private async Task<string>

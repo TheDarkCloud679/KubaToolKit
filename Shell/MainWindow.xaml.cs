@@ -208,9 +208,13 @@ MainWindow_Loaded(
 
         if (_pandoraProfiles.Any())
         {
+            // Pas de sélection automatique du premier profil : se
+            // connecter est une action explicite de l'utilisateur, pas
+            // quelque chose qui doit se déclencher tout seul en arrivant
+            // sur le module.
             PandoraProfileCombo.IsEnabled = true;
             PandoraProfileCombo.ItemsSource = _pandoraProfiles;
-            PandoraProfileCombo.SelectedIndex = 0;
+            PandoraProfileCombo.SelectedIndex = -1;
 
             return;
         }
@@ -915,11 +919,9 @@ StartDatePicker_SelectedDateChanged(
             await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
-        else if (isPandora)
-        {
-            await LoadPandoraTreeAsync(
-                PandoraProfileCombo.SelectedItem as PandoraProfile);
-        }
+        // isPandora : rien à charger automatiquement en arrivant sur le
+        // module -- PandoraProfileCombo_SelectionChanged s'en charge
+        // seulement quand l'utilisateur choisit explicitement un profil.
 
         // isCloudTrail : rien à précharger, la recherche se fait à la
         // demande (bouton Search).
