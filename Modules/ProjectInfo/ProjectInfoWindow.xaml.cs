@@ -254,12 +254,27 @@ public partial class ProjectInfoWindow
             // raison d'être touchés pour ce changement.
             TryCommitEdit(grid);
 
-            var index = SectionsPanel.Children.IndexOf(card);
-            var replacement = BuildSectionCard(section);
-
-            if (index >= 0)
+            try
             {
-                SectionsPanel.Children[index] = replacement;
+                var index = SectionsPanel.Children.IndexOf(card);
+                var replacement = BuildSectionCard(section);
+
+                if (index >= 0)
+                {
+                    SectionsPanel.Children[index] = replacement;
+                }
+                else
+                {
+                    SectionsPanel.Children.Add(replacement);
+                }
+            }
+            catch
+            {
+                // WPF a déjà refusé ce remplacement ciblé dans de rares cas
+                // (index déjà associé à un autre visuel) -- un rendu complet
+                // reste toujours valide en repli, la colonne est de toute
+                // façon déjà enregistrée dans le modèle.
+                RenderSections();
             }
 
             Save();
