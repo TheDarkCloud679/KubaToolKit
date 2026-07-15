@@ -190,14 +190,39 @@ MainWindow_Loaded(
 
     private void LoadPandoraProfiles()
     {
-        _pandoraProfiles = _pandoraProfileService.LoadProfiles();
+        try
+        {
+            _pandoraProfiles = _pandoraProfileService.LoadProfiles();
+        }
+        catch (Exception ex)
+        {
+            // Fichier présent mais invalide (JSON malformé) : on le signale
+            // clairement plutôt que de laisser planter tout le démarrage ou
+            // de basculer silencieusement sur une liste vide.
+            MessageBox.Show(
+                $"{_pandoraProfileService.GetProfilesFilePath()} existe mais n'a pas pu être lu :\n\n{ex.Message}",
+                "Pandora - fichier de profils invalide");
 
-        PandoraProfileCombo.ItemsSource = _pandoraProfiles;
+            _pandoraProfiles = new();
+        }
 
         if (_pandoraProfiles.Any())
         {
+            PandoraProfileCombo.IsEnabled = true;
+            PandoraProfileCombo.ItemsSource = _pandoraProfiles;
             PandoraProfileCombo.SelectedIndex = 0;
+
+            return;
         }
+
+        // Aucun profil trouvé : afficher où le fichier est attendu plutôt
+        // que de laisser un menu vide sans aucune explication.
+        PandoraProfileCombo.IsEnabled = false;
+
+        PandoraProfileCombo.ItemsSource =
+            new[] { $"Create {_pandoraProfileService.GetProfilesFilePath()}" };
+
+        PandoraProfileCombo.SelectedIndex = 0;
     }
 
     private void

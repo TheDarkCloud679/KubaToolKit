@@ -6,11 +6,14 @@ namespace KubaToolKit.Modules.Pandora;
 
 public class PandoraProfileService
 {
+    public string
+    GetProfilesFilePath() =>
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "pandora-profiles.json");
+
     public List<PandoraProfile>
     LoadProfiles()
     {
-        var filePath =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "pandora-profiles.json");
+        var filePath = GetProfilesFilePath();
 
         if (!File.Exists(filePath))
         {
