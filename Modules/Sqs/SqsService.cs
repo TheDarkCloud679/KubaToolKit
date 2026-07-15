@@ -3,6 +3,7 @@ using Amazon.Runtime.CredentialManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using KubaToolKit.Modules.Sqs.Models;
+using KubaToolKit.Shared.Services;
 
 namespace KubaToolKit.Modules.Sqs;
 
@@ -32,6 +33,8 @@ public class SqsService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug($"SqsService: chargement des files (profil '{profile}').");
+
         var credentials =
             GetCredentials(profile);
 
@@ -119,6 +122,8 @@ public class SqsService
                 });
         }
 
+        Logger.Info($"SqsService: {results.Count} file(s) chargée(s) (profil '{profile}').");
+
         return results;
     }
 
@@ -147,6 +152,9 @@ public class SqsService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug(
+            $"SqsService: consultation de '{queueUrl}' (recherche '{searchText}', max {maxMessages}).");
+
         var credentials =
             GetCredentials(profile);
 
@@ -226,6 +234,9 @@ public class SqsService
         }
 
         progress?.Report(100);
+
+        Logger.Info(
+            $"SqsService: {found.Count} message(s) trouvé(s) sur '{queueUrl}'.");
 
         return found.Values
             .OrderByDescending(x => x.SentTimestamp)

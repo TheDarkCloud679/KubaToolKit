@@ -70,11 +70,14 @@ public partial class SqsView
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("SqsView: rafraîchissement annulé.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("SqsView: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -84,6 +87,10 @@ public partial class SqsView
                     return;
                 }
             }
+
+            Logger.Error(
+                $"SqsView: échec du rafraîchissement (profil '{_currentProfile}').",
+                ex);
 
             MessageBox.Show(
                 ex.ToString(),

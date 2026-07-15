@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ProjectInfo.Models;
+using KubaToolKit.Shared.Services;
 using System.IO;
 using System.Text.Json;
 
@@ -25,14 +26,29 @@ public class ProjectInfoService
 
         if (!File.Exists(filePath))
         {
+            Logger.Debug($"ProjectInfoService: {filePath} absent, démarrage à vide.");
+
             return new ProjectInfoRoot();
         }
 
-        var json = File.ReadAllText(filePath);
+        try
+        {
+            var json = File.ReadAllText(filePath);
 
-        return
-            JsonSerializer.Deserialize<ProjectInfoRoot>(json, SerializerOptions)
-            ?? new ProjectInfoRoot();
+            var root =
+                JsonSerializer.Deserialize<ProjectInfoRoot>(json, SerializerOptions)
+                ?? new ProjectInfoRoot();
+
+            Logger.Debug($"ProjectInfoService: {root.Projects.Count} projet(s) chargé(s) depuis {filePath}.");
+
+            return root;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ProjectInfoService: échec de la lecture de {filePath}.", ex);
+
+            throw;
+        }
     }
 
     public void
@@ -40,16 +56,28 @@ public class ProjectInfoService
         ProjectInfoRoot root)
     {
         var filePath = GetFilePath();
-        var directory = Path.GetDirectoryName(filePath);
 
-        if (!string.IsNullOrEmpty(directory))
+        try
         {
-            Directory.CreateDirectory(directory);
-        }
+            var directory = Path.GetDirectoryName(filePath);
 
-        File.WriteAllText(
-            filePath,
-            JsonSerializer.Serialize(root, SerializerOptions));
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(
+                filePath,
+                JsonSerializer.Serialize(root, SerializerOptions));
+
+            Logger.Debug($"ProjectInfoService: {root.Projects.Count} projet(s) sauvegardé(s) dans {filePath}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ProjectInfoService: échec de l'écriture de {filePath}.", ex);
+
+            throw;
+        }
     }
 
     /// Clé de projet effective pour ce profil : celle assignée

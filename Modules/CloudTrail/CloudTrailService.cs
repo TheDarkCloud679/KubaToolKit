@@ -3,6 +3,7 @@ using Amazon.CloudTrail;
 using Amazon.CloudTrail.Model;
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.CloudTrail.Models;
+using KubaToolKit.Shared.Services;
 
 namespace KubaToolKit.Modules.CloudTrail;
 
@@ -27,10 +28,15 @@ public class CloudTrailService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug(
+            $"CloudTrailService: recherche attribut='{attributeKey}' valeur='{attributeValue}' (profil '{profile}').");
+
         var chain = new CredentialProfileStoreChain();
 
         if (!chain.TryGetAWSCredentials(profile, out var credentials))
         {
+            Logger.Error($"CloudTrailService: profil AWS introuvable '{profile}'.");
+
             throw new Exception($"Profil AWS introuvable : {profile}");
         }
 
@@ -70,52 +76,73 @@ public class CloudTrailService
         int page = 0;
         bool truncated = false;
 
-        do
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var response =
-                await client.LookupEventsAsync(request, cancellationToken);
-
-            page++;
-
-            foreach (var ev in response.Events ?? new List<Event>())
+            do
             {
-                results.Add(
-                    new CloudTrailEventItem
-                    {
-                        Timestamp =
-                            ev.EventTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
-                            ?? "",
+                cancellationToken.ThrowIfCancellationRequested();
 
-                        EventName = ev.EventName ?? "",
-                        Username = ev.Username ?? "",
-                        EventSource = ev.EventSource ?? "unknown",
+                var response =
+                    await client.LookupEventsAsync(request, cancellationToken);
 
-                        Resources =
-                            string.Join(
-                                ", ",
-                                (ev.Resources ?? new List<Resource>())
-                                    .Select(r =>
-                                        string.IsNullOrWhiteSpace(r.ResourceType)
-                                            ? r.ResourceName
-                                            : $"{r.ResourceType}: {r.ResourceName}")),
+                page++;
 
-                        CloudTrailEventJson = ev.CloudTrailEvent ?? ""
-                    });
+                foreach (var ev in response.Events ?? new List<Event>())
+                {
+                    results.Add(
+                        new CloudTrailEventItem
+                        {
+                            Timestamp =
+                                ev.EventTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                ?? "",
+
+                            EventName = ev.EventName ?? "",
+                            Username = ev.Username ?? "",
+                            EventSource = ev.EventSource ?? "unknown",
+
+                            Resources =
+                                string.Join(
+                                    ", ",
+                                    (ev.Resources ?? new List<Resource>())
+                                        .Select(r =>
+                                            string.IsNullOrWhiteSpace(r.ResourceType)
+                                                ? r.ResourceName
+                                                : $"{r.ResourceType}: {r.ResourceName}")),
+
+                            CloudTrailEventJson = ev.CloudTrailEvent ?? ""
+                        });
+                }
+
+                request.NextToken = response.NextToken;
+
+                progress?.Report(results.Count);
+
+                if (page >= MaxPages && !string.IsNullOrEmpty(request.NextToken))
+                {
+                    truncated = true;
+
+                    Logger.Debug($"CloudTrailService: recherche tronquée après {page} page(s).");
+
+                    break;
+                }
             }
-
-            request.NextToken = response.NextToken;
-
-            progress?.Report(results.Count);
-
-            if (page >= MaxPages && !string.IsNullOrEmpty(request.NextToken))
-            {
-                truncated = true;
-                break;
-            }
+            while (!string.IsNullOrEmpty(request.NextToken));
         }
-        while (!string.IsNullOrEmpty(request.NextToken));
+        catch (OperationCanceledException)
+        {
+            Logger.Debug("CloudTrailService: recherche annulée.");
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("CloudTrailService: échec de la recherche.", ex);
+
+            throw;
+        }
+
+        Logger.Info(
+            $"CloudTrailService: recherche terminée, {results.Count} évènement(s) sur {page} page(s).");
 
         return (
             results.OrderByDescending(x => x.Timestamp).ToList(),

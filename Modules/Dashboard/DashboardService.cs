@@ -7,6 +7,7 @@ using Amazon.RDS;
 using Amazon.RDS.Model;
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.Dashboard.Models;
+using KubaToolKit.Shared.Services;
 
 namespace KubaToolKit.Modules.Dashboard;
 
@@ -36,6 +37,8 @@ public class DashboardService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug($"DashboardService: chargement des instances RDS (profil '{profile}').");
+
         var credentials =
             GetCredentials(profile);
 
@@ -138,6 +141,8 @@ public class DashboardService
                 });
         }
 
+        Logger.Info($"DashboardService: {results.Count} instance(s) RDS chargée(s).");
+
         return results;
     }
 
@@ -239,6 +244,8 @@ public class DashboardService
         string profile,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug($"DashboardService: chargement des instances EC2 (profil '{profile}').");
+
         var credentials =
             GetCredentials(profile);
 
@@ -329,6 +336,8 @@ public class DashboardService
             nextToken = response.NextToken;
         }
         while (!string.IsNullOrEmpty(nextToken));
+
+        Logger.Info($"DashboardService: {items.Count} instance(s) EC2 chargée(s).");
 
         return items
             .OrderBy(x => x.Name)

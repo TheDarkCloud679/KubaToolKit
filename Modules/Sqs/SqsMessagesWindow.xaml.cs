@@ -108,9 +108,14 @@ public partial class SqsMessagesWindow
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("SqsMessagesWindow: consultation annulée.");
         }
         catch (Exception ex)
         {
+            Logger.Error(
+                $"SqsMessagesWindow: échec de la consultation de '{_queueUrl}'.",
+                ex);
+
             MessageBox.Show(
                 ex.ToString(),
                 "SQS search error");

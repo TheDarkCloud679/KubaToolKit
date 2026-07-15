@@ -3,6 +3,7 @@ using Amazon.Runtime.CredentialManagement;
 using Amazon.S3;
 using Amazon.S3.Model;
 using KubaToolKit.Modules.S3Explorer.Models;
+using KubaToolKit.Shared.Services;
 using SharpCompress.Archives.SevenZip;
 using SharpCompress.Readers;
 using System.IO;
@@ -27,6 +28,8 @@ public class S3Service
                 profile,
                 out var credentials))
         {
+            Logger.Error($"S3Service: profil AWS introuvable '{profile}'.");
+
             throw new Exception(
                 $"Unable to load AWS profile '{profile}'");
         }
@@ -506,6 +509,9 @@ ReadArchiveFile(
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+    Logger.Debug(
+        $"S3Service: recherche '{searchText}' (bucket '{bucket}', préfixe '{prefix}').");
+
     var credentials =
         GetCredentials(
             profile);

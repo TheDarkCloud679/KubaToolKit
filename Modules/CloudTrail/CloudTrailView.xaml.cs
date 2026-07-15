@@ -37,6 +37,9 @@ public partial class CloudTrailView
         DateTime? endDate,
         string endTime)
     {
+        Logger.Debug(
+            $"CloudTrailView: recherche attribut='{attributeKey}' valeur='{attributeValue}' (profil '{profile}').");
+
         try
         {
             // Effacer immédiatement l'ancien résultat plutôt qu'à la toute
@@ -72,16 +75,24 @@ public partial class CloudTrailView
                     progress,
                     _searchCancellation.Token);
 
+            Logger.Info(
+                $"CloudTrailView: recherche terminée, {results.Count} résultat(s)"
+                + (truncated ? " (tronqué)." : "."));
+
             DisplayResults(results, truncated);
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("CloudTrailView: recherche annulée.");
+
             ProgressTextBlock.Text = "Search cancelled";
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("CloudTrailView: session SSO expirée, tentative de reconnexion.");
+
                 var success = await AwsSsoService.Login();
 
                 if (success)
@@ -98,6 +109,8 @@ public partial class CloudTrailView
                     return;
                 }
             }
+
+            Logger.Error("CloudTrailView: échec de la recherche.", ex);
 
             MessageBox.Show(ex.ToString(), "Search error");
         }

@@ -122,6 +122,8 @@ public partial class DashboardView
             return;
         }
 
+        Logger.Debug($"DashboardView: rafraîchissement (profil '{_currentProfile}').");
+
         try
         {
             LoadingProgressBar.Visibility =
@@ -172,14 +174,20 @@ public partial class DashboardView
                     DataGridSortHelper.RefreshColumnWidths(Ec2Grid);
                 }),
                 System.Windows.Threading.DispatcherPriority.Loaded);
+
+            Logger.Info(
+                $"DashboardView: rafraîchissement terminé, {rdsTask.Result.Count} RDS, {ec2Task.Result.Count} EC2.");
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("DashboardView: rafraîchissement annulé.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("DashboardView: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -189,6 +197,10 @@ public partial class DashboardView
                     return;
                 }
             }
+
+            Logger.Error(
+                $"DashboardView: échec du rafraîchissement (profil '{_currentProfile}').",
+                ex);
 
             MessageBox.Show(
                 ex.ToString(),

@@ -54,6 +54,9 @@ public partial class S3ExplorerView
             var buckets =
                 await _s3Service.GetBuckets(_currentProfile);
 
+            Logger.Info(
+                $"S3ExplorerView: {buckets.Count} bucket(s) chargé(s) (profil '{_currentProfile}').");
+
             BucketCombo.ItemsSource = buckets;
 
             if (buckets.Any())
@@ -65,6 +68,8 @@ public partial class S3ExplorerView
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("S3ExplorerView: session SSO expirée, tentative de reconnexion.");
+
                 MessageBox.Show(
                     "AWS authentication required.\nYour browser will open.",
                     "AWS Login");
@@ -78,6 +83,10 @@ public partial class S3ExplorerView
                     return;
                 }
             }
+
+            Logger.Error(
+                $"S3ExplorerView: échec du chargement des buckets (profil '{_currentProfile}').",
+                ex);
 
             MessageBox.Show(
                 ex.ToString(),
@@ -383,6 +392,9 @@ RunSearchAsync(
             return;
         }
 
+        Logger.Debug(
+            $"S3ExplorerView: recherche '{searchText}' (bucket '{bucket}', préfixe '{_s3SearchPrefix}').");
+
         try
         {
             SearchProgressBar.Visibility =
@@ -435,6 +447,9 @@ RunSearchAsync(
             S3FilesGrid.ItemsSource =
                 _s3Files;
 
+            Logger.Info(
+                $"S3ExplorerView: recherche '{searchText}' terminée, {results.Count} résultat(s).");
+
             Dispatcher.BeginInvoke(
                 new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
                 System.Windows.Threading.DispatcherPriority.Loaded);
@@ -442,6 +457,13 @@ RunSearchAsync(
         catch (
     OperationCanceledException)
         {
+            Logger.Debug("S3ExplorerView: recherche annulée.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"S3ExplorerView: échec de la recherche '{searchText}'.", ex);
+
+            throw;
         }
         finally
         {

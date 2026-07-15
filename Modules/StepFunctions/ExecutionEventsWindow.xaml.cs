@@ -84,9 +84,12 @@ public partial class ExecutionEventsWindow
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("ExecutionEventsWindow: chargement annulé.");
         }
         catch (Exception ex)
         {
+            Logger.Error("ExecutionEventsWindow: échec du chargement de l'historique.", ex);
+
             MessageBox.Show(
                 ex.ToString(),
                 "Execution history loading error");

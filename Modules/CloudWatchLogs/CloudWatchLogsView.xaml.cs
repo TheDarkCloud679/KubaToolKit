@@ -100,6 +100,8 @@ public partial class CloudWatchLogsView
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("CloudWatchLogsView: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -109,6 +111,10 @@ public partial class CloudWatchLogsView
                     return;
                 }
             }
+
+            Logger.Error(
+                $"CloudWatchLogsView: échec du chargement des log groups (profil '{profile}').",
+                ex);
 
             MessageBox.Show(
                 ex.ToString(),
@@ -148,6 +154,9 @@ SearchAllLogsCheckBox_Changed(
     {
         _currentProfile = profile;
         _currentSearchText = searchText;
+
+        Logger.Debug(
+            $"CloudWatchLogsView: recherche '{searchText}' (profil '{profile}', {startDate:yyyy-MM-dd} {startTime} -> {endDate:yyyy-MM-dd} {endTime}).");
 
         try
         {
@@ -202,11 +211,16 @@ SearchAllLogsCheckBox_Changed(
                         _searchCancellation
                             .Token);
 
+            Logger.Info(
+                $"CloudWatchLogsView: recherche '{searchText}' terminée, {results.Count} résultat(s).");
+
             DisplayResults(
                 results);
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("CloudWatchLogsView: recherche annulée.");
+
             ProgressTextBlock.Text =
                 "Search cancelled";
 
@@ -217,6 +231,8 @@ SearchAllLogsCheckBox_Changed(
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("CloudWatchLogsView: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -226,6 +242,8 @@ SearchAllLogsCheckBox_Changed(
                     return;
                 }
             }
+
+            Logger.Error($"CloudWatchLogsView: échec de la recherche '{searchText}'.", ex);
 
             MessageBox.Show(ex.ToString(), "Search error");
         }

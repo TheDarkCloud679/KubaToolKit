@@ -146,11 +146,16 @@ public partial class MetricChartWindow
 
             DrawChart();
             DrawLegend();
+
+            Logger.Info(
+                $"MetricChartWindow: {loaded.Sum(s => s.Points.Count)} point(s) chargé(s) sur {loaded.Count} série(s).");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("MetricChartWindow: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -160,6 +165,8 @@ public partial class MetricChartWindow
                     return;
                 }
             }
+
+            Logger.Error("MetricChartWindow: échec du chargement de la métrique.", ex);
 
             MessageBox.Show(
                 ex.ToString(),

@@ -3,7 +3,7 @@ using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.CloudWatchLogs.Models;
-using System.Diagnostics;
+using KubaToolKit.Shared.Services;
 
 namespace KubaToolKit.Modules.CloudWatchLogs;
 
@@ -22,8 +22,13 @@ public class CloudWatchService
                 profileName,
                 out var cached))
         {
+            Logger.Debug(
+                $"CloudWatchService: log groups pour '{profileName}' servis depuis le cache ({cached.Count}).");
+
             return cached;
         }
+
+        Logger.Debug($"CloudWatchService: chargement des log groups pour '{profileName}'.");
 
         var chain = new CredentialProfileStoreChain();
 
@@ -31,6 +36,8 @@ public class CloudWatchService
         profileName,
         out var credentials))
         {
+            Logger.Error($"CloudWatchService: profil AWS introuvable '{profileName}'.");
+
             throw new Exception($"Profil AWS introuvable : {profileName}");
         }
 
@@ -43,29 +50,40 @@ public class CloudWatchService
         string? nextToken = null;
         var prefix = BuildPrefixFromProfile(profileName);
 
-        do
+        try
         {
-            var request = new DescribeLogGroupsRequest
-                {
-                    NextToken = nextToken
-                };
-
-            if (!string.IsNullOrWhiteSpace(prefix))
+            do
             {
-                request.LogGroupNamePrefix = prefix;
+                var request = new DescribeLogGroupsRequest
+                    {
+                        NextToken = nextToken
+                    };
+
+                if (!string.IsNullOrWhiteSpace(prefix))
+                {
+                    request.LogGroupNamePrefix = prefix;
+                }
+
+                var response =
+                    await client.DescribeLogGroupsAsync(request);
+
+                result.AddRange(
+                    response.LogGroups
+                        .Select(x =>
+                            x.LogGroupName));
+
+                nextToken = response.NextToken;
             }
-
-            var response =
-                await client.DescribeLogGroupsAsync(request);
-
-            result.AddRange(
-                response.LogGroups
-                    .Select(x =>
-                        x.LogGroupName));
-
-            nextToken = response.NextToken;
+            while (nextToken != null);
         }
-        while (nextToken != null);
+        catch (Exception ex)
+        {
+            Logger.Error(
+                $"CloudWatchService: échec du chargement des log groups pour '{profileName}'.",
+                ex);
+
+            throw;
+        }
 
         result =
             result
@@ -74,6 +92,10 @@ public class CloudWatchService
                 .ToList();
 
         LogGroupCache[profileName] = result;
+
+        Logger.Info(
+            $"CloudWatchService: {result.Count} log group(s) chargé(s) pour '{profileName}'.");
+
         return result;
     }
 
@@ -156,9 +178,14 @@ public class CloudWatchService
             cancellationToken =
                 default)
     {
+        Logger.Debug(
+            $"CloudWatchService: recherche '{searchText}' sur {selectedLogGroups.Count} log group(s) explicite(s) (profil '{profile}').");
+
         var chain = new CredentialProfileStoreChain();
         if (!chain.TryGetAWSCredentials(profile, out var credentials))
         {
+            Logger.Error($"CloudWatchService: profil AWS introuvable '{profile}'.");
+
             throw new Exception($"Profil AWS introuvable : {profile}");
         }
 
@@ -231,9 +258,15 @@ public class CloudWatchService
                 ex.Message.Contains(
                     "creation time",
                     StringComparison.OrdinalIgnoreCase))
-            { Debug.WriteLine($"Chunk {currentChunk} skipped: {ex.Message}"); }
+            { Logger.Debug($"CloudWatchService: chunk {currentChunk} ignoré ({ex.Message})."); }
         }
-        progress?.Report(100); return mergedResults.OrderByDescending( x => x.Timestamp ).ToList();
+
+        progress?.Report(100);
+
+        Logger.Info(
+            $"CloudWatchService: recherche '{searchText}' terminée, {mergedResults.Count} résultat(s) sur {totalChunks} chunk(s).");
+
+        return mergedResults.OrderByDescending( x => x.Timestamp ).ToList();
     }
 
     private async Task<List<LogEntry>>
@@ -241,14 +274,12 @@ ExecuteQuery(
     AmazonCloudWatchLogsClient client,
         List<string> logGroups, string query, long startUnix, long endUnix, int currentChunk, int totalChunks, IProgress<int>? progress, CancellationToken cancellationToken)
     {
-        Debug.WriteLine("========== QUERY ==========");
-        Debug.WriteLine($"Chunk {currentChunk}/{totalChunks}");
-        Debug.WriteLine($"Groups in chunk: {logGroups.Count}");
-        Debug.WriteLine($"Start UTC: {DateTimeOffset.FromUnixTimeSeconds(startUnix):yyyy-MM-dd HH:mm:ss}");
-        Debug.WriteLine($"End UTC: {DateTimeOffset.FromUnixTimeSeconds(endUnix):yyyy-MM-dd HH:mm:ss}");
-        Debug.WriteLine("Query:");
-        Debug.WriteLine(query);
-        Debug.WriteLine("===========================");
+        Logger.Debug(
+            $"CloudWatchService: query chunk {currentChunk}/{totalChunks}, "
+            + $"{logGroups.Count} log group(s), "
+            + $"{DateTimeOffset.FromUnixTimeSeconds(startUnix):yyyy-MM-dd HH:mm:ss} -> "
+            + $"{DateTimeOffset.FromUnixTimeSeconds(endUnix):yyyy-MM-dd HH:mm:ss} :{Environment.NewLine}{query}");
+
         var queryResponse =
     await client
         .StartQueryAsync(
@@ -285,10 +316,10 @@ ExecuteQuery(
     results.Status == QueryStatus.Running
     ||
     results.Status == QueryStatus.Scheduled);
-        Debug.WriteLine( $"Chunk {currentChunk}/{totalChunks}");
-        Debug.WriteLine( $"Status: {results.Status}");
-        Debug.WriteLine( $"Rows returned: {results.Results.Count}");
-        Debug.WriteLine( "----------------------------");
+        Logger.Debug(
+            $"CloudWatchService: chunk {currentChunk}/{totalChunks} -> {results.Status}, "
+            + $"{results.Results.Count} ligne(s).");
+
         return results.Results
             .Select(row =>
                 new LogEntry
@@ -317,7 +348,7 @@ ExecuteQuery(
     private string
        BuildPrefixFromProfile(string profileName)
     {
-        // D�sactive le filtre
+        // D�sactive le filtre
         return "";
     }
 

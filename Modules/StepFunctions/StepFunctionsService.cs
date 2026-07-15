@@ -5,6 +5,7 @@ using Amazon.Runtime.CredentialManagement;
 using Amazon.StepFunctions;
 using Amazon.StepFunctions.Model;
 using KubaToolKit.Modules.StepFunctions.Models;
+using KubaToolKit.Shared.Services;
 using System.Reflection;
 using System.Text.Json;
 
@@ -50,6 +51,8 @@ public class StepFunctionsService
         string profile,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug($"StepFunctionsService: chargement des state machines (profil '{profile}').");
+
         var credentials =
             GetCredentials(profile);
 
@@ -92,6 +95,8 @@ public class StepFunctionsService
         }
         while (!string.IsNullOrEmpty(nextToken));
 
+        Logger.Info($"StepFunctionsService: {items.Count} state machine(s) chargée(s).");
+
         return items
             .OrderBy(x => x.Name)
             .ToList();
@@ -103,6 +108,8 @@ public class StepFunctionsService
         string stateMachineArn,
         CancellationToken cancellationToken = default)
     {
+        Logger.Debug($"StepFunctionsService: chargement des exécutions de '{stateMachineArn}'.");
+
         var credentials =
             GetCredentials(profile);
 
@@ -153,6 +160,9 @@ public class StepFunctionsService
         }
         while (!string.IsNullOrEmpty(nextToken)
             && items.Count < MaxExecutions);
+
+        Logger.Info(
+            $"StepFunctionsService: {items.Count} exécution(s) chargée(s) pour '{stateMachineArn}'.");
 
         return items
             .OrderByDescending(x => x.StartDate)

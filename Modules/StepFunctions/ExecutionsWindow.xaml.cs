@@ -90,6 +90,8 @@ public partial class ExecutionsWindow
         }
         catch (ExpressLoggingNotConfiguredException ex)
         {
+            Logger.Debug($"ExecutionsWindow: {ex.Message}");
+
             MessageBox.Show(
                 ex.Message,
                 "Journalisation non configurée");
@@ -98,6 +100,8 @@ public partial class ExecutionsWindow
         }
         catch (Exception ex)
         {
+            Logger.Error("ExecutionsWindow: échec du chargement des exécutions.", ex);
+
             MessageBox.Show(
                 ex.ToString(),
                 "Executions loading error");

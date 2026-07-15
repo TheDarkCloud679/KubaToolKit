@@ -75,11 +75,14 @@ public partial class StepFunctionsView
         }
         catch (OperationCanceledException)
         {
+            Logger.Debug("StepFunctionsView: rafraîchissement annulé.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
+                Logger.Debug("StepFunctionsView: session SSO expirée, tentative de reconnexion.");
+
                 var success =
                     await AwsSsoService.Login();
 
@@ -89,6 +92,10 @@ public partial class StepFunctionsView
                     return;
                 }
             }
+
+            Logger.Error(
+                $"StepFunctionsView: échec du rafraîchissement (profil '{_currentProfile}').",
+                ex);
 
             MessageBox.Show(
                 ex.ToString(),
