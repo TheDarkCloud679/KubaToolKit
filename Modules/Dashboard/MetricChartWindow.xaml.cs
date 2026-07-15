@@ -19,6 +19,7 @@ public partial class MetricChartWindow
 
     private readonly DashboardService _dashboardService = new();
     private readonly string _profile;
+    private readonly string _subtitle;
     private readonly List<ChartSeriesRequest> _seriesRequests;
     private List<LoadedSeries> _series = new();
 
@@ -31,14 +32,63 @@ public partial class MetricChartWindow
         InitializeComponent();
 
         _profile = profile;
+        _subtitle = subtitle;
         _seriesRequests = seriesRequests;
 
         Title = title;
         TitleTextBlock.Text = title;
-        SubtitleTextBlock.Text = $"{subtitle} • Last 1 hour";
+        SubtitleTextBlock.Text = subtitle;
+
+        // Plage par défaut à l'ouverture : la dernière heure, comme avant
+        // que la plage ne soit réglable -- l'utilisateur peut l'élargir
+        // ensuite (Start/End + Apply), même logique que la recherche de
+        // logs CloudWatch.
+        var now = DateTime.Now;
+
+        StartDatePicker.SelectedDate = now.AddHours(-1).Date;
+        StartTimeTextBox.Text = now.AddHours(-1).ToString("HH:mm");
+        EndDatePicker.SelectedDate = now.Date;
+        EndTimeTextBox.Text = now.ToString("HH:mm");
 
         Loaded += async (_, __) =>
             await LoadAsync();
+    }
+
+    private async void
+    ApplyRangeButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await LoadAsync();
+
+    private void
+    TimeTextBox_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not TextBox textBox)
+        {
+            return;
+        }
+
+        textBox.Text =
+            TimeSpan.TryParse(textBox.Text, out var time)
+                ? $"{time.Hours:00}:{time.Minutes:00}"
+                : "00:00";
+    }
+
+    private DateTime
+    GetSelectedDateTime(
+        DatePicker datePicker,
+        TextBox timeTextBox)
+    {
+        var date = datePicker.SelectedDate ?? DateTime.Today;
+
+        var timeOfDay =
+            TimeSpan.TryParse(timeTextBox.Text, out var parsed)
+                ? parsed
+                : TimeSpan.Zero;
+
+        return date.Date + timeOfDay;
     }
 
     private async Task
@@ -48,6 +98,27 @@ public partial class MetricChartWindow
         {
             LoadingProgressBar.Visibility =
                 Visibility.Visible;
+
+            var startLocal =
+                GetSelectedDateTime(StartDatePicker, StartTimeTextBox);
+
+            var endLocal =
+                GetSelectedDateTime(EndDatePicker, EndTimeTextBox);
+
+            if (endLocal <= startLocal)
+            {
+                MessageBox.Show(
+                    "La date de fin doit être après la date de début.",
+                    "Plage invalide");
+
+                return;
+            }
+
+            var startUtc = startLocal.ToUniversalTime();
+            var endUtc = endLocal.ToUniversalTime();
+
+            SubtitleTextBlock.Text =
+                $"{_subtitle} • {startLocal:dd/MM HH:mm} → {endLocal:dd/MM HH:mm}";
 
             var loaded = new List<LoadedSeries>();
 
@@ -59,7 +130,8 @@ public partial class MetricChartWindow
                         request.Namespace,
                         request.MetricName,
                         request.Dimensions,
-                        TimeSpan.FromHours(1));
+                        startUtc,
+                        endUtc);
 
                 loaded.Add(
                     new LoadedSeries

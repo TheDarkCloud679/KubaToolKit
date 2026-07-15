@@ -185,15 +185,19 @@ public class DashboardService
     }
 
     /// Historique d'une métrique CloudWatch (namespace/dimensions
-    /// génériques) pour afficher un graphique. La période demandée vise
-    /// ~1 point par minute sur la plage.
+    /// génériques) pour afficher un graphique, sur une plage explicite
+    /// (UTC) plutôt qu'implicitement "maintenant moins une durée" : la
+    /// fenêtre affichée dans MetricChartWindow est réglable par
+    /// l'utilisateur, comme la recherche de logs. La période demandée
+    /// vise ~1 point par minute sur la plage.
     public async Task<List<(DateTime Timestamp, double Value)>>
     GetMetricHistory(
         string profile,
         string @namespace,
         string metricName,
         List<Dimension> dimensions,
-        TimeSpan duration,
+        DateTime startTimeUtc,
+        DateTime endTimeUtc,
         CancellationToken cancellationToken = default)
     {
         var credentials =
@@ -204,9 +208,6 @@ public class DashboardService
                 credentials,
                 RegionEndpoint.EUWest3);
 
-        var now =
-            DateTime.UtcNow;
-
         var response =
             await client.GetMetricStatisticsAsync(
                 new GetMetricStatisticsRequest
@@ -214,9 +215,9 @@ public class DashboardService
                     Namespace = @namespace,
                     MetricName = metricName,
                     Dimensions = dimensions,
-                    StartTime = now - duration,
-                    EndTime = now,
-                    Period = ComputePeriodSeconds(duration),
+                    StartTime = startTimeUtc,
+                    EndTime = endTimeUtc,
+                    Period = ComputePeriodSeconds(endTimeUtc - startTimeUtc),
                     Statistics = new List<string> { "Average" }
                 },
                 cancellationToken);
