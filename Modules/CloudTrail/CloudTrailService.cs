@@ -8,7 +8,14 @@ namespace KubaToolKit.Modules.CloudTrail;
 
 public class CloudTrailService
 {
-    public async Task<List<CloudTrailEventItem>>
+    // LookupEvents est limitée à ~2 requêtes/seconde par compte et 50
+    // évènements par page : sans filtre ("All events"), une recherche sur
+    // un compte actif peut porter sur des milliers d'évènements et tourner
+    // pendant plusieurs minutes. On plafonne pour garantir un résultat en
+    // temps raisonnable plutôt que de paraître figé indéfiniment.
+    private const int MaxPages = 40;
+
+    public async Task<(List<CloudTrailEventItem> Events, bool Truncated)>
     SearchEvents(
         string profile,
         string attributeKey,
@@ -56,10 +63,12 @@ public class CloudTrailService
 
         var results = new List<CloudTrailEventItem>();
 
-        // L'API ne renvoie qu'une page à la fois et ne donne pas de total :
-        // on avance la barre par palier à chaque page reçue, sans jamais
-        // atteindre 100% avant la fin réelle de la pagination.
+        // Total inconnu à l'avance (l'API ne renvoie qu'une page à la
+        // fois) : on rapporte le nombre d'évènements trouvés jusqu'ici
+        // plutôt qu'un pourcentage, la barre elle-même reste indéterminée
+        // côté vue.
         int page = 0;
+        bool truncated = false;
 
         do
         {
@@ -98,15 +107,19 @@ public class CloudTrailService
 
             request.NextToken = response.NextToken;
 
-            progress?.Report(Math.Min(90, page * 10));
+            progress?.Report(results.Count);
+
+            if (page >= MaxPages && !string.IsNullOrEmpty(request.NextToken))
+            {
+                truncated = true;
+                break;
+            }
         }
         while (!string.IsNullOrEmpty(request.NextToken));
 
-        progress?.Report(100);
-
-        return results
-            .OrderByDescending(x => x.Timestamp)
-            .ToList();
+        return (
+            results.OrderByDescending(x => x.Timestamp).ToList(),
+            truncated);
     }
 
     private (DateTime StartUtc, DateTime EndUtc)

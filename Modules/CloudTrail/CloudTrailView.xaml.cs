@@ -39,19 +39,28 @@ public partial class CloudTrailView
     {
         try
         {
+            // Effacer immédiatement l'ancien résultat plutôt qu'à la toute
+            // fin : sur "All events" (pas de filtre), la pagination peut
+            // prendre longtemps (LookupEvents est limitée à ~2 req/s côté
+            // AWS) et laisser l'ancien tableau affiché pendant tout ce
+            // temps donnait l'impression que la recherche ne faisait rien.
+            EventsGroupedItemsControl.ItemsSource = null;
             SearchProgressBar.Value = 0;
+            SearchProgressBar.IsIndeterminate = true;
             ProgressTextBlock.Text = "Searching CloudTrail...";
 
+            // Total inconnu à l'avance : on affiche le nombre d'évènements
+            // trouvés au fil de la pagination plutôt qu'un faux
+            // pourcentage, la barre reste indéterminée pendant la recherche.
             var progress =
-                new Progress<int>(percent =>
+                new Progress<int>(count =>
                 {
-                    SearchProgressBar.Value = percent;
-                    ProgressTextBlock.Text = $"Searching... {percent}%";
+                    ProgressTextBlock.Text = $"Searching... {count} event(s) found so far";
                 });
 
             _searchCancellation = new CancellationTokenSource();
 
-            var results =
+            var (results, truncated) =
                 await _cloudTrailService.SearchEvents(
                     profile,
                     attributeKey,
@@ -63,12 +72,11 @@ public partial class CloudTrailView
                     progress,
                     _searchCancellation.Token);
 
-            DisplayResults(results);
+            DisplayResults(results, truncated);
         }
         catch (OperationCanceledException)
         {
             ProgressTextBlock.Text = "Search cancelled";
-            SearchProgressBar.Value = 0;
         }
         catch (Exception ex)
         {
@@ -95,6 +103,7 @@ public partial class CloudTrailView
         }
         finally
         {
+            SearchProgressBar.IsIndeterminate = false;
             _searchCancellation = null;
         }
     }
@@ -128,7 +137,8 @@ public partial class CloudTrailView
 
     private void
     DisplayResults(
-        List<CloudTrailEventItem> results)
+        List<CloudTrailEventItem> results,
+        bool truncated)
     {
         var groupedResults =
             results
@@ -149,6 +159,10 @@ public partial class CloudTrailView
         EventsGroupedItemsControl.ItemsSource = groupedResults;
 
         SearchProgressBar.Value = 100;
-        ProgressTextBlock.Text = $"Done ({results.Count} results)";
+
+        ProgressTextBlock.Text =
+            truncated
+                ? $"Done ({results.Count} results, truncated — narrow the time range or pick an attribute)"
+                : $"Done ({results.Count} results)";
     }
 }
