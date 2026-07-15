@@ -6,5 +6,10 @@
 Config/config
 Config/credentials
 
+# Project Info glossary (contacts, network/VPN details...) -- contains PII,
+# not committed by default. Share the file directly with your team, or
+# remove this line if you'd rather version it in git instead.
+Config/project-info.json
+
 # Per-user Visual Studio project settings (machine-specific paths)
 *.csproj.user

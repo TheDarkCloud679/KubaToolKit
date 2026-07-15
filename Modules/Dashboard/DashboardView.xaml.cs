@@ -1,5 +1,6 @@
 using Amazon.CloudWatch.Model;
 using KubaToolKit.Modules.Dashboard.Models;
+using KubaToolKit.Modules.ProjectInfo;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -209,6 +210,28 @@ public partial class DashboardView
         RoutedEventArgs e)
     {
         await RefreshAsync();
+    }
+
+    private void
+    ProjectInfoButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            MessageBox.Show(
+                "Choisir un profil AWS d'abord.",
+                "Project Info");
+
+            return;
+        }
+
+        var window = new ProjectInfoWindow(_currentProfile)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        window.Show();
     }
 
     private void

@@ -15,6 +15,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -34,8 +35,16 @@
                 VerticalAlignment="Center"/>
 
             <Button
-                x:Name="RefreshButton"
+                x:Name="ProjectInfoButton"
                 Grid.Column="2"
+                Width="110"
+                Margin="0,0,10,0"
+                Content="Project Info"
+                Click="ProjectInfoButton_Click"/>
+
+            <Button
+                x:Name="RefreshButton"
+                Grid.Column="3"
                 Width="100"
                 Content="Refresh"
                 Click="RefreshButton_Click"/>
