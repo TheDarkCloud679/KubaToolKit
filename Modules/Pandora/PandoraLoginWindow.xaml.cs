@@ -8,14 +8,14 @@ namespace KubaToolKit.Modules.Pandora;
 /// OAuth2 : affiche un vrai navigateur (WebView2), laisse l'utilisateur se
 /// connecter normalement (identique au flux "aws sso login" côté AWS,
 /// mais interactif dans l'appli plutôt que dans un navigateur externe),
-/// puis récupère les cookies de session une fois revenu sur le domaine
-/// Pandora pour les réutiliser dans les appels API suivants.
+/// puis récupère les cookies de session une fois la connexion terminée
+/// pour les réutiliser dans les appels API suivants.
 public partial class PandoraLoginWindow
     : Window
 {
     private readonly string _startUrl;
     private readonly string _pandoraHost;
-    private bool _leftPandoraHost;
+    private bool _sawAuthStep;
     private bool _completed;
 
     public List<PandoraCookie> Cookies { get; private set; } = new();
@@ -52,7 +52,7 @@ public partial class PandoraLoginWindow
         }
     }
 
-    private async void
+    private void
     CoreWebView2_SourceChanged(
         object? sender,
         CoreWebView2SourceChangedEventArgs e)
@@ -73,29 +73,66 @@ public partial class PandoraLoginWindow
             return;
         }
 
-        // On repère d'abord le passage par un domaine autre que Pandora
-        // (la SSO) : sans ça, la toute première navigation -- qui est
-        // aussi sur le domaine Pandora avant sa redirection -- serait
-        // prise à tort pour une connexion déjà réussie.
-        if (!string.Equals(current.Host, _pandoraHost, StringComparison.OrdinalIgnoreCase))
+        // La passerelle SSO peut rediriger vers un domaine externe (IdP
+        // séparé) OU rester sur le même hôte que la console (proxy oauth2
+        // intégré -- l'URL "oauth2/start?repo=4" vue en erreur est
+        // relative, donc probablement sur ce même hôte) : les deux comptent
+        // comme "en cours de connexion", pas seulement un changement de
+        // domaine.
+        bool looksLikeAuthStep =
+            !string.Equals(current.Host, _pandoraHost, StringComparison.OrdinalIgnoreCase)
+            || current.AbsolutePath.Contains("/oauth2/", StringComparison.OrdinalIgnoreCase);
+
+        if (looksLikeAuthStep)
         {
-            _leftPandoraHost = true;
+            _sawAuthStep = true;
 
             return;
         }
 
-        if (!_leftPandoraHost)
+        // De retour sur une page Pandora normale après être passé par une
+        // étape de connexion : terminé. Si la détection automatique se
+        // trompe (flux SSO différent de ce qui a été observé), le bouton
+        // Continuer reste le filet de sécurité.
+        if (_sawAuthStep)
+        {
+            _ = CompleteAsync();
+        }
+    }
+
+    private async void
+    ContinueButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CompleteAsync();
+    }
+
+    private async Task
+    CompleteAsync()
+    {
+        if (_completed)
         {
             return;
         }
 
         _completed = true;
 
+        Uri current;
+
+        try
+        {
+            current = new Uri(WebView.CoreWebView2.Source);
+        }
+        catch
+        {
+            current = new Uri(_startUrl);
+        }
+
         // Filtré sur la racine du domaine plutôt que sur _startUrl (qui
         // inclut le sous-chemin /pandora_console/) : un cookie posé sur un
-        // autre chemin pendant le retour de la SSO (page de callback,
-        // etc.) doit être capturé aussi, pas seulement ceux qui
-        // s'appliquent au chemin exact de départ.
+        // autre chemin pendant le retour de la SSO doit être capturé
+        // aussi.
         var rawCookies =
             await WebView.CoreWebView2.CookieManager.GetCookiesAsync(
                 $"{current.Scheme}://{current.Host}");

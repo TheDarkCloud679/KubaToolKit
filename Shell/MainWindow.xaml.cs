@@ -309,9 +309,8 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             return;
         }
 
-        await _pandoraView.LoadTreeAsync(
-            PandoraProfileCombo.SelectedItem as PandoraProfile,
-            SearchTextBox.Text);
+        await LoadPandoraTreeAsync(
+            PandoraProfileCombo.SelectedItem as PandoraProfile);
     }
 
     private async Task
@@ -331,6 +330,25 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
     }
 
+    private async Task
+    LoadPandoraTreeAsync(PandoraProfile? profile)
+    {
+        // Contrairement à LoadCloudWatchLogGroupsAsync, le bouton reste
+        // actif (Content="Cancel") : le chargement peut inclure une
+        // fenêtre de connexion SSO, potentiellement longue, qu'il doit
+        // rester possible d'annuler.
+        SearchButton.Content = "Cancel";
+
+        try
+        {
+            await _pandoraView.LoadTreeAsync(profile, SearchTextBox.Text);
+        }
+        finally
+        {
+            SearchButton.Content = "Search";
+        }
+    }
+
     private async void
         SearchButton_Click(
             object sender,
@@ -345,6 +363,12 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (_cloudTrailView.IsSearchRunning)
         {
             _cloudTrailView.CancelSearch();
+            return;
+        }
+
+        if (_pandoraView.IsLoading)
+        {
+            _pandoraView.CancelLoad();
             return;
         }
 
@@ -893,9 +917,8 @@ StartDatePicker_SelectedDateChanged(
         }
         else if (isPandora)
         {
-            await _pandoraView.LoadTreeAsync(
-                PandoraProfileCombo.SelectedItem as PandoraProfile,
-                SearchTextBox.Text);
+            await LoadPandoraTreeAsync(
+                PandoraProfileCombo.SelectedItem as PandoraProfile);
         }
 
         // isCloudTrail : rien à précharger, la recherche se fait à la

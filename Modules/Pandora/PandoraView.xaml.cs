@@ -14,6 +14,7 @@ public partial class PandoraView
     private readonly PandoraService _pandoraService = new();
     private List<PandoraGroupNode> _allGroups = new();
     private CancellationTokenSource? _loadCancellation;
+    private PandoraLoginWindow? _openLoginWindow;
 
     public PandoraView()
     {
@@ -26,6 +27,13 @@ public partial class PandoraView
     CancelLoad()
     {
         _loadCancellation?.Cancel();
+
+        // ShowDialog() bloque le thread UI tant que la fenêtre de
+        // connexion est ouverte : annuler le token ne suffit pas à
+        // l'interrompre, il faut la fermer explicitement. Elle renvoie
+        // alors DialogResult != true, ce que ShowLoginWindow traite comme
+        // un échec normal.
+        _openLoginWindow?.Close();
     }
 
     public async Task
@@ -33,6 +41,11 @@ public partial class PandoraView
         PandoraProfile? profile,
         string filterText)
     {
+        // Jamais deux chargements/connexions en même temps : changer de
+        // profil doit d'abord couper la tentative précédente, où qu'elle
+        // en soit (appels réseau ou fenêtre de connexion ouverte).
+        CancelLoad();
+
         if (profile == null)
         {
             return;
@@ -86,6 +99,14 @@ public partial class PandoraView
 
             if (!ShowLoginWindow(profile))
             {
+                // La fenêtre a pu se fermer sans succès pour deux raisons
+                // différentes : l'utilisateur l'a fermée/annulée
+                // volontairement, ou CancelLoad() l'a fermée parce qu'un
+                // autre profil a été sélectionné entre-temps -- dans ce
+                // second cas le token est déjà annulé, à traiter comme une
+                // annulation silencieuse plutôt qu'une erreur bruyante.
+                cancellationToken.ThrowIfCancellationRequested();
+
                 throw new Exception($"Connexion à {profile.Name} annulée ou échouée.");
             }
 
@@ -102,14 +123,23 @@ public partial class PandoraView
             Owner = Window.GetWindow(this)
         };
 
-        var success = login.ShowDialog() == true;
+        _openLoginWindow = login;
 
-        if (success)
+        try
         {
-            _pandoraService.SetSession(profile.Url, login.Cookies);
-        }
+            var success = login.ShowDialog() == true;
 
-        return success;
+            if (success)
+            {
+                _pandoraService.SetSession(profile.Url, login.Cookies);
+            }
+
+            return success;
+        }
+        finally
+        {
+            _openLoginWindow = null;
+        }
     }
 
     public void
