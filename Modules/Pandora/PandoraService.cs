@@ -204,7 +204,18 @@ public class PandoraService
         using var response = await Http.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            // Beaucoup d'API PHP legacy renvoient leurs erreurs en 200
+            // avec un corps texte ("auth error" par ex.), donc ce n'est
+            // pas le cas le plus courant -- mais un vrai code d'erreur
+            // HTTP (401/403 typiquement pour une liste d'IP autorisées
+            // côté Setup Pandora) est un signal bien plus précis que le
+            // corps seul pour distinguer "identifiants refusés" de
+            // "requête bloquée avant même d'être authentifiée".
+            throw new Exception(
+                $"Pandora a répondu {(int)response.StatusCode} {response.ReasonPhrase} : {body.Trim()}");
+        }
 
         return body;
     }
