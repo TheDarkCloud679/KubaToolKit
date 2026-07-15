@@ -12,32 +12,42 @@
     WindowStartupLocation="CenterOwner">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <wv2:WebView2 x:Name="WebView" Grid.Row="0"/>
+        <!-- En haut et bien visible plutôt qu'en bas, où le contenu de la
+             page Pandora (souvent longue) pouvait le repousser hors champ
+             malgré la fenêtre maximisée. -->
+        <Border
+            Grid.Row="0"
+            Background="{StaticResource AccentBrush}"
+            Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="1" Margin="12,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    TextWrapping="Wrap"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextOnAccentBrush}"
+                    Text="Connecte-toi (SSO puis, si demandé, le formulaire Pandora). Une fois le tableau de bord Pandora réellement affiché ci-dessous, clique sur Continuer."/>
 
-            <TextBlock
-                Grid.Column="0"
-                VerticalAlignment="Center"
-                TextWrapping="Wrap"
-                Text="Connecte-toi (SSO puis, si demandé, le formulaire Pandora). Une fois le tableau de bord Pandora réellement affiché, clique sur Continuer."/>
+                <Button
+                    x:Name="ContinueButton"
+                    Grid.Column="1"
+                    Margin="16,0,0,0"
+                    Padding="18,6"
+                    FontWeight="Bold"
+                    Content="Continuer"
+                    Click="ContinueButton_Click"/>
+            </Grid>
+        </Border>
 
-            <Button
-                x:Name="ContinueButton"
-                Grid.Column="1"
-                Margin="12,0,0,0"
-                Padding="14,4"
-                Style="{StaticResource AccentButtonStyle}"
-                Content="Continuer"
-                Click="ContinueButton_Click"/>
-        </Grid>
+        <wv2:WebView2 x:Name="WebView" Grid.Row="1"/>
     </Grid>
 </Window>

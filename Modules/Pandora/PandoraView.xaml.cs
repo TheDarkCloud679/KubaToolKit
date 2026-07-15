@@ -118,9 +118,11 @@ public partial class PandoraView
     ShowLoginWindow(
         PandoraProfile profile)
     {
+        var owner = Window.GetWindow(this);
+
         var login = new PandoraLoginWindow(profile.Url)
         {
-            Owner = Window.GetWindow(this)
+            Owner = owner
         };
 
         _openLoginWindow = login;
@@ -139,6 +141,12 @@ public partial class PandoraView
         finally
         {
             _openLoginWindow = null;
+
+            // WebView2 peut laisser le focus dans un état bizarre au
+            // moment où sa fenêtre hôte se ferme : on ramène explicitement
+            // KubaToolKit au premier plan plutôt que d'espérer que WPF le
+            // fasse tout seul.
+            owner?.Activate();
         }
     }
 
