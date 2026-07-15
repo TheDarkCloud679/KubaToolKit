@@ -1,7 +1,10 @@
 using KubaToolKit.Modules.ProjectInfo.Models;
+using KubaToolKit.Shared.Services;
+using System.ComponentModel;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -437,6 +440,38 @@ public partial class ProjectInfoWindow
 
         table.RowChanged += (_, __) => SyncAndSave(section, table);
         table.RowDeleted += (_, __) => SyncAndSave(section, table);
+
+        // Double-clic sur un en-tête pour trier, comme ailleurs dans
+        // l'appli -- DataView.Sort plutôt que DataGridSortHelper (qui
+        // suppose une ObservableCollection<T> typée) puisque cette grille
+        // est adossée à un DataTable/DataView aux colonnes dynamiques.
+        grid.MouseDoubleClick += (_, e) =>
+        {
+            if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+                is not { Column: { } column })
+            {
+                return;
+            }
+
+            var columnName = column.Header?.ToString();
+
+            if (string.IsNullOrEmpty(columnName))
+            {
+                return;
+            }
+
+            var ascending = column.SortDirection != ListSortDirection.Ascending;
+
+            table.DefaultView.Sort = $"[{columnName}] {(ascending ? "ASC" : "DESC")}";
+
+            foreach (var col in grid.Columns)
+            {
+                col.SortDirection = null;
+            }
+
+            column.SortDirection =
+                ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
+        };
 
         outer.Children.Add(grid);
 
