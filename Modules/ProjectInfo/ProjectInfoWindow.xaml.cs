@@ -33,7 +33,7 @@ public partial class ProjectInfoWindow
     private readonly Dictionary<ProjectInfoSection, (Border Card, DataGrid Grid, DataTable Table)>
         _sectionControls = new();
 
-    // Absente ici = dépliée (comportement par défaut) ; seul un repli
+    // Absente ici = repliée (comportement par défaut) ; seul un dépli
     // explicite ajoute une entrée, préservée tant que la fenêtre reste
     // ouverte même si la carte de la section est reconstruite.
     private readonly Dictionary<ProjectInfoSection, bool> _sectionExpanded = new();
@@ -213,11 +213,11 @@ public partial class ProjectInfoWindow
         StackPanel columnManageRow = null!;
 
         // Repliées, seules l'en-tête et sa ligne d'actions restent
-        // visibles -- une section jamais explicitement repliée reste
-        // dépliée par défaut (comportement historique).
+        // visibles -- une section jamais explicitement dépliée reste
+        // repliée par défaut.
         var isExpanded =
-            !_sectionExpanded.TryGetValue(section, out var storedExpanded)
-            || storedExpanded;
+            _sectionExpanded.TryGetValue(section, out var storedExpanded)
+            && storedExpanded;
 
         var outer = new StackPanel();
 
