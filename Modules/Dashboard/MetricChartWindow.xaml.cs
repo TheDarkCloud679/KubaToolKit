@@ -60,22 +60,6 @@ public partial class MetricChartWindow
         RoutedEventArgs e) =>
         await LoadAsync();
 
-    private void
-    TimeTextBox_LostFocus(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not TextBox textBox)
-        {
-            return;
-        }
-
-        textBox.Text =
-            TimeSpan.TryParse(textBox.Text, out var time)
-                ? $"{time.Hours:00}:{time.Minutes:00}"
-                : "00:00";
-    }
-
     private DateTime
     GetSelectedDateTime(
         DatePicker datePicker,
