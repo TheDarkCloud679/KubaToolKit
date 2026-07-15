@@ -6,34 +6,78 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
-/// Glossaire libre par projet (profil AWS) : sections définies par
-/// l'utilisateur (Contacts, Équipements réseau, VPN, ou tout autre nom),
-/// chacune avec ses propres colonnes. Enregistré automatiquement à chaque
-/// modification dans Config/project-info.json, partagé entre collègues
-/// via ce même fichier (copie manuelle, lecteur réseau, ou suivi dans git
-/// selon ce que l'équipe préfère).
+/// Glossaire libre par projet : sections définies par l'utilisateur
+/// (Contacts, Équipements réseau, VPN, ou tout autre nom), chacune avec
+/// ses propres colonnes. Enregistré automatiquement à chaque modification
+/// dans Config/project-info.json, partagé entre collègues via ce même
+/// fichier (copie manuelle, lecteur réseau, ou suivi dans git selon ce que
+/// l'équipe préfère). Un "projet" n'est pas forcément un profil AWS
+/// unique : le champ Project en haut de la fenêtre permet à Prod/Preprod/
+/// Test d'un même client de partager les mêmes informations en portant le
+/// même nom.
 public partial class ProjectInfoWindow
     : Window
 {
     private readonly ProjectInfoService _projectInfoService = new();
     private readonly ProjectInfoRoot _root;
-    private readonly ProjectInfoProject _project;
+    private readonly string _profileName;
+    private ProjectInfoProject _project;
 
     public ProjectInfoWindow(
         string profileName)
     {
         InitializeComponent();
 
-        Title = $"Project Info - {profileName}";
-        TitleTextBlock.Text = $"Project Info - {profileName}";
-
+        _profileName = profileName;
         _root = _projectInfoService.Load();
-        _project = _projectInfoService.GetOrCreateProject(_root, profileName);
+
+        var projectKey = _projectInfoService.ResolveProjectKey(_root, profileName);
+
+        ProjectKeyTextBox.Text = projectKey;
+
+        _project = _projectInfoService.GetOrCreateProject(_root, projectKey);
 
         SectionPresetCombo.ItemsSource = ProjectInfoService.SectionPresets.Keys.ToList();
         SectionPresetCombo.SelectedIndex = 0;
 
+        UpdateTitle();
         RenderSections();
+    }
+
+    private void
+    UpdateTitle()
+    {
+        var text = $"Project Info - {_project.Key} (profile: {_profileName})";
+
+        Title = text;
+        TitleTextBlock.Text = text;
+    }
+
+    private void
+    ProjectKeyTextBox_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var newKey = ProjectKeyTextBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(newKey))
+        {
+            ProjectKeyTextBox.Text = _project.Key;
+
+            return;
+        }
+
+        if (string.Equals(newKey, _project.Key, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _projectInfoService.SetProjectKey(_root, _profileName, newKey);
+        _project = _projectInfoService.GetOrCreateProject(_root, newKey);
+
+        UpdateTitle();
+        RenderSections();
+        Save();
     }
 
     private void

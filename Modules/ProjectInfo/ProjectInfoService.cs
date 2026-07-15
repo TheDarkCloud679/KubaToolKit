@@ -52,21 +52,44 @@ public class ProjectInfoService
             JsonSerializer.Serialize(root, SerializerOptions));
     }
 
+    /// Clé de projet effective pour ce profil : celle assignée
+    /// explicitement (partagée avec d'autres profils, ex: prod/preprod/
+    /// test d'un même projet) si elle existe, sinon le nom du profil
+    /// lui-même -- comportement par défaut inchangé tant que l'utilisateur
+    /// n'a pas explicitement demandé un partage.
+    public string
+    ResolveProjectKey(
+        ProjectInfoRoot root,
+        string profileName) =>
+        root.ProfileProjectKeys.TryGetValue(profileName, out var key)
+        && !string.IsNullOrWhiteSpace(key)
+            ? key
+            : profileName;
+
+    public void
+    SetProjectKey(
+        ProjectInfoRoot root,
+        string profileName,
+        string projectKey)
+    {
+        root.ProfileProjectKeys[profileName] = projectKey;
+    }
+
     public ProjectInfoProject
     GetOrCreateProject(
         ProjectInfoRoot root,
-        string profileName)
+        string projectKey)
     {
         var project =
             root.Projects.FirstOrDefault(p =>
-                string.Equals(p.ProfileName, profileName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Key, projectKey, StringComparison.OrdinalIgnoreCase));
 
         if (project != null)
         {
             return project;
         }
 
-        project = new ProjectInfoProject { ProfileName = profileName };
+        project = new ProjectInfoProject { Key = projectKey };
         root.Projects.Add(project);
 
         return project;

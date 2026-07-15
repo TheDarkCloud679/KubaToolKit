@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -20,11 +21,39 @@
             Grid.Row="0"
             FontWeight="Bold"
             FontSize="16"
-            Margin="0,0,0,12"
+            Margin="0,0,0,4"
             Foreground="{StaticResource TextPrimaryBrush}"/>
 
         <StackPanel
             Grid.Row="1"
+            Orientation="Horizontal"
+            Margin="0,0,0,14">
+
+            <TextBlock
+                Text="Project"
+                VerticalAlignment="Center"
+                Margin="0,0,8,0"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextSecondaryBrush}"/>
+
+            <TextBox
+                x:Name="ProjectKeyTextBox"
+                Width="220"
+                VerticalContentAlignment="Center"
+                LostFocus="ProjectKeyTextBox_LostFocus"
+                ToolTip="Utilise le même nom sur les profils Prod/Preprod/Test d'un même projet pour qu'ils partagent ces informations."/>
+
+            <TextBlock
+                Text="(même nom sur Prod/Preprod/Test = infos partagées)"
+                VerticalAlignment="Center"
+                Margin="8,0,0,0"
+                FontSize="11"
+                FontStyle="Italic"
+                Foreground="{StaticResource TextMutedBrush}"/>
+        </StackPanel>
+
+        <StackPanel
+            Grid.Row="2"
             Orientation="Horizontal"
             Margin="0,0,0,14">
 
@@ -56,7 +85,7 @@
         </StackPanel>
 
         <ScrollViewer
-            Grid.Row="2"
+            Grid.Row="3"
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="SectionsPanel"/>
