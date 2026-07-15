@@ -1,22 +1,22 @@
 using KubaToolKit.Modules.Pandora.Models;
-using Microsoft.Web.WebView2.Core;
 using System.Windows;
 
 namespace KubaToolKit.Modules.Pandora;
 
 /// Fenêtre de connexion pour les sites Pandora protégés par une SSO
-/// OAuth2 : affiche un vrai navigateur (WebView2), laisse l'utilisateur se
-/// connecter normalement (identique au flux "aws sso login" côté AWS,
-/// mais interactif dans l'appli plutôt que dans un navigateur externe),
-/// puis récupère les cookies de session une fois la connexion terminée
-/// pour les réutiliser dans les appels API suivants.
+/// OAuth2 (parfois suivie d'un second formulaire de connexion propre à
+/// Pandora, indépendant de la SSO) : affiche un vrai navigateur (WebView2)
+/// et laisse l'utilisateur enchaîner toutes les étapes nécessaires
+/// normalement. La fermeture n'est jamais automatique -- deviner "la
+/// connexion est terminée" depuis la navigation s'est révélé peu fiable
+/// (flux à un ou deux formulaires selon le site, redirections internes au
+/// même domaine...) -- c'est le clic sur Continuer, une fois la vraie page
+/// Pandora affichée, qui capture les cookies de session pour les appels
+/// API suivants.
 public partial class PandoraLoginWindow
     : Window
 {
     private readonly string _startUrl;
-    private readonly string _pandoraHost;
-    private bool _sawAuthStep;
-    private bool _completed;
 
     public List<PandoraCookie> Cookies { get; private set; } = new();
 
@@ -26,7 +26,6 @@ public partial class PandoraLoginWindow
         InitializeComponent();
 
         _startUrl = startUrl;
-        _pandoraHost = new Uri(startUrl).Host;
 
         Loaded += async (_, __) => await InitializeAsync();
     }
@@ -37,8 +36,6 @@ public partial class PandoraLoginWindow
         try
         {
             await WebView.EnsureCoreWebView2Async();
-
-            WebView.CoreWebView2.SourceChanged += CoreWebView2_SourceChanged;
 
             WebView.CoreWebView2.Navigate(_startUrl);
         }
@@ -52,72 +49,11 @@ public partial class PandoraLoginWindow
         }
     }
 
-    private void
-    CoreWebView2_SourceChanged(
-        object? sender,
-        CoreWebView2SourceChangedEventArgs e)
-    {
-        if (_completed)
-        {
-            return;
-        }
-
-        Uri current;
-
-        try
-        {
-            current = new Uri(WebView.CoreWebView2.Source);
-        }
-        catch
-        {
-            return;
-        }
-
-        // La passerelle SSO peut rediriger vers un domaine externe (IdP
-        // séparé) OU rester sur le même hôte que la console (proxy oauth2
-        // intégré -- l'URL "oauth2/start?repo=4" vue en erreur est
-        // relative, donc probablement sur ce même hôte) : les deux comptent
-        // comme "en cours de connexion", pas seulement un changement de
-        // domaine.
-        bool looksLikeAuthStep =
-            !string.Equals(current.Host, _pandoraHost, StringComparison.OrdinalIgnoreCase)
-            || current.AbsolutePath.Contains("/oauth2/", StringComparison.OrdinalIgnoreCase);
-
-        if (looksLikeAuthStep)
-        {
-            _sawAuthStep = true;
-
-            return;
-        }
-
-        // De retour sur une page Pandora normale après être passé par une
-        // étape de connexion : terminé. Si la détection automatique se
-        // trompe (flux SSO différent de ce qui a été observé), le bouton
-        // Continuer reste le filet de sécurité.
-        if (_sawAuthStep)
-        {
-            _ = CompleteAsync();
-        }
-    }
-
     private async void
     ContinueButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        await CompleteAsync();
-    }
-
-    private async Task
-    CompleteAsync()
-    {
-        if (_completed)
-        {
-            return;
-        }
-
-        _completed = true;
-
         Uri current;
 
         try
@@ -131,8 +67,7 @@ public partial class PandoraLoginWindow
 
         // Filtré sur la racine du domaine plutôt que sur _startUrl (qui
         // inclut le sous-chemin /pandora_console/) : un cookie posé sur un
-        // autre chemin pendant le retour de la SSO doit être capturé
-        // aussi.
+        // autre chemin pendant la connexion doit être capturé aussi.
         var rawCookies =
             await WebView.CoreWebView2.CookieManager.GetCookiesAsync(
                 $"{current.Scheme}://{current.Host}");

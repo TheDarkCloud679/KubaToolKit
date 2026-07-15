@@ -27,13 +27,14 @@
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 TextWrapping="Wrap"
-                Text="Une fois connecté et la console Pandora affichée, clique sur Continuer si la fenêtre ne se ferme pas automatiquement."/>
+                Text="Connecte-toi (SSO puis, si demandé, le formulaire Pandora). Une fois le tableau de bord Pandora réellement affiché, clique sur Continuer."/>
 
             <Button
                 x:Name="ContinueButton"
                 Grid.Column="1"
                 Margin="12,0,0,0"
                 Padding="14,4"
+                Style="{StaticResource AccentButtonStyle}"
                 Content="Continuer"
                 Click="ContinueButton_Click"/>
         </Grid>
