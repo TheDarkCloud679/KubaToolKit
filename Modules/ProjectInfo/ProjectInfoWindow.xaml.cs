@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
@@ -35,10 +36,37 @@ public partial class ProjectInfoWindow
     private int _currentMatchIndex = -1;
     private string _lastSearchQuery = "";
 
+    // Écrire le fichier à chaque cellule validée (donc à chaque tabulation
+    // pendant la saisie d'une ligne) causait des micro-gels perceptibles,
+    // voire pire en tapant vite. On regroupe les sauvegardes : chaque
+    // modification relance ce délai plutôt que d'écrire immédiatement, et
+    // seule la dernière modification d'une rafale déclenche une écriture
+    // réelle.
+    private readonly DispatcherTimer _saveDebounceTimer;
+    private bool _isSyncing;
+
     public ProjectInfoWindow(
         string profileName)
     {
         InitializeComponent();
+
+        _saveDebounceTimer =
+            new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+
+        _saveDebounceTimer.Tick += (_, __) =>
+        {
+            _saveDebounceTimer.Stop();
+            Save();
+        };
+
+        Closing += (_, __) =>
+        {
+            if (_saveDebounceTimer.IsEnabled)
+            {
+                _saveDebounceTimer.Stop();
+                Save();
+            }
+        };
 
         _profileName = profileName;
         _root = _projectInfoService.Load();
@@ -367,26 +395,85 @@ public partial class ProjectInfoWindow
         ProjectInfoSection section,
         DataTable table)
     {
-        section.Rows =
-            table.Rows
-                .Cast<DataRow>()
-                .Where(r => r.RowState != DataRowState.Deleted)
-                .Select(r =>
-                {
-                    var dict = new Dictionary<string, string>();
+        // AcceptChanges() plus bas peut re-déclencher cet évènement selon
+        // l'état exact de la ligne (observé en pratique, source probable
+        // des plantages) : un garde de ré-entrance simple évite toute
+        // récursion, même indirecte.
+        if (_isSyncing)
+        {
+            return;
+        }
 
-                    foreach (var column in section.Columns)
+        _isSyncing = true;
+
+        try
+        {
+            section.Rows =
+                table.Rows
+                    .Cast<DataRow>()
+                    .Where(r =>
+                        r.RowState != DataRowState.Deleted
+                        && r.RowState != DataRowState.Detached)
+                    .Select(r =>
                     {
-                        dict[column] = r[column]?.ToString() ?? "";
-                    }
+                        var dict = new Dictionary<string, string>();
 
-                    return dict;
-                })
-                .ToList();
+                        foreach (var column in section.Columns)
+                        {
+                            dict[column] = TryReadCell(r, column);
+                        }
 
-        table.AcceptChanges();
+                        return dict;
+                    })
+                    .ToList();
 
-        Save();
+            table.AcceptChanges();
+        }
+        catch (Exception ex)
+        {
+            // Une ligne en cours d'ajout côté WPF (ligne "+" pas encore
+            // pleinement initialisée) peut être dans un état transitoire
+            // au moment précis de cet évènement : on l'ignore plutôt que
+            // de laisser une exception non gérée planter toute l'appli --
+            // la prochaine modification resynchronisera correctement.
+            System.Diagnostics.Debug.WriteLine(
+                $"ProjectInfo SyncAndSave ignoré : {ex}");
+
+            return;
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+
+        ScheduleSave();
+    }
+
+    /// Comme SyncAndSave, une ligne peut être dans un état où l'accès à
+    /// une colonne précise lève une exception (RowNotInTableException et
+    /// apparentées) sans que toute la ligne soit concernée -- protégé
+    /// individuellement plutôt que de perdre toute la synchronisation pour
+    /// une seule valeur illisible.
+    private string
+    TryReadCell(
+        DataRow row,
+        string column)
+    {
+        try
+        {
+            return row[column]?.ToString() ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private void
+    ScheduleSave()
+    {
+        _saveDebounceTimer.Stop();
+        _saveDebounceTimer.Start();
     }
 
     private void
