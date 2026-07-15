@@ -314,7 +314,8 @@ public partial class ProjectInfoWindow
             CanUserSortColumns = false,
             HeadersVisibility = DataGridHeadersVisibility.Column,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            MaxHeight = 320
+            MaxHeight = 320,
+            SelectionUnit = DataGridSelectionUnit.Cell
         };
 
         table.RowChanged += (_, __) => SyncAndSave(section, table);
