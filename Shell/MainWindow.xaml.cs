@@ -1,6 +1,7 @@
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Infrastructure;
 using KubaToolKit.Modules.ApiClient;
+using KubaToolKit.Modules.CloudTrail;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.Dashboard;
 using KubaToolKit.Modules.S3Explorer;
@@ -24,6 +25,7 @@ public partial class MainWindow
     private readonly IReadOnlyList<IToolModule> _modules = ToolModuleRegistry.CreateModules();
     private readonly DashboardView _dashboardView;
     private readonly CloudWatchLogsView _cloudWatchView;
+    private readonly CloudTrailView _cloudTrailView;
     private readonly S3ExplorerView _s3View;
     private readonly SqsView _sqsView;
     private readonly StepFunctionsView _stepFunctionsView;
@@ -62,6 +64,7 @@ public partial class MainWindow
 
         _dashboardView = _modules.OfType<DashboardModule>().Single().TypedView;
         _cloudWatchView = _modules.OfType<CloudWatchLogsModule>().Single().TypedView;
+        _cloudTrailView = _modules.OfType<CloudTrailModule>().Single().TypedView;
         _s3View = _modules.OfType<S3ExplorerModule>().Single().TypedView;
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
@@ -93,6 +96,7 @@ MainWindow_Closing(object? sender, CancelEventArgs e)
         try
         {
             _cloudWatchView.CancelSearch();
+            _cloudTrailView.CancelSearch();
             _s3View.CancelSearch();
         }
         catch { }
@@ -117,6 +121,7 @@ MainWindow_Loaded(
             }
 
             LoadPatterns();
+            LoadCloudTrailAttributes();
             InitializeDates();
 
             _windowLoaded =
@@ -166,6 +171,12 @@ MainWindow_Loaded(
                 "TimeOut"
             };
         PatternCombo.SelectedIndex = 0;
+    }
+
+    private void LoadCloudTrailAttributes()
+    {
+        CloudTrailAttributeCombo.ItemsSource = CloudTrailAttributeOption.All;
+        CloudTrailAttributeCombo.SelectedIndex = 0;
     }
 
     private void
@@ -232,9 +243,15 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             // Aucun profil AWS nécessaire : l'API Client est indépendant
             // du système de credentials/profils de l'app.
         }
-        else
+        else if (CloudWatchModeRadio?.IsChecked == true)
         {
             await LoadCloudWatchLogGroupsAsync(profile);
+        }
+        else
+        {
+            // CloudTrail interroge à la demande (bouton Search) : rien à
+            // précharger au changement de profil, contrairement à
+            // CloudWatch qui a besoin de la liste des log groups.
         }
     }
 
@@ -263,6 +280,12 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (_cloudWatchView.IsSearchRunning)
         {
             _cloudWatchView.CancelSearch();
+            return;
+        }
+
+        if (_cloudTrailView.IsSearchRunning)
+        {
+            _cloudTrailView.CancelSearch();
             return;
         }
 
@@ -348,92 +371,40 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 return;
             }
 
-            var profile =
-    ProfileCombo
-        .SelectedItem?
-        .ToString();
-
-            if (string.IsNullOrWhiteSpace(
-                    profile))
+            if (CloudTrailModeRadio?.IsChecked == true)
             {
-                MessageBox.Show(
-                    "Choisir un profil AWS");
+                if (!TryGetValidatedTimeRange(out var ctProfile))
+                {
+                    return;
+                }
+
+                var attribute =
+                    CloudTrailAttributeCombo.SelectedItem as CloudTrailAttributeOption
+                    ?? CloudTrailAttributeOption.All[0];
+
+                SearchButton.Content = "Cancel";
+
+                try
+                {
+                    await _cloudTrailView.RunSearchAsync(
+                        ctProfile,
+                        attribute.Key,
+                        SearchTextBox.Text,
+                        StartDatePicker.SelectedDate,
+                        StartTimeTextBox.Text,
+                        EndDatePicker.SelectedDate,
+                        EndTimeTextBox.Text);
+                }
+                finally
+                {
+                    SearchButton.Content = "Search";
+                }
 
                 return;
             }
 
-            // Vérification format heure
-            if (!TimeSpan.TryParse(
-                    StartTimeTextBox.Text,
-                    out var startTime))
+            if (!TryGetValidatedTimeRange(out var profile))
             {
-                MessageBox.Show(
-                    "Invalid start time.\nFormat attendu : HH:mm",
-                    "Time error");
-
-                return;
-            }
-
-            if (!TimeSpan.TryParse(
-                    EndTimeTextBox.Text,
-                    out var endTime))
-            {
-                MessageBox.Show(
-                    "Invalid end time.\nFormat attendu : HH:mm",
-                    "Time error");
-
-                return;
-            }
-
-            // plage valide
-            if (startTime.TotalHours
-                >= 24
-                ||
-                endTime.TotalHours
-                >= 24)
-            {
-                MessageBox.Show(
-                    "Hour must be between 00:00 and 23:59.",
-                    "Time error");
-
-                return;
-            }
-
-            if (StartDatePicker.SelectedDate
-                == null
-                ||
-                EndDatePicker.SelectedDate
-                == null)
-            {
-                MessageBox.Show(
-                    "Please select dates.",
-                    "Date error");
-
-                return;
-            }
-
-            var startDateTime =
-                StartDatePicker
-                    .SelectedDate
-                    .Value
-                    .Date
-                    + startTime;
-
-            var endDateTime =
-                EndDatePicker
-                    .SelectedDate
-                    .Value
-                    .Date
-                    + endTime;
-
-            // ordre chrono
-            if (endDateTime
-                <= startDateTime)
-            {
-                MessageBox.Show(
-                    "End date/time must be after start date/time.",
-                    "Date error");
-
                 return;
             }
 
@@ -458,6 +429,85 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             MessageBox.Show(ex.ToString(), "Search error");
         }
+    }
+
+    /// Valide le profil AWS et la plage date/heure partagée (Start/End)
+    /// avant une recherche CloudWatch ou CloudTrail -- les deux modes
+    /// utilisent exactement les mêmes champs du Shell et les mêmes règles.
+    private bool
+    TryGetValidatedTimeRange(
+        out string profile)
+    {
+        profile =
+            ProfileCombo.SelectedItem?.ToString()
+            ?? "";
+
+        if (string.IsNullOrWhiteSpace(profile))
+        {
+            MessageBox.Show(
+                "Choisir un profil AWS");
+
+            return false;
+        }
+
+        if (!TimeSpan.TryParse(
+                StartTimeTextBox.Text,
+                out var startTime))
+        {
+            MessageBox.Show(
+                "Invalid start time.\nFormat attendu : HH:mm",
+                "Time error");
+
+            return false;
+        }
+
+        if (!TimeSpan.TryParse(
+                EndTimeTextBox.Text,
+                out var endTime))
+        {
+            MessageBox.Show(
+                "Invalid end time.\nFormat attendu : HH:mm",
+                "Time error");
+
+            return false;
+        }
+
+        if (startTime.TotalHours >= 24
+            || endTime.TotalHours >= 24)
+        {
+            MessageBox.Show(
+                "Hour must be between 00:00 and 23:59.",
+                "Time error");
+
+            return false;
+        }
+
+        if (StartDatePicker.SelectedDate == null
+            || EndDatePicker.SelectedDate == null)
+        {
+            MessageBox.Show(
+                "Please select dates.",
+                "Date error");
+
+            return false;
+        }
+
+        var startDateTime =
+            StartDatePicker.SelectedDate.Value.Date + startTime;
+
+        var endDateTime =
+            EndDatePicker.SelectedDate.Value.Date + endTime;
+
+        if (endDateTime <= startDateTime)
+        {
+            MessageBox.Show(
+                "End date/time must be after start date/time.",
+                "Date error");
+
+            return false;
+        }
+
+        return true;
     }
 
     private void
@@ -667,14 +717,22 @@ StartDatePicker_SelectedDateChanged(
                 ?.IsChecked
             == true;
 
+        bool isCloudTrail =
+            CloudTrailModeRadio
+                ?.IsChecked
+            == true;
+
         bool isCloudWatch =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient;
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isCloudTrail;
 
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
 
         _cloudWatchView.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
+
+        _cloudTrailView.Visibility =
+            isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
         _s3View.Visibility =
             isS3 ? Visibility.Visible : Visibility.Collapsed;
@@ -691,28 +749,34 @@ StartDatePicker_SelectedDateChanged(
         ProfilePatternSearchRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
 
-        // Dates/heures ne servent qu'au filtrage CloudWatch.
+        // Dates/heures servent au filtrage CloudWatch et CloudTrail (tous
+        // deux interrogent une plage temporelle).
         DateRangeRow.Visibility =
-            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
-        // Pattern ne sert qu'au filtrage CloudWatch ; Search sert aussi en
-        // S3 (recherche dans les dossiers). Dashboard/SQS/Step Functions
-        // ont chacun leur propre bouton "Refresh" et n'utilisent ni le
-        // texte de recherche ni le bouton d'action partagé : les deux
-        // disparaissent complètement pour ces modules plutôt que
-        // d'occuper une ligne pour rien. Le bouton reste toujours sur la
-        // même ligne que Search, jamais avec les dates.
+        // Pattern ne sert qu'au filtrage CloudWatch ; Attribute ne sert
+        // qu'à CloudTrail (les deux partagent la même colonne, jamais
+        // visibles ensemble). Search sert aussi en S3 (recherche dans les
+        // dossiers). Dashboard/SQS/Step Functions ont chacun leur propre
+        // bouton "Refresh" et n'utilisent ni le texte de recherche ni le
+        // bouton d'action partagé : les deux disparaissent complètement
+        // pour ces modules plutôt que d'occuper une ligne pour rien. Le
+        // bouton reste toujours sur la même ligne que Search, jamais avec
+        // les dates.
         PatternGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
+        AttributeGroup.Visibility =
+            isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
+
         SearchGroup.Visibility =
-            isCloudWatch || isS3 ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         DateFieldsGroup.Visibility =
-            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
         SearchButton.Visibility =
-            isCloudWatch || isS3 ? Visibility.Visible : Visibility.Collapsed;
+            isCloudWatch || isCloudTrail || isS3 ? Visibility.Visible : Visibility.Collapsed;
 
         if (isS3)
         {
@@ -739,6 +803,9 @@ StartDatePicker_SelectedDateChanged(
             await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
+
+        // isCloudTrail : rien à précharger, la recherche se fait à la
+        // demande (bouton Search).
     }
 
     private void
