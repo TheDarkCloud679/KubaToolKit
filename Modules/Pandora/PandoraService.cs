@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.Pandora.Models;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -23,11 +24,31 @@ namespace KubaToolKit.Modules.Pandora;
 /// vérifié contre un serveur réel depuis cet environnement -- ReadRows/
 /// GetField lisent donc les deux formes possibles plutôt que de supposer
 /// une forme unique.
+///
+/// Les sessions capturées (une par site, l'identité SSO derrière est
+/// partagée mais chaque site garde son propre cookie) sont mises en cache
+/// sur disque (%LocalAppData%\KubaToolKit\pandora-sessions.json, hors du
+/// dépôt) pour survivre au redémarrage de l'appli -- se reconnecter reste
+/// nécessaire au tout premier accès à un site, ou une fois la session
+/// expirée côté serveur, mais plus à chaque lancement. Ce fichier contient
+/// des cookies de session en clair (même sensibilité qu'un cookie de
+/// navigateur classique) : le supprimer force une reconnexion.
 public class PandoraService
 {
     private static readonly HttpClient Http = new();
 
-    private readonly Dictionary<string, string> _sessionCookies = new();
+    private static readonly string SessionCachePath =
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "KubaToolKit",
+            "pandora-sessions.json");
+
+    private readonly Dictionary<string, string> _sessionCookies;
+
+    public PandoraService()
+    {
+        _sessionCookies = LoadCachedSessions();
+    }
 
     public bool
     HasSession(
@@ -45,6 +66,55 @@ public class PandoraService
                 cookies.Select(c => $"{c.Name}={c.Value}"));
 
         _sessionCookies[NormalizeKey(profileUrl)] = header;
+
+        SaveCachedSessions();
+    }
+
+    private Dictionary<string, string>
+    LoadCachedSessions()
+    {
+        try
+        {
+            if (!File.Exists(SessionCachePath))
+            {
+                return new();
+            }
+
+            var json = File.ReadAllText(SessionCachePath);
+
+            return
+                JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                ?? new();
+        }
+        catch
+        {
+            // Cache corrompu ou illisible : on repart d'une session vide
+            // plutôt que de bloquer le chargement du module.
+            return new();
+        }
+    }
+
+    private void
+    SaveCachedSessions()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(SessionCachePath);
+
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(
+                SessionCachePath,
+                JsonSerializer.Serialize(_sessionCookies));
+        }
+        catch
+        {
+            // Non bloquant : au pire la session ne survivra pas au
+            // redémarrage de l'appli, comme avant ce cache.
+        }
     }
 
     public async Task<List<PandoraGroupNode>>
