@@ -159,6 +159,25 @@ public class CloudTrailService
         var start = startDate!.Value.Date + TimeSpan.Parse(startTime);
         var end = endDate!.Value.Date + TimeSpan.Parse(endTime);
 
-        return (start.ToUniversalTime(), end.ToUniversalTime());
+        var startUtc = start.ToUniversalTime();
+        var endUtc = end.ToUniversalTime();
+
+        // L'API CloudTrail rejette une EndTime future ("EndTime must be
+        // before the current time"). Plutôt que de faire échouer toute la
+        // recherche, on plafonne à maintenant pour couvrir jusqu'aux
+        // évènements les plus récents disponibles.
+        var now = DateTime.UtcNow;
+
+        if (endUtc > now)
+        {
+            endUtc = now;
+        }
+
+        if (startUtc > endUtc)
+        {
+            startUtc = endUtc;
+        }
+
+        return (startUtc, endUtc);
     }
 }
