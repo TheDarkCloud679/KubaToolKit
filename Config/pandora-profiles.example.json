@@ -1,16 +1,10 @@
 [
   {
     "Name": "Bretagne",
-    "Url": "https://monitoring.bzh.kubapay.io/pandora_console/",
-    "User": "your-pandora-username",
-    "Pass": "your-pandora-password",
-    "ApiPassword": ""
+    "Url": "https://monitoring.bzh.kubapay.io/pandora_console/"
   },
   {
     "Name": "Dijon",
-    "Url": "https://monitoring.dijon.kubapay.io/pandora_console/",
-    "User": "your-pandora-username",
-    "Pass": "your-pandora-password",
-    "ApiPassword": ""
+    "Url": "https://monitoring.dijon.kubapay.io/pandora_console/"
   }
 ]

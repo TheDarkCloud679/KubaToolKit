@@ -47,7 +47,7 @@ public partial class PandoraView
             _loadCancellation = new CancellationTokenSource();
 
             _allGroups =
-                await _pandoraService.GetTreeAsync(profile, _loadCancellation.Token);
+                await LoadTreeWithLoginRetryAsync(profile, _loadCancellation.Token);
 
             ApplyFilter(filterText);
         }
@@ -65,6 +65,51 @@ public partial class PandoraView
             LoadingProgressBar.IsIndeterminate = false;
             _loadCancellation = null;
         }
+    }
+
+    /// Comme AwsSsoService côté AWS : on tente l'appel, et seulement s'il
+    /// échoue faute de session valide on ouvre la fenêtre de connexion et
+    /// on réessaie une fois -- pas de vérification préalable coûteuse à
+    /// chaque recherche.
+    private async Task<List<PandoraGroupNode>>
+    LoadTreeWithLoginRetryAsync(
+        PandoraProfile profile,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _pandoraService.GetTreeAsync(profile, cancellationToken);
+        }
+        catch (PandoraAuthRequiredException)
+        {
+            ProgressTextBlock.Text = $"Login required for {profile.Name}...";
+
+            if (!ShowLoginWindow(profile))
+            {
+                throw new Exception($"Connexion à {profile.Name} annulée ou échouée.");
+            }
+
+            return await _pandoraService.GetTreeAsync(profile, cancellationToken);
+        }
+    }
+
+    private bool
+    ShowLoginWindow(
+        PandoraProfile profile)
+    {
+        var login = new PandoraLoginWindow(profile.Url)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        var success = login.ShowDialog() == true;
+
+        if (success)
+        {
+            _pandoraService.SetSession(profile.Url, login.Cookies);
+        }
+
+        return success;
     }
 
     public void

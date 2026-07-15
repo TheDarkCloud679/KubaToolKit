@@ -1,17 +1,61 @@
 using KubaToolKit.Modules.Pandora.Models;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 
 namespace KubaToolKit.Modules.Pandora;
 
-/// Client pour l'API legacy de Pandora FMS (include/api.php). Le format de
-/// réponse exact (tableau JSON brut vs {"data": [...]}, lignes en tableau
-/// positionnel vs objet à clés) n'a pas pu être vérifié contre un serveur
-/// réel depuis cet environnement -- ReadRows/GetField lisent donc les deux
-/// formes possibles plutôt que de supposer une forme unique.
+/// Client pour l'API legacy de Pandora FMS (include/api.php), authentifié
+/// par cookie de session (voir PandoraLoginWindow) plutôt que par user/pass
+/// en query string : la console est derrière une SSO OAuth2 qui intercepte
+/// toute requête non authentifiée avant qu'elle n'atteigne l'API. Le
+/// format de réponse exact de l'API elle-même (tableau JSON brut vs
+/// {"data": [...]}, lignes en tableau positionnel vs objet à clés) n'a pas
+/// pu être vérifié contre un serveur réel depuis cet environnement --
+/// ReadRows/GetField lisent donc les deux formes possibles plutôt que de
+/// supposer une forme unique.
 public class PandoraService
 {
-    private static readonly HttpClient Http = new();
+    private readonly Dictionary<string, HttpClient> _sessions = new();
+
+    public bool
+    HasSession(
+        string profileUrl) =>
+        _sessions.ContainsKey(NormalizeKey(profileUrl));
+
+    public void
+    SetSession(
+        string profileUrl,
+        IEnumerable<PandoraCookie> cookies)
+    {
+        var container = new CookieContainer();
+
+        foreach (var cookie in cookies)
+        {
+            try
+            {
+                container.Add(
+                    new Cookie(cookie.Name, cookie.Value, cookie.Path, cookie.Domain));
+            }
+            catch
+            {
+                // Cookie dont le domaine/la valeur ne satisfait pas
+                // System.Net.Cookie : ignoré plutôt que de faire échouer
+                // toute la session pour un seul cookie secondaire.
+            }
+        }
+
+        var handler = new HttpClientHandler
+        {
+            CookieContainer = container,
+            UseCookies = true
+        };
+
+        var key = NormalizeKey(profileUrl);
+
+        _sessions.Remove(key);
+        _sessions[key] = new HttpClient(handler);
+    }
 
     public async Task<List<PandoraGroupNode>>
     GetTreeAsync(
@@ -52,7 +96,7 @@ public class PandoraService
         CancellationToken cancellationToken)
     {
         var url = BuildUrl(profile, "get", "groups");
-        var json = await FetchAsync(url, cancellationToken);
+        var json = await FetchAsync(profile, url, cancellationToken);
         var rows = ReadRows(json);
 
         var result = new List<(string, string)>();
@@ -87,7 +131,7 @@ public class PandoraService
             + $"&other={Uri.EscapeDataString(other)}"
             + $"&other_mode={Uri.EscapeDataString("url_encode_separator_|")}";
 
-        var json = await FetchAsync(url, cancellationToken);
+        var json = await FetchAsync(profile, url, cancellationToken);
         var rows = ReadRows(json);
 
         var result = new List<PandoraAgent>();
@@ -128,33 +172,44 @@ public class PandoraService
     {
         var baseUrl = profile.Url.TrimEnd('/');
 
-        var url =
+        return
             $"{baseUrl}/include/api.php"
             + $"?op={op}&op2={op2}"
-            + $"&user={Uri.EscapeDataString(profile.User)}"
-            + $"&pass={Uri.EscapeDataString(profile.Pass)}"
             + "&return_type=json";
-
-        if (!string.IsNullOrWhiteSpace(profile.ApiPassword))
-        {
-            url += $"&apipass={Uri.EscapeDataString(profile.ApiPassword)}";
-        }
-
-        return url;
     }
 
     private async Task<string>
     FetchAsync(
+        PandoraProfile profile,
         string url,
         CancellationToken cancellationToken)
     {
-        using var response = await Http.GetAsync(url, cancellationToken);
+        var client = GetClient(profile.Url);
+
+        using var response = await client.GetAsync(url, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
         return body;
     }
+
+    private HttpClient
+    GetClient(
+        string profileUrl)
+    {
+        if (!_sessions.TryGetValue(NormalizeKey(profileUrl), out var client))
+        {
+            throw new PandoraAuthRequiredException();
+        }
+
+        return client;
+    }
+
+    private string
+    NormalizeKey(
+        string url) =>
+        new Uri(url).Host.ToLowerInvariant();
 
     private List<JsonElement>
     ReadRows(
@@ -168,8 +223,13 @@ public class PandoraService
         }
         catch (JsonException)
         {
-            // Pandora renvoie parfois un message d'erreur texte brut (auth
-            // invalide, apipass manquant...) même avec return_type=json.
+            // La SSO renvoie une page HTML (login ou session expirée) au
+            // lieu du JSON attendu quand la session n'est plus valide.
+            if (LooksLikeAuthRedirect(json))
+            {
+                throw new PandoraAuthRequiredException();
+            }
+
             throw new Exception($"Réponse Pandora inattendue : {json.Trim()}");
         }
 
@@ -185,6 +245,12 @@ public class PandoraService
             ? data.EnumerateArray().ToList()
             : new List<JsonElement>();
     }
+
+    private bool
+    LooksLikeAuthRedirect(
+        string body) =>
+        body.Contains("oauth2", StringComparison.OrdinalIgnoreCase)
+        || body.Contains("<!DOCTYPE html>", StringComparison.OrdinalIgnoreCase);
 
     private string
     GetField(
