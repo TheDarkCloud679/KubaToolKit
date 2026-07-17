@@ -254,6 +254,11 @@ public partial class ProjectInfoWindow
             FontSize = 14,
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)FindResource("AccentBrush"),
+            // Sans Background, un TextBlock n'est cliquable que là où du
+            // texte est effectivement dessiné (pas sur le reste de sa
+            // zone, étirée par la colonne Star) -- Transparent rend toute
+            // la zone du titre cliquable pour le double-clic de renommage.
+            Background = Brushes.Transparent,
             Cursor = Cursors.Hand,
             ToolTip = "Double-clic pour renommer la section"
         };
