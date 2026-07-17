@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -748,6 +749,7 @@ public static class JsonCardViewBuilder
             {
                 Clipboard.SetText(copyText);
                 FlashCopyFeedback(wrapper);
+                ShowCopiedBubble(wrapper);
             }
             catch
             {
@@ -796,6 +798,49 @@ public static class JsonCardViewBuilder
         {
             timer.Stop();
             wrapper.Background = original;
+        };
+
+        timer.Start();
+    }
+
+    /// Petite bulle "Copié" flottant au-dessus de la valeur, plutôt que de
+    /// se fier au seul flash de fond -- pas assez explicite pour que
+    /// l'utilisateur comprenne que la copie a bien eu lieu.
+    private static void
+    ShowCopiedBubble(
+        Border wrapper)
+    {
+        var bubble = new Border
+        {
+            Background = new SolidColorBrush(SuccessColor),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(8, 3, 8, 3),
+            Child = new TextBlock
+            {
+                Text = "Copié ✓",
+                Foreground = Brushes.White,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold
+            }
+        };
+
+        var popup = new Popup
+        {
+            PlacementTarget = wrapper,
+            Placement = PlacementMode.Top,
+            VerticalOffset = -4,
+            AllowsTransparency = true,
+            StaysOpen = true,
+            Child = bubble,
+            IsOpen = true
+        };
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+
+        timer.Tick += (_, __) =>
+        {
+            timer.Stop();
+            popup.IsOpen = false;
         };
 
         timer.Start();
