@@ -32,6 +32,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -85,9 +86,36 @@
                         Click="ReloadCollections_Click"/>
                 </Grid>
 
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        x:Name="RequestSearchBox"
+                        Grid.Column="0"
+                        Height="24"
+                        FontSize="11"
+                        Padding="6,0"
+                        VerticalContentAlignment="Center"
+                        ToolTip="Rechercher une requête par son nom (Entrée : suivant, Maj+Entrée : précédent, Échap : effacer)"
+                        TextChanged="RequestSearchBox_TextChanged"
+                        PreviewKeyDown="RequestSearchBox_PreviewKeyDown"/>
+
+                    <TextBlock
+                        x:Name="RequestSearchCountText"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Margin="6,0,0,0"
+                        Visibility="Collapsed"/>
+                </Grid>
+
                 <TreeView
                     x:Name="CollectionsTreeView"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     BorderThickness="0"
                     Background="Transparent"
                     MouseDoubleClick="CollectionsTreeView_MouseDoubleClick"

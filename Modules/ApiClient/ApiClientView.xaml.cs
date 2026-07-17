@@ -887,6 +887,167 @@ public partial class ApiClientView
         }
     }
 
+    private List<CollectionNode> _requestSearchMatches = new();
+    private int _requestSearchMatchIndex = -1;
+
+    private void
+    RequestSearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        RunRequestSearch();
+
+    private void
+    RequestSearchBox_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Enter:
+
+                MoveToRequestMatch(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+                e.Handled = true;
+
+                break;
+
+            case Key.Escape:
+
+                RequestSearchBox.Text = "";
+                e.Handled = true;
+
+                break;
+        }
+    }
+
+    /// Cherche par nom parmi les requêtes uniquement (pas les dossiers) --
+    /// Distinct() car une requête favorite apparaît deux fois dans l'arbre
+    /// (sa place réelle + le pseudo-dossier "Favoris", mêmes références).
+    private void
+    RunRequestSearch()
+    {
+        var query = RequestSearchBox.Text?.Trim() ?? "";
+
+        _requestSearchMatches.Clear();
+        _requestSearchMatchIndex = -1;
+
+        if (string.IsNullOrEmpty(query))
+        {
+            RequestSearchCountText.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        _requestSearchMatches =
+            _collections
+                .SelectMany(EnumerateRequestNodes)
+                .Where(n => n.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Distinct()
+                .ToList();
+
+        _requestSearchMatchIndex = _requestSearchMatches.Count > 0 ? 0 : -1;
+
+        RequestSearchCountText.Visibility = Visibility.Visible;
+        UpdateRequestSearchCountText();
+
+        if (_requestSearchMatchIndex >= 0)
+        {
+            ExpandAndSelectTreeNode(_requestSearchMatches[_requestSearchMatchIndex]);
+        }
+    }
+
+    private static IEnumerable<CollectionNode>
+    EnumerateRequestNodes(
+        CollectionNode node)
+    {
+        if (node.IsRequest)
+        {
+            yield return node;
+        }
+
+        foreach (var child in node.Children)
+        {
+            foreach (var descendant in EnumerateRequestNodes(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
+
+    private void
+    MoveToRequestMatch(
+        int direction)
+    {
+        if (_requestSearchMatches.Count == 0)
+        {
+            return;
+        }
+
+        _requestSearchMatchIndex =
+            (_requestSearchMatchIndex + direction + _requestSearchMatches.Count)
+            % _requestSearchMatches.Count;
+
+        UpdateRequestSearchCountText();
+        ExpandAndSelectTreeNode(_requestSearchMatches[_requestSearchMatchIndex]);
+    }
+
+    private void
+    UpdateRequestSearchCountText()
+    {
+        RequestSearchCountText.Text =
+            _requestSearchMatches.Count == 0
+                ? "0/0"
+                : $"{_requestSearchMatchIndex + 1}/{_requestSearchMatches.Count}";
+    }
+
+    /// Déplie chaque ancêtre (en remontant via Parent, donc toujours la
+    /// vraie position du nœud, jamais le pseudo-dossier "Favoris") avant de
+    /// sélectionner et défiler jusqu'à la requête trouvée -- les conteneurs
+    /// TreeViewItem d'un niveau ne sont générés qu'une fois leur parent
+    /// développé, d'où l'UpdateLayout() après chaque IsExpanded.
+    private void
+    ExpandAndSelectTreeNode(
+        CollectionNode node)
+    {
+        var ancestors = new List<CollectionNode>();
+        var current = node.Parent;
+
+        while (current != null)
+        {
+            ancestors.Insert(0, current);
+            current = current.Parent;
+        }
+
+        ItemsControl container = CollectionsTreeView;
+
+        foreach (var ancestor in ancestors)
+        {
+            container.UpdateLayout();
+
+            if (container.ItemContainerGenerator.ContainerFromItem(ancestor)
+                is not TreeViewItem ancestorItem)
+            {
+                return;
+            }
+
+            ancestorItem.IsExpanded = true;
+
+            container = ancestorItem;
+        }
+
+        container.UpdateLayout();
+
+        if (container.ItemContainerGenerator.ContainerFromItem(node) is not TreeViewItem targetItem)
+        {
+            return;
+        }
+
+        targetItem.IsSelected = true;
+
+        targetItem.Dispatcher.BeginInvoke(
+            DispatcherPriority.ContextIdle,
+            new Action(() => targetItem.BringIntoView()));
+    }
+
     private void
     CollectionsContextMenu_Opened(
         object sender,
