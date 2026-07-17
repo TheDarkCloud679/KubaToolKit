@@ -91,6 +91,24 @@ public partial class ProjectInfoWindow
         SectionPresetCombo.ItemsSource = ProjectInfoService.SectionPresets.Keys.ToList();
         SectionPresetCombo.SelectedIndex = 0;
 
+        // Filet pour un dépôt dans l'espace vide sous la dernière carte
+        // (pas géré par le Drop d'une carte précise) : place la section en
+        // dernière position.
+        SectionsPanel.AllowDrop = true;
+        SectionsPanel.Drop += (_, e) =>
+        {
+            if (e.Data.GetData(typeof(ProjectInfoSection)) is not ProjectInfoSection draggedSection)
+            {
+                return;
+            }
+
+            _project.Sections.Remove(draggedSection);
+            _project.Sections.Add(draggedSection);
+
+            RenderSections();
+            Save();
+        };
+
         UpdateTitle();
         RenderSections();
     }
@@ -253,10 +271,28 @@ public partial class ProjectInfoWindow
 
         var header = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var dragHandle = new TextBlock
+        {
+            Text = "⠿",
+            FontSize = 16,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+            Foreground = (Brush)FindResource("TextMutedBrush"),
+            Cursor = Cursors.SizeAll,
+            ToolTip = "Glisser pour réordonner la section"
+        };
+        Grid.SetColumn(dragHandle, 0);
+        dragHandle.MouseLeftButtonDown += (_, e) =>
+        {
+            DragDrop.DoDragDrop(card, section, DragDropEffects.Move);
+            e.Handled = true;
+        };
 
         var toggleButton = new Button
         {
@@ -265,7 +301,7 @@ public partial class ProjectInfoWindow
             Margin = new Thickness(0, 0, 6, 0),
             ToolTip = "Déplier/replier la section"
         };
-        Grid.SetColumn(toggleButton, 0);
+        Grid.SetColumn(toggleButton, 1);
         toggleButton.Click += (_, __) =>
         {
             isExpanded = !isExpanded;
@@ -291,7 +327,7 @@ public partial class ProjectInfoWindow
             Cursor = Cursors.Hand,
             ToolTip = "Double-clic pour renommer la section"
         };
-        Grid.SetColumn(nameText, 1);
+        Grid.SetColumn(nameText, 2);
 
         var nameEditBox = new TextBox
         {
@@ -300,7 +336,7 @@ public partial class ProjectInfoWindow
             VerticalContentAlignment = VerticalAlignment.Center,
             Visibility = Visibility.Collapsed
         };
-        Grid.SetColumn(nameEditBox, 1);
+        Grid.SetColumn(nameEditBox, 2);
 
         void CommitSectionRename()
         {
@@ -382,7 +418,7 @@ public partial class ProjectInfoWindow
             VerticalContentAlignment = VerticalAlignment.Center,
             ToolTip = "Nom de la nouvelle colonne"
         };
-        Grid.SetColumn(newColumnTextBox, 2);
+        Grid.SetColumn(newColumnTextBox, 3);
 
         var addColumnButton = new Button
         {
@@ -413,7 +449,7 @@ public partial class ProjectInfoWindow
 
             Save();
         };
-        Grid.SetColumn(addColumnButton, 3);
+        Grid.SetColumn(addColumnButton, 4);
 
         var deleteSectionButton = new Button
         {
@@ -444,8 +480,9 @@ public partial class ProjectInfoWindow
 
             Save();
         };
-        Grid.SetColumn(deleteSectionButton, 4);
+        Grid.SetColumn(deleteSectionButton, 5);
 
+        header.Children.Add(dragHandle);
         header.Children.Add(toggleButton);
         header.Children.Add(nameText);
         header.Children.Add(nameEditBox);
@@ -652,7 +689,55 @@ public partial class ProjectInfoWindow
             Effect = (System.Windows.Media.Effects.Effect)FindResource("CardShadowEffect"),
             Padding = (Thickness)FindResource("CardPadding"),
             Margin = new Thickness(0, 0, 0, 12),
-            Child = outer
+            Child = outer,
+            AllowDrop = true
+        };
+
+        // Glisser-déposer pour réordonner : dépose dans la moitié haute
+        // d'une carte cible = avant elle, moitié basse = après -- peu
+        // importe qu'elle soit dépliée ou repliée, seule l'en-tête (via
+        // dragHandle) initie le glissement.
+        card.DragEnter += (_, e) =>
+        {
+            e.Effects =
+                e.Data.GetDataPresent(typeof(ProjectInfoSection))
+                    ? DragDropEffects.Move
+                    : DragDropEffects.None;
+
+            e.Handled = true;
+        };
+
+        card.Drop += (_, e) =>
+        {
+            if (e.Data.GetData(typeof(ProjectInfoSection)) is not ProjectInfoSection draggedSection
+                || draggedSection == section)
+            {
+                return;
+            }
+
+            var oldIndex = _project.Sections.IndexOf(draggedSection);
+            var newIndex = _project.Sections.IndexOf(section);
+
+            if (oldIndex < 0 || newIndex < 0)
+            {
+                return;
+            }
+
+            _project.Sections.RemoveAt(oldIndex);
+
+            if (oldIndex < newIndex)
+            {
+                newIndex--;
+            }
+
+            var dropAfter = e.GetPosition(card).Y > card.ActualHeight / 2;
+
+            _project.Sections.Insert(dropAfter ? newIndex + 1 : newIndex, draggedSection);
+
+            RenderSections();
+            Save();
+
+            e.Handled = true;
         };
 
         // Écrase l'éventuelle entrée précédente pour cette section (cas
