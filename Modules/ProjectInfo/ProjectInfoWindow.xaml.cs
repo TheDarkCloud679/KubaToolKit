@@ -253,9 +253,82 @@ public partial class ProjectInfoWindow
             FontWeight = FontWeights.Bold,
             FontSize = 14,
             VerticalAlignment = VerticalAlignment.Center,
-            Foreground = (Brush)FindResource("AccentBrush")
+            Foreground = (Brush)FindResource("AccentBrush"),
+            Cursor = Cursors.Hand,
+            ToolTip = "Double-clic pour renommer la section"
         };
         Grid.SetColumn(nameText, 1);
+
+        var nameEditBox = new TextBox
+        {
+            FontWeight = FontWeights.Bold,
+            FontSize = 14,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Visibility = Visibility.Collapsed
+        };
+        Grid.SetColumn(nameEditBox, 1);
+
+        void CommitSectionRename()
+        {
+            var newName = nameEditBox.Text.Trim();
+
+            nameEditBox.Visibility = Visibility.Collapsed;
+            nameText.Visibility = Visibility.Visible;
+
+            if (string.IsNullOrWhiteSpace(newName)
+                || string.Equals(newName, section.Name, StringComparison.Ordinal))
+            {
+                nameEditBox.Text = section.Name;
+
+                return;
+            }
+
+            if (_project.Sections.Any(s =>
+                    s != section && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show($"Une section \"{newName}\" existe déjà.", "Project Info");
+
+                nameEditBox.Text = section.Name;
+
+                return;
+            }
+
+            section.Name = newName;
+            nameText.Text = newName;
+
+            Save();
+        }
+
+        nameText.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2)
+            {
+                return;
+            }
+
+            nameEditBox.Text = section.Name;
+            nameText.Visibility = Visibility.Collapsed;
+            nameEditBox.Visibility = Visibility.Visible;
+            nameEditBox.Focus();
+            nameEditBox.SelectAll();
+        };
+
+        nameEditBox.LostFocus += (_, __) => CommitSectionRename();
+
+        nameEditBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter)
+            {
+                Keyboard.ClearFocus();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                nameEditBox.Text = section.Name;
+                Keyboard.ClearFocus();
+                e.Handled = true;
+            }
+        };
 
         var newColumnTextBox = new TextBox
         {
@@ -330,6 +403,7 @@ public partial class ProjectInfoWindow
 
         header.Children.Add(toggleButton);
         header.Children.Add(nameText);
+        header.Children.Add(nameEditBox);
         header.Children.Add(newColumnTextBox);
         header.Children.Add(addColumnButton);
         header.Children.Add(deleteSectionButton);
