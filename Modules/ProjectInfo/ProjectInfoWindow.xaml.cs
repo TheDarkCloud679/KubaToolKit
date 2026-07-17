@@ -5,6 +5,7 @@ using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -467,11 +468,23 @@ public partial class ProjectInfoWindow
             CanUserAddRows = true,
             CanUserDeleteRows = true,
             CanUserSortColumns = false,
-            HeadersVisibility = DataGridHeadersVisibility.Column,
+            HeadersVisibility = DataGridHeadersVisibility.All,
+            RowHeaderWidth = 34,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             MaxHeight = 320,
             SelectionUnit = DataGridSelectionUnit.Cell,
             Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
+        };
+
+        // Numéro de ligne dans l'en-tête, pour compter les entrées d'un
+        // coup d'œil -- vide pour la ligne "+" d'ajout (CanUserAddRows),
+        // qui n'est pas encore une vraie ligne.
+        grid.LoadingRow += (_, e) =>
+        {
+            e.Row.Header =
+                e.Row.Item == CollectionView.NewItemPlaceholder
+                    ? ""
+                    : (e.Row.GetIndex() + 1).ToString();
         };
 
         table.RowChanged += (_, __) => SyncAndSave(section, table);
