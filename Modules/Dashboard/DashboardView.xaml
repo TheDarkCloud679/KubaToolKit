@@ -53,12 +53,6 @@
         <!-- Metric sections -->
         <Grid Grid.Row="1">
             <Grid.Resources>
-                <!--
-                    Le fond (dégradé bleu -> rouge selon la charge) est
-                    posé en local via Binding sur chaque cellule, donc
-                    le survol se signale via la bordure plutôt que le
-                    fond pour ne pas l'écraser.
-                -->
                 <Style x:Key="MetricCellStyle" TargetType="Border">
                     <Setter Property="Padding" Value="10,4"/>
                     <Setter Property="Margin" Value="0,0,4,0"/>
@@ -84,12 +78,6 @@
             </Grid.Resources>
 
             <Grid.RowDefinitions>
-                <!--
-                    Pas de MinHeight ici : une section repliée doit pouvoir
-                    se réduire jusqu'à ne plus afficher que son titre. La
-                    taille minimale visible en mode déplié est portée par
-                    le Border de contenu (MinHeight="120") à la place.
-                -->
                 <RowDefinition x:Name="RdsRow" Height="280"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="Ec2Row" Height="*"/>

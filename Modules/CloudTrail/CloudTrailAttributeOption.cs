@@ -1,9 +1,5 @@
 namespace KubaToolKit.Modules.CloudTrail;
 
-/// Une entrée du sélecteur "Attribute" du Shell : l'intitulé affiché et la
-/// clé LookupAttributeKey (API CloudTrail LookupEvents) qu'elle représente.
-/// Key = "" signifie "pas de filtre", c'est-à-dire tous les évènements de
-/// la plage horaire choisie.
 public class CloudTrailAttributeOption
 {
     public string Display { get; set; } = "";

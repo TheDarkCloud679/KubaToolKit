@@ -94,13 +94,13 @@ public partial class ExecutionsWindow
 
             MessageBox.Show(
                 ex.Message,
-                "Journalisation non configurée");
+                "Logging not configured");
 
             Close();
         }
         catch (Exception ex)
         {
-            Logger.Error("ExecutionsWindow: échec du chargement des exécutions.", ex);
+            Logger.Error("ExecutionsWindow: failed to load executions.", ex);
 
             MessageBox.Show(
                 ex.ToString(),

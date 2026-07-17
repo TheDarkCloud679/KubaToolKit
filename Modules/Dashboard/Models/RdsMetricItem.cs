@@ -5,8 +5,6 @@ namespace KubaToolKit.Modules.Dashboard.Models;
 
 public class RdsMetricItem
 {
-    // Repère approximatif (pas de vraie limite par instance sans lire
-    // max_connections) au-delà duquel Activity est considérée "chargée".
     private const double ActivityScaleMax = 50;
 
     public string Identifier { get; set; } = "";

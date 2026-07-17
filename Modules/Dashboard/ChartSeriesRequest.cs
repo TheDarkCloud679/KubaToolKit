@@ -3,8 +3,6 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.Dashboard;
 
-/// Décrit une courbe à tracer dans MetricChartWindow : d'où vient la
-/// donnée CloudWatch et comment l'afficher.
 public class ChartSeriesRequest
 {
     public string Namespace { get; set; } = "";

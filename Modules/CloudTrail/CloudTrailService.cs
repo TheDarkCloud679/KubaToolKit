@@ -9,11 +9,6 @@ namespace KubaToolKit.Modules.CloudTrail;
 
 public class CloudTrailService
 {
-    // LookupEvents est limitée à ~2 requêtes/seconde par compte et 50
-    // évènements par page : sans filtre ("All events"), une recherche sur
-    // un compte actif peut porter sur des milliers d'évènements et tourner
-    // pendant plusieurs minutes. On plafonne pour garantir un résultat en
-    // temps raisonnable plutôt que de paraître figé indéfiniment.
     private const int MaxPages = 40;
 
     public async Task<(List<CloudTrailEventItem> Events, bool Truncated)>
@@ -29,15 +24,15 @@ public class CloudTrailService
         CancellationToken cancellationToken = default)
     {
         Logger.Debug(
-            $"CloudTrailService: recherche attribut='{attributeKey}' valeur='{attributeValue}' (profil '{profile}').");
+            $"CloudTrailService: search attribute='{attributeKey}' value='{attributeValue}' (profile '{profile}').");
 
         var chain = new CredentialProfileStoreChain();
 
         if (!chain.TryGetAWSCredentials(profile, out var credentials))
         {
-            Logger.Error($"CloudTrailService: profil AWS introuvable '{profile}'.");
+            Logger.Error($"CloudTrailService: AWS profile not found '{profile}'.");
 
-            throw new Exception($"Profil AWS introuvable : {profile}");
+            throw new Exception($"AWS profile not found: {profile}");
         }
 
         using var client =
@@ -69,10 +64,6 @@ public class CloudTrailService
 
         var results = new List<CloudTrailEventItem>();
 
-        // Total inconnu à l'avance (l'API ne renvoie qu'une page à la
-        // fois) : on rapporte le nombre d'évènements trouvés jusqu'ici
-        // plutôt qu'un pourcentage, la barre elle-même reste indéterminée
-        // côté vue.
         int page = 0;
         bool truncated = false;
 
@@ -121,7 +112,7 @@ public class CloudTrailService
                 {
                     truncated = true;
 
-                    Logger.Debug($"CloudTrailService: recherche tronquée après {page} page(s).");
+                    Logger.Debug($"CloudTrailService: search truncated after {page} page(s).");
 
                     break;
                 }
@@ -130,19 +121,19 @@ public class CloudTrailService
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("CloudTrailService: recherche annulée.");
+            Logger.Debug("CloudTrailService: search cancelled.");
 
             throw;
         }
         catch (Exception ex)
         {
-            Logger.Error("CloudTrailService: échec de la recherche.", ex);
+            Logger.Error("CloudTrailService: search failed.", ex);
 
             throw;
         }
 
         Logger.Info(
-            $"CloudTrailService: recherche terminée, {results.Count} évènement(s) sur {page} page(s).");
+            $"CloudTrailService: search completed, {results.Count} event(s) over {page} page(s).");
 
         return (
             results.OrderByDescending(x => x.Timestamp).ToList(),
@@ -162,10 +153,6 @@ public class CloudTrailService
         var startUtc = start.ToUniversalTime();
         var endUtc = end.ToUniversalTime();
 
-        // L'API CloudTrail rejette une EndTime future ("EndTime must be
-        // before the current time"). Plutôt que de faire échouer toute la
-        // recherche, on plafonne à maintenant pour couvrir jusqu'aux
-        // évènements les plus récents disponibles.
         var now = DateTime.UtcNow;
 
         if (endUtc > now)

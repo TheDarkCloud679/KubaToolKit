@@ -30,12 +30,6 @@ public class LogGroupNode
     } =
         new();
 
-    /// True uniquement pour un vrai groupe de logs CloudWatch (FullPath =
-    /// nom du log group), jamais pour un nœud catégorie/sous-catégorie/
-    /// stage : ces derniers ont aussi parfois zéro enfant (catégorie
-    /// "Uncategorized" vide si tous les groupes ont matché une autre
-    /// catégorie), donc "pas d'enfant" seul ne suffit pas à repérer une
-    /// feuille cherchable.
     public bool
         IsLeaf
     {

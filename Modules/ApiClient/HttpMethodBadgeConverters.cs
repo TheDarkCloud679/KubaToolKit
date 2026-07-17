@@ -4,12 +4,6 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.ApiClient;
 
-/// Couleur associée à chaque méthode HTTP pour les badges de
-/// l'arborescence des collections (repère visuel façon Postman : GET en
-/// vert, DELETE en rouge...). Réutilise les teintes déjà définies dans
-/// Styles/Colors.xaml (Success/Warning/Accent/Danger) pour rester
-/// cohérent avec le reste de l'appli, complétées de deux teintes propres
-/// aux méthodes qu'aucune de ces quatre ne couvrait (PATCH, HEAD).
 internal static class HttpMethodColors
 {
     private static readonly Color GetColor = Color.FromRgb(0x1F, 0xA9, 0x71);
@@ -35,8 +29,6 @@ internal static class HttpMethodColors
         };
 }
 
-/// Fond du badge : la couleur de la méthode en très faible opacité,
-/// pour rester lisible avec le texte de la méthode par-dessus en plein.
 public sealed class HttpMethodBadgeBackgroundConverter
     : IValueConverter
 {

@@ -25,7 +25,7 @@
                 Foreground="{StaticResource TextPrimaryBrush}"/>
 
             <TextBlock
-                Text="Consultation seule : les messages ne sont jamais supprimés de la file."
+                Text="Read only: messages are never deleted from the queue."
                 FontSize="11"
                 Foreground="{StaticResource TextSecondaryBrush}"
                 Margin="0,2,0,0"/>

@@ -104,16 +104,16 @@ public partial class SqsMessagesWindow
                 System.Windows.Threading.DispatcherPriority.Loaded);
 
             StatusTextBlock.Text =
-                $"{messages.Count} message(s) • consultation seule, aucune suppression";
+                $"{messages.Count} message(s) • read only, no deletion";
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("SqsMessagesWindow: consultation annulée.");
+            Logger.Debug("SqsMessagesWindow: search cancelled.");
         }
         catch (Exception ex)
         {
             Logger.Error(
-                $"SqsMessagesWindow: échec de la consultation de '{_queueUrl}'.",
+                $"SqsMessagesWindow: failed to search '{_queueUrl}'.",
                 ex);
 
             MessageBox.Show(

@@ -28,7 +28,7 @@ public class S3Service
                 profile,
                 out var credentials))
         {
-            Logger.Error($"S3Service: profil AWS introuvable '{profile}'.");
+            Logger.Error($"S3Service: AWS profile not found '{profile}'.");
 
             throw new Exception(
                 $"Unable to load AWS profile '{profile}'");
@@ -411,10 +411,6 @@ ReadArchiveFile(
         }
     }
 
-    /// Lit le contenu d'une entrée quel que soit le format de l'archive
-    /// (zip, 7z, rar, tar...) au lieu de se limiter au zip natif .NET,
-    /// pour rester cohérent avec ReadArchiveEntries qui liste déjà ces
-    /// formats via SharpCompress.
     private async Task<string>
     ReadEntryContent(
         Stream stream,
@@ -510,7 +506,7 @@ ReadArchiveFile(
         CancellationToken cancellationToken = default)
     {
     Logger.Debug(
-        $"S3Service: recherche '{searchText}' (bucket '{bucket}', préfixe '{prefix}').");
+        $"S3Service: search '{searchText}' (bucket '{bucket}', prefix '{prefix}').");
 
     var credentials =
         GetCredentials(

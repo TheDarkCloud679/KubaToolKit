@@ -29,8 +29,6 @@ public partial class TextInputWindow
         };
     }
 
-    /// Ouvre la fenêtre en modal et retourne la valeur saisie, ou null si
-    /// l'utilisateur a annulé.
     public static string?
     Prompt(
         Window? owner,
@@ -73,7 +71,7 @@ public partial class TextInputWindow
     {
         if (string.IsNullOrWhiteSpace(ValueTextBox.Text))
         {
-            MessageBox.Show("Entrer un nom.");
+            MessageBox.Show("Enter a name.");
             return;
         }
 

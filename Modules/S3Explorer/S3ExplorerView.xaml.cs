@@ -55,7 +55,7 @@ public partial class S3ExplorerView
                 await _s3Service.GetBuckets(_currentProfile);
 
             Logger.Info(
-                $"S3ExplorerView: {buckets.Count} bucket(s) chargé(s) (profil '{_currentProfile}').");
+                $"S3ExplorerView: {buckets.Count} bucket(s) loaded (profile '{_currentProfile}').");
 
             BucketCombo.ItemsSource = buckets;
 
@@ -68,7 +68,7 @@ public partial class S3ExplorerView
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("S3ExplorerView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("S3ExplorerView: SSO session expired, attempting reconnection.");
 
                 MessageBox.Show(
                     "AWS authentication required.\nYour browser will open.",
@@ -85,7 +85,7 @@ public partial class S3ExplorerView
             }
 
             Logger.Error(
-                $"S3ExplorerView: échec du chargement des buckets (profil '{_currentProfile}').",
+                $"S3ExplorerView: failed to load buckets (profile '{_currentProfile}').",
                 ex);
 
             MessageBox.Show(
@@ -153,7 +153,6 @@ LoadS3RootFolders()
             folder
     };
 
-                // faux enfant pour afficher la flèche
                 node.Children.Add(
                     new S3Node
                     {
@@ -224,7 +223,6 @@ LoadS3Children(
                             folder
                     };
 
-                // placeholder
                 child.Children.Add(
                     new S3Node
                     {
@@ -393,7 +391,7 @@ RunSearchAsync(
         }
 
         Logger.Debug(
-            $"S3ExplorerView: recherche '{searchText}' (bucket '{bucket}', préfixe '{_s3SearchPrefix}').");
+            $"S3ExplorerView: search '{searchText}' (bucket '{bucket}', prefix '{_s3SearchPrefix}').");
 
         try
         {
@@ -448,7 +446,7 @@ RunSearchAsync(
                 _s3Files;
 
             Logger.Info(
-                $"S3ExplorerView: recherche '{searchText}' terminée, {results.Count} résultat(s).");
+                $"S3ExplorerView: search '{searchText}' completed, {results.Count} result(s).");
 
             Dispatcher.BeginInvoke(
                 new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
@@ -457,11 +455,11 @@ RunSearchAsync(
         catch (
     OperationCanceledException)
         {
-            Logger.Debug("S3ExplorerView: recherche annulée.");
+            Logger.Debug("S3ExplorerView: search canceled.");
         }
         catch (Exception ex)
         {
-            Logger.Error($"S3ExplorerView: échec de la recherche '{searchText}'.", ex);
+            Logger.Error($"S3ExplorerView: search '{searchText}' failed.", ex);
 
             throw;
         }

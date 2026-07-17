@@ -6,8 +6,6 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Shared.Services;
 
-/// Pretty-print + coloration syntaxique JSON partagées entre tous les
-/// viewers de l'appli (logs, messages SQS, réponses API...).
 public static class JsonFormattingHelper
 {
     public static string
@@ -79,7 +77,6 @@ public static class JsonFormattingHelper
                     return stringValue;
                 }
 
-                // Détecte JSON stringifié
                 if ((stringValue.StartsWith("{")
                      && stringValue.EndsWith("}"))
                     ||
@@ -137,7 +134,6 @@ public static class JsonFormattingHelper
                 CurrentContext.Document
                     .GetText(line);
 
-            // Clés JSON
             HighlightRegex(
                 line,
                 text,

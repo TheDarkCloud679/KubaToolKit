@@ -166,7 +166,6 @@ ApplySyntaxHighlighting(
 
             case ".log":
             case ".txt":
-                // heuristique JSON
                 var trimmed =
                     content.TrimStart();
 

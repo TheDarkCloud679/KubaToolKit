@@ -5,11 +5,6 @@ using System.Text.Json;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
-/// Un seul fichier JSON partagé (Config/project-info.json) plutôt qu'une
-/// base de données : pas de concurrence sérieuse attendue pour un petit
-/// outil d'équipe, et un fichier texte reste facile à copier/versionner/
-/// inspecter à la main. Dernier enregistrement gagnant en cas d'édition
-/// simultanée par deux personnes -- acceptable ici, pas de verrouillage.
 public class ProjectInfoService
 {
     private static readonly JsonSerializerOptions SerializerOptions =
@@ -19,10 +14,6 @@ public class ProjectInfoService
     GetFilePath() =>
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "project-info.json");
 
-    /// Dossier partagé (Config/ProjectFiles/{clé}) où déposer des fichiers
-    /// pour ce projet -- pas de vraie fonction d'upload dans l'appli,
-    /// juste un raccourci vers un dossier ouvert dans l'explorateur,
-    /// créé au premier clic s'il n'existe pas encore.
     public static string
     GetProjectFolderPath(
         string projectKey) =>
@@ -52,7 +43,7 @@ public class ProjectInfoService
 
         if (!File.Exists(filePath))
         {
-            Logger.Debug($"ProjectInfoService: {filePath} absent, démarrage à vide.");
+            Logger.Debug($"ProjectInfoService: {filePath} missing, starting empty.");
 
             return new ProjectInfoRoot();
         }
@@ -65,13 +56,13 @@ public class ProjectInfoService
                 JsonSerializer.Deserialize<ProjectInfoRoot>(json, SerializerOptions)
                 ?? new ProjectInfoRoot();
 
-            Logger.Debug($"ProjectInfoService: {root.Projects.Count} projet(s) chargé(s) depuis {filePath}.");
+            Logger.Debug($"ProjectInfoService: {root.Projects.Count} project(s) loaded from {filePath}.");
 
             return root;
         }
         catch (Exception ex)
         {
-            Logger.Error($"ProjectInfoService: échec de la lecture de {filePath}.", ex);
+            Logger.Error($"ProjectInfoService: failed to read {filePath}.", ex);
 
             throw;
         }
@@ -96,21 +87,16 @@ public class ProjectInfoService
                 filePath,
                 JsonSerializer.Serialize(root, SerializerOptions));
 
-            Logger.Debug($"ProjectInfoService: {root.Projects.Count} projet(s) sauvegardé(s) dans {filePath}.");
+            Logger.Debug($"ProjectInfoService: {root.Projects.Count} project(s) saved to {filePath}.");
         }
         catch (Exception ex)
         {
-            Logger.Error($"ProjectInfoService: échec de l'écriture de {filePath}.", ex);
+            Logger.Error($"ProjectInfoService: failed to write {filePath}.", ex);
 
             throw;
         }
     }
 
-    /// Clé de projet effective pour ce profil : celle assignée
-    /// explicitement (partagée avec d'autres profils, ex: prod/preprod/
-    /// test d'un même projet) si elle existe, sinon le nom du profil
-    /// lui-même -- comportement par défaut inchangé tant que l'utilisateur
-    /// n'a pas explicitement demandé un partage.
     public string
     ResolveProjectKey(
         ProjectInfoRoot root,
@@ -149,15 +135,12 @@ public class ProjectInfoService
         return project;
     }
 
-    /// Colonnes de départ pour les types de section les plus courants,
-    /// modifiables ensuite librement (renommer/ajouter/retirer des
-    /// colonnes) une fois la section créée.
     public static readonly Dictionary<string, string[]> SectionPresets =
         new()
         {
-            ["Contacts"] = new[] { "Prénom", "Nom", "Fonction", "Email", "Téléphone" },
-            ["Network equipment"] = new[] { "Nom", "Type", "Adresse IP", "Emplacement", "Notes" },
-            ["VPN"] = new[] { "Nom", "Type", "Adresse", "Identifiants", "Notes" },
+            ["Contacts"] = new[] { "First name", "Last name", "Role", "Email", "Phone" },
+            ["Network equipment"] = new[] { "Name", "Type", "IP address", "Location", "Notes" },
+            ["VPN"] = new[] { "Name", "Type", "Address", "Credentials", "Notes" },
             ["Custom"] = new[] { "Column 1" }
         };
 }

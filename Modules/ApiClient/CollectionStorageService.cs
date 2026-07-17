@@ -7,10 +7,6 @@ using System.Text.Json.Nodes;
 
 namespace KubaToolKit.Modules.ApiClient;
 
-/// Charge des collections/environnements exportés depuis Postman
-/// (Export > Collection v2.1 / Export environment) déposés dans un
-/// dossier local hors du dépôt git, pour éviter d'y committer des URLs ou
-/// tokens spécifiques à un environnement.
 public class CollectionStorageService
 {
     public static string RootFolder =>
@@ -25,11 +21,6 @@ public class CollectionStorageService
     public static string EnvironmentsFolder =>
         Path.Combine(RootFolder, "Environments");
 
-    /// Table de correspondance "code technique -> libellé lisible" pour
-    /// la vue Cartes des réponses (ex : providerCode 9 -> "Limoges",
-    /// affiché "Limoges (9)"). Un seul fichier plutôt qu'un par
-    /// collection : ces codes (fournisseur, tarif...) sont en général
-    /// partagés par toutes les requêtes d'une même API.
     public static string ValueLabelsFile =>
         Path.Combine(RootFolder, "ValueLabels.json");
 
@@ -58,25 +49,22 @@ public class CollectionStorageService
                 KubaToolKit - API Client
                 =========================
 
-                Ce dossier n'est pas dans le dépôt git de l'outil : vos
-                collections/environnements restent locaux à ce poste.
+                This folder is not in the tool's git repo: your
+                collections/environments stay local to this machine.
 
-                Collections\   -> export Postman "Collection v2.1"
-                                   (clic droit sur une collection > Export)
-                Environments\  -> export Postman d'un environnement
-                                   (icône œil > ... > Export)
+                Collections\   -> Postman "Collection v2.1" export
+                                   (right-click a collection > Export)
+                Environments\  -> Postman environment export
+                                   (eye icon > ... > Export)
 
-                Déposez les fichiers .json exportés directement dans ces
-                deux dossiers, puis cliquez sur "Recharger" (⟳) dans
-                l'onglet API Client. Les variables {{clé}} d'un
-                environnement sélectionné sont substituées dans l'URL, les
-                headers et le body au moment de l'envoi.
+                Drop the exported .json files directly into these two
+                folders, then click "Reload" (⟳) in the API Client tab.
+                The {{key}} variables of a selected environment are
+                substituted in the URL, headers, and body when sending.
                 """);
         }
         catch
         {
-            // Non bloquant : l'absence de README n'empêche pas d'utiliser
-            // le module.
         }
     }
 
@@ -121,8 +109,6 @@ public class CollectionStorageService
             }
             catch (JsonException)
             {
-                // Fichier non reconnu comme une collection Postman : ignoré
-                // pour ne pas bloquer le chargement des autres fichiers.
             }
         }
 
@@ -264,9 +250,6 @@ public class CollectionStorageService
         return "";
     }
 
-    /// Absence de champ "auth" = hérite du parent, comme Postman. Un
-    /// résultat "Inherit" côté racine (aucun ancêtre) se résout en "None"
-    /// via CollectionNode.ResolveEffectiveAuth au moment de l'envoi.
     private static AuthConfig
     ParseAuth(
         PostmanAuth? auth)
@@ -360,20 +343,8 @@ public class CollectionStorageService
         return environments;
     }
 
-    /// Renseigné après chaque LoadValueLabels() : message d'erreur si le
-    /// fichier n'a pas pu être lu tel quel (JSON invalide...), sinon
-    /// null. Le chargement retombe silencieusement sur "aucune
-    /// correspondance" dans ce cas -- ce message sert uniquement à
-    /// prévenir l'utilisateur que ses libellés ne sont pas appliqués, au
-    /// lieu de le laisser deviner pourquoi "9" ne devient jamais "Limoges (9)".
     public string? LastValueLabelsError { get; private set; }
 
-    /// Charge ValueLabels.json : { "champ JSON": { "code": "libellé" } }.
-    /// Créé au premier appel avec un exemple commenté si absent, pour ne
-    /// pas laisser l'utilisateur deviner le format. Jamais bloquant : un
-    /// fichier absent/invalide retombe sur "aucune correspondance" plutôt
-    /// que de faire planter l'affichage de la réponse (voir
-    /// LastValueLabelsError pour le signaler côté UI).
     public Dictionary<string, Dictionary<string, string>>
     LoadValueLabels()
     {
@@ -389,19 +360,18 @@ public class CollectionStorageService
                     ValueLabelsFile,
                     """
                     {
-                      "_comment": "Correspondance code technique -> libellé, affichée en Cartes sous la forme 'Libellé (code)'. Une entrée par champ JSON de la réponse (nom exact tel qu'il apparaît dans le JSON, ex: providerCode), avec pour chaque code observé le libellé à afficher. Cette clé _comment est ignorée.",
+                      "_comment": "Maps technical codes to readable labels, shown in Cards view as 'Label (code)'. One entry per JSON field of the response (exact name as it appears in the JSON, e.g. providerCode), with the label to display for each observed code. This _comment key is ignored.",
                       "providerCode": {
                         "9": "Limoges"
                       },
                       "externalCode": {
-                        "600": "Abonnement"
+                        "600": "Subscription"
                       }
                     }
                     """);
             }
             catch
             {
-                // Non bloquant : voir le commentaire de la méthode.
             }
         }
 
@@ -411,10 +381,6 @@ public class CollectionStorageService
         {
             var json = File.ReadAllText(ValueLabelsFile);
 
-            // Tolérant aux virgules trainantes/commentaires : ce fichier
-            // s'édite à la main, une virgule oubliée en fin de liste est
-            // l'erreur la plus probable et ne doit pas invalider tout le
-            // fichier silencieusement.
             var documentOptions =
                 new JsonDocumentOptions
                 {
@@ -422,14 +388,9 @@ public class CollectionStorageService
                     CommentHandling = JsonCommentHandling.Skip
                 };
 
-            // JsonNode plutôt qu'une désérialisation forte-typée : "_comment"
-            // vaut une simple chaîne (pas un objet {code: libellé}), ce
-            // qu'un Dictionary<string, Dictionary<string,string>> rejetterait
-            // en bloc. Ignorer silencieusement toute entrée qui n'a pas la
-            // forme attendue est plus utile qu'un fichier entier invalidé.
             if (JsonNode.Parse(json, documentOptions: documentOptions) is not JsonObject root)
             {
-                LastValueLabelsError = "Le fichier ne contient pas un objet JSON valide.";
+                LastValueLabelsError = "The file does not contain a valid JSON object.";
 
                 return result;
             }
@@ -458,16 +419,12 @@ public class CollectionStorageService
         {
             LastValueLabelsError = ex.Message;
 
-            Logger.Error("CollectionStorageService: échec du chargement de ValueLabels.json.", ex);
+            Logger.Error("CollectionStorageService: failed to load ValueLabels.json.", ex);
         }
 
         return result;
     }
 
-    /// Réécrit uniquement le tableau "values" du fichier d'environnement,
-    /// en conservant tous les autres champs (id, _postman_variable_scope,
-    /// etc.) tels quels pour que le fichier reste réimportable dans
-    /// Postman.
     public void
     SaveEnvironment(
         EnvironmentSet environment)
@@ -513,8 +470,6 @@ public class CollectionStorageService
             root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    /// Crée un nouveau fichier de collection Postman v2.1 vide et retourne
-    /// son chemin.
     public string
     CreateCollection(
         string name)
@@ -552,12 +507,6 @@ public class CollectionStorageService
         }
     }
 
-    /// Réécrit le fichier de collection à partir de l'arbre en mémoire.
-    /// Ne modifie que "info.name" et "item" : les autres champs connus du
-    /// fichier ("info.schema", etc.) sont conservés tels quels, mais toute
-    /// métadonnée avancée par requête que KubaToolKit ne modélise pas
-    /// (scripts, tests, auth par requête...) est perdue au premier
-    /// ajout/suppression/renommage effectué depuis l'app.
     public void
     SaveCollection(
         CollectionNode root)
@@ -565,7 +514,7 @@ public class CollectionStorageService
         if (string.IsNullOrEmpty(root.FilePath))
         {
             throw new InvalidOperationException(
-                "Cette collection n'est associée à aucun fichier.");
+                "This collection is not associated with any file.");
         }
 
         JsonObject fileRoot;
@@ -616,9 +565,6 @@ public class CollectionStorageService
 
         foreach (var node in nodes)
         {
-            // Pseudo-dossier "Favoris" : purement visuel, jamais persisté
-            // (les requêtes qu'il contient le sont déjà via leur vrai
-            // emplacement, sous leur dossier d'origine).
             if (node.IsFavoritesFolder)
             {
                 continue;
@@ -712,9 +658,6 @@ public class CollectionStorageService
         return array;
     }
 
-    /// Null (donc absence du champ "auth") pour Inherit, afin de préserver
-    /// la convention Postman "pas de champ = hérite du parent" plutôt que
-    /// d'écrire un type "inherit" qui n'existe pas dans son schéma.
     private static JsonObject?
     BuildAuthNode(
         AuthConfig auth)

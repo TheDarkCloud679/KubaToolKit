@@ -37,7 +37,7 @@ public class DashboardService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        Logger.Debug($"DashboardService: chargement des instances RDS (profil '{profile}').");
+        Logger.Debug($"DashboardService: loading RDS instances (profile '{profile}').");
 
         var credentials =
             GetCredentials(profile);
@@ -141,7 +141,7 @@ public class DashboardService
                 });
         }
 
-        Logger.Info($"DashboardService: {results.Count} instance(s) RDS chargée(s).");
+        Logger.Info($"DashboardService: {results.Count} RDS instance(s) loaded.");
 
         return results;
     }
@@ -189,12 +189,6 @@ public class DashboardService
             .Average;
     }
 
-    /// Historique d'une métrique CloudWatch (namespace/dimensions
-    /// génériques) pour afficher un graphique, sur une plage explicite
-    /// (UTC) plutôt qu'implicitement "maintenant moins une durée" : la
-    /// fenêtre affichée dans MetricChartWindow est réglable par
-    /// l'utilisateur, comme la recherche de logs. La période demandée
-    /// vise ~1 point par minute sur la plage.
     public async Task<List<(DateTime Timestamp, double Value)>>
     GetMetricHistory(
         string profile,
@@ -244,7 +238,7 @@ public class DashboardService
         string profile,
         CancellationToken cancellationToken = default)
     {
-        Logger.Debug($"DashboardService: chargement des instances EC2 (profil '{profile}').");
+        Logger.Debug($"DashboardService: loading EC2 instances (profile '{profile}').");
 
         var credentials =
             GetCredentials(profile);
@@ -287,8 +281,6 @@ public class DashboardService
                             instance.State?.Name?.Value
                             ?? "";
 
-                        // Une instance terminée disparaît définitivement :
-                        // pas utile dans un dashboard d'instances actives.
                         if (stateName == "terminated")
                         {
                             continue;
@@ -337,7 +329,7 @@ public class DashboardService
         }
         while (!string.IsNullOrEmpty(nextToken));
 
-        Logger.Info($"DashboardService: {items.Count} instance(s) EC2 chargée(s).");
+        Logger.Info($"DashboardService: {items.Count} EC2 instance(s) loaded.");
 
         return items
             .OrderBy(x => x.Name)
@@ -394,8 +386,6 @@ public class DashboardService
     ComputePeriodSeconds(
         TimeSpan duration)
     {
-        // CloudWatch exige un multiple de 60s ; on vise ~60 points sur la
-        // plage demandée (1 point/minute pour une fenêtre de 1h).
         const int TargetPoints = 60;
 
         double rawSeconds =

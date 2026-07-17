@@ -70,13 +70,13 @@ public partial class SqsView
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("SqsView: rafraîchissement annulé.");
+            Logger.Debug("SqsView: refresh cancelled.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("SqsView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("SqsView: SSO session expired, attempting reconnection.");
 
                 var success =
                     await AwsSsoService.Login();
@@ -89,7 +89,7 @@ public partial class SqsView
             }
 
             Logger.Error(
-                $"SqsView: échec du rafraîchissement (profil '{_currentProfile}').",
+                $"SqsView: refresh failed (profile '{_currentProfile}').",
                 ex);
 
             MessageBox.Show(
@@ -128,7 +128,7 @@ public partial class SqsView
         if (string.IsNullOrWhiteSpace(_currentProfile))
         {
             MessageBox.Show(
-                "Choisir un profil AWS");
+                "Select an AWS profile");
 
             return;
         }

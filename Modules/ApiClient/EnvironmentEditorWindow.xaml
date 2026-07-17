@@ -104,7 +104,7 @@
                                     Width="24"
                                     Height="24"
                                     Padding="0"
-                                    ToolTip="Supprimer cette ligne"
+                                    ToolTip="Delete this row"
                                     Content="✕"
                                     Click="DeleteVariableRow_Click"/>
                             </DataTemplate>

@@ -38,23 +38,15 @@ public partial class CloudTrailView
         string endTime)
     {
         Logger.Debug(
-            $"CloudTrailView: recherche attribut='{attributeKey}' valeur='{attributeValue}' (profil '{profile}').");
+            $"CloudTrailView: search attribute='{attributeKey}' value='{attributeValue}' (profile '{profile}').");
 
         try
         {
-            // Effacer immédiatement l'ancien résultat plutôt qu'à la toute
-            // fin : sur "All events" (pas de filtre), la pagination peut
-            // prendre longtemps (LookupEvents est limitée à ~2 req/s côté
-            // AWS) et laisser l'ancien tableau affiché pendant tout ce
-            // temps donnait l'impression que la recherche ne faisait rien.
             EventsGroupedItemsControl.ItemsSource = null;
             SearchProgressBar.Value = 0;
             SearchProgressBar.IsIndeterminate = true;
             ProgressTextBlock.Text = "Searching CloudTrail...";
 
-            // Total inconnu à l'avance : on affiche le nombre d'évènements
-            // trouvés au fil de la pagination plutôt qu'un faux
-            // pourcentage, la barre reste indéterminée pendant la recherche.
             var progress =
                 new Progress<int>(count =>
                 {
@@ -76,14 +68,14 @@ public partial class CloudTrailView
                     _searchCancellation.Token);
 
             Logger.Info(
-                $"CloudTrailView: recherche terminée, {results.Count} résultat(s)"
-                + (truncated ? " (tronqué)." : "."));
+                $"CloudTrailView: search completed, {results.Count} result(s)"
+                + (truncated ? " (truncated)." : "."));
 
             DisplayResults(results, truncated);
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("CloudTrailView: recherche annulée.");
+            Logger.Debug("CloudTrailView: search cancelled.");
 
             ProgressTextBlock.Text = "Search cancelled";
         }
@@ -91,7 +83,7 @@ public partial class CloudTrailView
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("CloudTrailView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("CloudTrailView: SSO session expired, attempting reconnection.");
 
                 var success = await AwsSsoService.Login();
 
@@ -110,7 +102,7 @@ public partial class CloudTrailView
                 }
             }
 
-            Logger.Error("CloudTrailView: échec de la recherche.", ex);
+            Logger.Error("CloudTrailView: search failed.", ex);
 
             MessageBox.Show(ex.ToString(), "Search error");
         }

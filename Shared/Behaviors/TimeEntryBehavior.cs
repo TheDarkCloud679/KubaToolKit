@@ -5,15 +5,6 @@ using System.Windows.Threading;
 
 namespace KubaToolKit.Shared.Behaviors;
 
-/// Édition d'un TextBox au format "HH:mm" par segments : cliquer sur la
-/// partie heure ou minute la sélectionne entièrement (façon champ heure
-/// de Windows), taper un chiffre remplace le premier puis le second
-/// chiffre du segment actif, haut/bas incrémentent/décrémentent,
-/// gauche/droite/Tab changent de segment. Activé via
-/// behaviors:TimeEntryBehavior.Enabled="True" en XAML -- un seul endroit
-/// pour ce comportement, partagé par la recherche de logs CloudWatch et
-/// le sélecteur de plage du graphique Dashboard (plutôt que deux copies
-/// qui finiraient par diverger).
 public static class TimeEntryBehavior
 {
     private sealed class EditState
@@ -84,9 +75,6 @@ public static class TimeEntryBehavior
 
         e.Handled = true;
 
-        // Index du caractère cliqué, indépendant du focus actuel : permet
-        // de savoir si l'utilisateur vise la partie heure ou minute même
-        // au tout premier clic (avant que le focus ne soit posé).
         int charIndex =
             textBox.GetCharacterIndexFromPoint(
                 e.GetPosition(textBox),
@@ -146,14 +134,12 @@ public static class TimeEntryBehavior
 
         string[] parts = textBox.Text.Split(':');
 
-        // sécurité
         if (parts.Length != 2)
         {
             textBox.Text = "00:00";
             parts = textBox.Text.Split(':');
         }
 
-        // navigation gauche/droite
         if (e.Key == Key.Left)
         {
             SelectHourPart(textBox);
@@ -168,7 +154,6 @@ public static class TimeEntryBehavior
             return;
         }
 
-        // flèches haut/bas
         if (e.Key == Key.Up || e.Key == Key.Down)
         {
             bool increase = e.Key == Key.Up;
@@ -201,7 +186,6 @@ public static class TimeEntryBehavior
             return;
         }
 
-        // chiffres seulement
         bool isDigit =
             (e.Key >= Key.D0 && e.Key <= Key.D9)
             || (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9);
@@ -218,7 +202,6 @@ public static class TimeEntryBehavior
 
         bool editingHour = textBox.SelectionStart < 3;
 
-        // édition HH
         if (editingHour)
         {
             if (!state.EditingSecondHourDigit)

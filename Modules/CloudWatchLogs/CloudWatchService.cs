@@ -23,12 +23,12 @@ public class CloudWatchService
                 out var cached))
         {
             Logger.Debug(
-                $"CloudWatchService: log groups pour '{profileName}' servis depuis le cache ({cached.Count}).");
+                $"CloudWatchService: log groups for '{profileName}' served from cache ({cached.Count}).");
 
             return cached;
         }
 
-        Logger.Debug($"CloudWatchService: chargement des log groups pour '{profileName}'.");
+        Logger.Debug($"CloudWatchService: loading log groups for '{profileName}'.");
 
         var chain = new CredentialProfileStoreChain();
 
@@ -36,9 +36,9 @@ public class CloudWatchService
         profileName,
         out var credentials))
         {
-            Logger.Error($"CloudWatchService: profil AWS introuvable '{profileName}'.");
+            Logger.Error($"CloudWatchService: AWS profile not found '{profileName}'.");
 
-            throw new Exception($"Profil AWS introuvable : {profileName}");
+            throw new Exception($"AWS profile not found: {profileName}");
         }
 
         using var client =
@@ -79,7 +79,7 @@ public class CloudWatchService
         catch (Exception ex)
         {
             Logger.Error(
-                $"CloudWatchService: échec du chargement des log groups pour '{profileName}'.",
+                $"CloudWatchService: failed to load log groups for '{profileName}'.",
                 ex);
 
             throw;
@@ -94,7 +94,7 @@ public class CloudWatchService
         LogGroupCache[profileName] = result;
 
         Logger.Info(
-            $"CloudWatchService: {result.Count} log group(s) chargé(s) pour '{profileName}'.");
+            $"CloudWatchService: {result.Count} log group(s) loaded for '{profileName}'.");
 
         return result;
     }
@@ -102,7 +102,6 @@ public class CloudWatchService
     public string
         BuildQuery(string searchTerm)
     {
-        // Aucun filtre
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
             return
@@ -179,14 +178,14 @@ public class CloudWatchService
                 default)
     {
         Logger.Debug(
-            $"CloudWatchService: recherche '{searchText}' sur {selectedLogGroups.Count} log group(s) explicite(s) (profil '{profile}').");
+            $"CloudWatchService: search '{searchText}' over {selectedLogGroups.Count} explicit log group(s) (profile '{profile}').");
 
         var chain = new CredentialProfileStoreChain();
         if (!chain.TryGetAWSCredentials(profile, out var credentials))
         {
-            Logger.Error($"CloudWatchService: profil AWS introuvable '{profile}'.");
+            Logger.Error($"CloudWatchService: AWS profile not found '{profile}'.");
 
-            throw new Exception($"Profil AWS introuvable : {profile}");
+            throw new Exception($"AWS profile not found: {profile}");
         }
 
         using var clientLogs = new AmazonCloudWatchLogsClient(credentials, RegionEndpoint.EUWest3);
@@ -258,13 +257,13 @@ public class CloudWatchService
                 ex.Message.Contains(
                     "creation time",
                     StringComparison.OrdinalIgnoreCase))
-            { Logger.Debug($"CloudWatchService: chunk {currentChunk} ignoré ({ex.Message})."); }
+            { Logger.Debug($"CloudWatchService: chunk {currentChunk} skipped ({ex.Message})."); }
         }
 
         progress?.Report(100);
 
         Logger.Info(
-            $"CloudWatchService: recherche '{searchText}' terminée, {mergedResults.Count} résultat(s) sur {totalChunks} chunk(s).");
+            $"CloudWatchService: search '{searchText}' completed, {mergedResults.Count} result(s) over {totalChunks} chunk(s).");
 
         return mergedResults.OrderByDescending( x => x.Timestamp ).ToList();
     }
@@ -318,7 +317,7 @@ ExecuteQuery(
     results.Status == QueryStatus.Scheduled);
         Logger.Debug(
             $"CloudWatchService: chunk {currentChunk}/{totalChunks} -> {results.Status}, "
-            + $"{results.Results.Count} ligne(s).");
+            + $"{results.Results.Count} row(s).");
 
         return results.Results
             .Select(row =>
@@ -348,7 +347,6 @@ ExecuteQuery(
     private string
        BuildPrefixFromProfile(string profileName)
     {
-        // D�sactive le filtre
         return "";
     }
 

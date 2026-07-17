@@ -33,7 +33,7 @@ public class SqsService
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        Logger.Debug($"SqsService: chargement des files (profil '{profile}').");
+        Logger.Debug($"SqsService: loading queues (profile '{profile}').");
 
         var credentials =
             GetCredentials(profile);
@@ -122,7 +122,7 @@ public class SqsService
                 });
         }
 
-        Logger.Info($"SqsService: {results.Count} file(s) chargée(s) (profil '{profile}').");
+        Logger.Info($"SqsService: {results.Count} queue(s) loaded (profile '{profile}').");
 
         return results;
     }
@@ -139,10 +139,6 @@ public class SqsService
             : 0;
     }
 
-    /// Consultation uniquement : les messages sont reçus avec un
-    /// VisibilityTimeout très court et ne sont jamais supprimés (aucun
-    /// appel à DeleteMessage), pour ne jamais perturber les vrais
-    /// consommateurs de la file.
     public async Task<List<SqsMessageItem>>
     PeekMessages(
         string profile,
@@ -153,7 +149,7 @@ public class SqsService
         CancellationToken cancellationToken = default)
     {
         Logger.Debug(
-            $"SqsService: consultation de '{queueUrl}' (recherche '{searchText}', max {maxMessages}).");
+            $"SqsService: searching '{queueUrl}' (query '{searchText}', max {maxMessages}).");
 
         var credentials =
             GetCredentials(profile);
@@ -236,7 +232,7 @@ public class SqsService
         progress?.Report(100);
 
         Logger.Info(
-            $"SqsService: {found.Count} message(s) trouvé(s) sur '{queueUrl}'.");
+            $"SqsService: {found.Count} message(s) found in '{queueUrl}'.");
 
         return found.Values
             .OrderByDescending(x => x.SentTimestamp)

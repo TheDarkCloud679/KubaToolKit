@@ -42,10 +42,10 @@
                 Width="220"
                 VerticalContentAlignment="Center"
                 LostFocus="ProjectKeyTextBox_LostFocus"
-                ToolTip="Utilise le même nom sur les profils Prod/Preprod/Test d'un même projet pour qu'ils partagent ces informations."/>
+                ToolTip="Use the same name across Prod/Preprod/Test profiles of the same project so they share this information."/>
 
             <TextBlock
-                Text="(même nom sur Prod/Preprod/Test = infos partagées)"
+                Text="(same name across Prod/Preprod/Test = shared info)"
                 VerticalAlignment="Center"
                 Margin="8,0,0,0"
                 FontSize="11"
@@ -53,11 +53,11 @@
                 Foreground="{StaticResource TextMutedBrush}"/>
 
             <Button
-                Content="📁 Dossier de fichiers"
+                Content="📁 Files folder"
                 Margin="16,0,0,0"
                 Padding="10,2"
                 Click="OpenProjectFolderButton_Click"
-                ToolTip="Ouvre (et crée si besoin) un dossier partagé pour ce projet, pour y déposer des fichiers à côté de ce glossaire."/>
+                ToolTip="Opens (and creates if needed) a shared folder for this project, to drop files alongside this glossary."/>
         </StackPanel>
 
         <StackPanel
@@ -77,21 +77,21 @@
                 Width="240"
                 VerticalContentAlignment="Center"
                 KeyDown="SearchTextBox_KeyDown"
-                ToolTip="Cherche dans toutes les sections/colonnes de ce projet. Entrée = résultat suivant, Maj+Entrée = précédent."/>
+                ToolTip="Searches across all sections/columns of this project. Enter = next result, Shift+Enter = previous."/>
 
             <Button
                 Content="▲"
                 Width="30"
                 Margin="6,0,0,0"
                 Click="SearchPreviousButton_Click"
-                ToolTip="Résultat précédent"/>
+                ToolTip="Previous result"/>
 
             <Button
                 Content="▼"
                 Width="30"
                 Margin="4,0,0,0"
                 Click="SearchNextButton_Click"
-                ToolTip="Résultat suivant"/>
+                ToolTip="Next result"/>
 
             <TextBlock
                 x:Name="SearchResultsText"
@@ -124,7 +124,7 @@
                 Width="200"
                 Margin="0,0,8,0"
                 VerticalContentAlignment="Center"
-                ToolTip="Nom de la section (laisser vide pour reprendre le nom du modèle)"/>
+                ToolTip="Section name (leave empty to use the template name)"/>
 
             <Button
                 Content="Add section"

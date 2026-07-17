@@ -1,8 +1,5 @@
 namespace KubaToolKit.Modules.ApiClient.Models;
 
-/// Décrit le body d'une requête à la manière de Postman : un seul mode est
-/// actif à la fois ("none", "formdata", "urlencoded", "raw", "binary" ou
-/// "graphql"), les autres champs sont ignorés à l'envoi.
 public class RequestBody
 {
     public string Mode { get; set; } = "raw";

@@ -14,15 +14,6 @@ using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
-/// Glossaire libre par projet : sections définies par l'utilisateur
-/// (Contacts, Équipements réseau, VPN, ou tout autre nom), chacune avec
-/// ses propres colonnes. Enregistré automatiquement à chaque modification
-/// dans Config/project-info.json, partagé entre collègues via ce même
-/// fichier (copie manuelle, lecteur réseau, ou suivi dans git selon ce que
-/// l'équipe préfère). Un "projet" n'est pas forcément un profil AWS
-/// unique : le champ Project en haut de la fenêtre permet à Prod/Preprod/
-/// Test d'un même client de partager les mêmes informations en portant le
-/// même nom.
 public partial class ProjectInfoWindow
     : Window
 {
@@ -31,14 +22,9 @@ public partial class ProjectInfoWindow
     private readonly string _profileName;
     private ProjectInfoProject _project;
 
-    // Pour retrouver le DataGrid/DataTable d'une section depuis la
-    // recherche, sans devoir les faire remonter par un autre canal.
     private readonly Dictionary<ProjectInfoSection, (Border Card, DataGrid Grid, DataTable Table)>
         _sectionControls = new();
 
-    // Absente ici = repliée (comportement par défaut) ; seul un dépli
-    // explicite ajoute une entrée, préservée tant que la fenêtre reste
-    // ouverte même si la carte de la section est reconstruite.
     private readonly Dictionary<ProjectInfoSection, bool> _sectionExpanded = new();
 
     private readonly List<(ProjectInfoSection Section, int RowIndex, string Column)>
@@ -47,12 +33,6 @@ public partial class ProjectInfoWindow
     private int _currentMatchIndex = -1;
     private string _lastSearchQuery = "";
 
-    // Écrire le fichier à chaque cellule validée (donc à chaque tabulation
-    // pendant la saisie d'une ligne) causait des micro-gels perceptibles,
-    // voire pire en tapant vite. On regroupe les sauvegardes : chaque
-    // modification relance ce délai plutôt que d'écrire immédiatement, et
-    // seule la dernière modification d'une rafale déclenche une écriture
-    // réelle.
     private readonly DispatcherTimer _saveDebounceTimer;
     private bool _isSyncing;
 
@@ -91,9 +71,6 @@ public partial class ProjectInfoWindow
         SectionPresetCombo.ItemsSource = ProjectInfoService.SectionPresets.Keys.ToList();
         SectionPresetCombo.SelectedIndex = 0;
 
-        // Filet pour un dépôt dans l'espace vide sous la dernière carte
-        // (pas géré par le Drop d'une carte précise) : place la section en
-        // dernière position.
         SectionsPanel.AllowDrop = true;
         SectionsPanel.Drop += (_, e) =>
         {
@@ -160,7 +137,7 @@ public partial class ProjectInfoWindow
 
             Directory.CreateDirectory(folderPath);
 
-            Logger.Debug($"ProjectInfoWindow: ouverture du dossier de fichiers '{folderPath}'.");
+            Logger.Debug($"ProjectInfoWindow: opening files folder '{folderPath}'.");
 
             Process.Start(new ProcessStartInfo
             {
@@ -170,9 +147,9 @@ public partial class ProjectInfoWindow
         }
         catch (Exception ex)
         {
-            Logger.Error("ProjectInfoWindow: échec de l'ouverture du dossier de fichiers.", ex);
+            Logger.Error("ProjectInfoWindow: failed to open files folder.", ex);
 
-            MessageBox.Show(ex.ToString(), "Project Info - dossier de fichiers");
+            MessageBox.Show(ex.ToString(), "Project Info - files folder");
         }
     }
 
@@ -192,7 +169,7 @@ public partial class ProjectInfoWindow
         if (_project.Sections.Any(s =>
                 string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show($"Une section \"{name}\" existe déjà.", "Project Info");
+            MessageBox.Show($"A section \"{name}\" already exists.", "Project Info");
 
             return;
         }
@@ -211,10 +188,6 @@ public partial class ProjectInfoWindow
 
         _project.Sections.Add(newSection);
 
-        // N'ajoute que la nouvelle carte, ne touche pas aux sections
-        // existantes -- reconstruire tout le panneau à chaque changement
-        // pouvait détacher un DataGrid pendant qu'il finissait de valider
-        // une édition en cours ailleurs, ce que WPF supporte mal.
         SectionsPanel.Children.Add(BuildSectionCard(newSection));
 
         NewSectionNameTextBox.Text = "";
@@ -233,10 +206,6 @@ public partial class ProjectInfoWindow
             SectionsPanel.Children.Add(BuildSectionCard(section));
         }
 
-        // Les correspondances d'une recherche précédente peuvent viser des
-        // sections qui n'existent plus (changement de projet, section
-        // supprimée) : on repart propre plutôt que de risquer un saut vers
-        // une section obsolète.
         _searchMatches.Clear();
         _currentMatchIndex = -1;
         _lastSearchQuery = "";
@@ -247,22 +216,10 @@ public partial class ProjectInfoWindow
     BuildSectionCard(
         ProjectInfoSection section)
     {
-        // Déclarés tôt et assignés plus bas : les gestionnaires de clic
-        // ci-dessous capturent ces variables (pas leur valeur au moment de
-        // la capture), donc elles voient bien la carte/grille finales une
-        // fois le clic effectif -- ça permet à "Delete section" et
-        // "+ Column" de ne toucher qu'à LEUR propre carte plutôt que de
-        // faire un RenderSections() complet qui recréait aussi les
-        // DataGrid des autres sections, y compris pendant qu'un autre
-        // pouvait être en train de valider une édition (source probable
-        // du plantage observé).
         Border card = null!;
         DataGrid grid = null!;
         StackPanel columnManageRow = null!;
 
-        // Repliées, seules l'en-tête et sa ligne d'actions restent
-        // visibles -- une section jamais explicitement dépliée reste
-        // repliée par défaut.
         var isExpanded =
             _sectionExpanded.TryGetValue(section, out var storedExpanded)
             && storedExpanded;
@@ -285,7 +242,7 @@ public partial class ProjectInfoWindow
             Margin = new Thickness(0, 0, 8, 0),
             Foreground = (Brush)FindResource("TextMutedBrush"),
             Cursor = Cursors.SizeAll,
-            ToolTip = "Glisser pour réordonner la section"
+            ToolTip = "Drag to reorder the section"
         };
         Grid.SetColumn(dragHandle, 0);
         dragHandle.MouseLeftButtonDown += (_, e) =>
@@ -299,7 +256,7 @@ public partial class ProjectInfoWindow
             Content = isExpanded ? "▼" : "▶",
             Padding = new Thickness(6, 2, 6, 2),
             Margin = new Thickness(0, 0, 6, 0),
-            ToolTip = "Déplier/replier la section"
+            ToolTip = "Expand/collapse the section"
         };
         Grid.SetColumn(toggleButton, 1);
         toggleButton.Click += (_, __) =>
@@ -319,13 +276,9 @@ public partial class ProjectInfoWindow
             FontSize = 14,
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)FindResource("AccentBrush"),
-            // Sans Background, un TextBlock n'est cliquable que là où du
-            // texte est effectivement dessiné (pas sur le reste de sa
-            // zone, étirée par la colonne Star) -- Transparent rend toute
-            // la zone du titre cliquable pour le double-clic de renommage.
             Background = Brushes.Transparent,
             Cursor = Cursors.Hand,
-            ToolTip = "Double-clic pour renommer la section"
+            ToolTip = "Double-click to rename the section"
         };
         Grid.SetColumn(nameText, 2);
 
@@ -356,7 +309,7 @@ public partial class ProjectInfoWindow
             if (_project.Sections.Any(s =>
                     s != section && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
             {
-                MessageBox.Show($"Une section \"{newName}\" existe déjà.", "Project Info");
+                MessageBox.Show($"A section \"{newName}\" already exists.", "Project Info");
 
                 nameEditBox.Text = section.Name;
 
@@ -380,11 +333,6 @@ public partial class ProjectInfoWindow
             nameText.Visibility = Visibility.Collapsed;
             nameEditBox.Visibility = Visibility.Visible;
 
-            // Un élément qui vient de passer de Collapsed à Visible n'est
-            // pas encore réellement visible (pas de passe de mise en page
-            // faite) : Focus() appelé tout de suite ici échouerait
-            // silencieusement. Différer au prochain passage de mise en
-            // page, comme ailleurs dans l'appli pour le même problème.
             nameEditBox.Dispatcher.BeginInvoke(
                 DispatcherPriority.Loaded,
                 new Action(() =>
@@ -416,7 +364,7 @@ public partial class ProjectInfoWindow
             Width = 140,
             Margin = new Thickness(8, 0, 0, 0),
             VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = "Nom de la nouvelle colonne"
+            ToolTip = "New column name"
         };
         Grid.SetColumn(newColumnTextBox, 3);
 
@@ -438,10 +386,6 @@ public partial class ProjectInfoWindow
 
             section.Columns.Add(columnName);
 
-            // Une nouvelle colonne change la structure de la table : cette
-            // carte précise doit être reconstruite, mais seulement elle --
-            // pas les autres sections, dont les DataGrid n'ont aucune
-            // raison d'être touchés pour ce changement.
             TryCommitEdit(grid);
             ReplaceSectionCard(section, card);
 
@@ -460,17 +404,13 @@ public partial class ProjectInfoWindow
         deleteSectionButton.Click += (_, __) =>
         {
             if (MessageBox.Show(
-                    $"Supprimer la section \"{section.Name}\" et toutes ses données ?",
-                    "Confirmer",
+                    $"Delete section \"{section.Name}\" and all its data?",
+                    "Confirm",
                     MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             {
                 return;
             }
 
-            // Valider une éventuelle édition en cours avant de détacher le
-            // DataGrid du visuel : WPF peut se plaindre si on le retire du
-            // panneau pendant qu'il essaie encore de valider une cellule
-            // ou la ligne d'ajout.
             TryCommitEdit(grid);
 
             _project.Sections.Remove(section);
@@ -516,7 +456,7 @@ public partial class ProjectInfoWindow
             Width = 140,
             Margin = new Thickness(8, 0, 0, 0),
             VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = "Nouveau nom pour la colonne sélectionnée"
+            ToolTip = "New name for the selected column"
         };
 
         var renameColumnButton = new Button
@@ -580,15 +520,15 @@ public partial class ProjectInfoWindow
             if (section.Columns.Count <= 1)
             {
                 MessageBox.Show(
-                    "Une section doit garder au moins une colonne.",
+                    "A section must keep at least one column.",
                     "Project Info");
 
                 return;
             }
 
             if (MessageBox.Show(
-                    $"Supprimer la colonne \"{columnName}\" et ses données ?",
-                    "Confirmer",
+                    $"Delete column \"{columnName}\" and its data?",
+                    "Confirm",
                     MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             {
                 return;
@@ -632,9 +572,6 @@ public partial class ProjectInfoWindow
             Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
         };
 
-        // Numéro de ligne dans l'en-tête, pour compter les entrées d'un
-        // coup d'œil -- vide pour la ligne "+" d'ajout (CanUserAddRows),
-        // qui n'est pas encore une vraie ligne.
         grid.LoadingRow += (_, e) =>
         {
             e.Row.Header =
@@ -646,10 +583,6 @@ public partial class ProjectInfoWindow
         table.RowChanged += (_, __) => SyncAndSave(section, table);
         table.RowDeleted += (_, __) => SyncAndSave(section, table);
 
-        // Double-clic sur un en-tête pour trier, comme ailleurs dans
-        // l'appli -- DataView.Sort plutôt que DataGridSortHelper (qui
-        // suppose une ObservableCollection<T> typée) puisque cette grille
-        // est adossée à un DataTable/DataView aux colonnes dynamiques.
         grid.MouseDoubleClick += (_, e) =>
         {
             if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
@@ -693,10 +626,6 @@ public partial class ProjectInfoWindow
             AllowDrop = true
         };
 
-        // Glisser-déposer pour réordonner : dépose dans la moitié haute
-        // d'une carte cible = avant elle, moitié basse = après -- peu
-        // importe qu'elle soit dépliée ou repliée, seule l'en-tête (via
-        // dragHandle) initie le glissement.
         card.DragEnter += (_, e) =>
         {
             e.Effects =
@@ -740,18 +669,11 @@ public partial class ProjectInfoWindow
             e.Handled = true;
         };
 
-        // Écrase l'éventuelle entrée précédente pour cette section (cas
-        // d'une reconstruction suite à l'ajout d'une colonne) : toujours
-        // la dernière carte/grille/table réellement affichées.
         _sectionControls[section] = (card, grid, table);
 
         return card;
     }
 
-    /// Reconstruit uniquement la carte d'une section (après ajout/
-    /// renommage/suppression de colonne) et la remet à sa place dans le
-    /// panneau -- jamais RenderSections() pour ce cas, qui toucherait
-    /// aussi les DataGrid des autres sections.
     private void
     ReplaceSectionCard(
         ProjectInfoSection section,
@@ -773,18 +695,10 @@ public partial class ProjectInfoWindow
         }
         catch
         {
-            // WPF a déjà refusé ce remplacement ciblé dans de rares cas
-            // (index déjà associé à un autre visuel) -- un rendu complet
-            // reste toujours valide en repli, le changement est de toute
-            // façon déjà enregistré dans le modèle.
             RenderSections();
         }
     }
 
-    /// Force la validation d'une édition de cellule/ligne en cours avant
-    /// de retirer le DataGrid du visuel -- sans ça, WPF peut tenter de la
-    /// valider lui-même pendant le détachement, ce qui a déjà provoqué un
-    /// plantage à la suppression d'une section.
     private void
     TryCommitEdit(
         DataGrid grid)
@@ -796,8 +710,6 @@ public partial class ProjectInfoWindow
         }
         catch
         {
-            // Rien d'exploitable à faire ici : la section est de toute
-            // façon en train d'être supprimée ou reconstruite.
         }
     }
 
@@ -834,10 +746,6 @@ public partial class ProjectInfoWindow
         ProjectInfoSection section,
         DataTable table)
     {
-        // AcceptChanges() plus bas peut re-déclencher cet évènement selon
-        // l'état exact de la ligne (observé en pratique, source probable
-        // des plantages) : un garde de ré-entrance simple évite toute
-        // récursion, même indirecte.
         if (_isSyncing)
         {
             return;
@@ -870,13 +778,8 @@ public partial class ProjectInfoWindow
         }
         catch (Exception ex)
         {
-            // Une ligne en cours d'ajout côté WPF (ligne "+" pas encore
-            // pleinement initialisée) peut être dans un état transitoire
-            // au moment précis de cet évènement : on l'ignore plutôt que
-            // de laisser une exception non gérée planter toute l'appli --
-            // la prochaine modification resynchronisera correctement.
             System.Diagnostics.Debug.WriteLine(
-                $"ProjectInfo SyncAndSave ignoré : {ex}");
+                $"ProjectInfo SyncAndSave skipped: {ex}");
 
             return;
         }
@@ -888,11 +791,6 @@ public partial class ProjectInfoWindow
         ScheduleSave();
     }
 
-    /// Comme SyncAndSave, une ligne peut être dans un état où l'accès à
-    /// une colonne précise lève une exception (RowNotInTableException et
-    /// apparentées) sans que toute la ligne soit concernée -- protégé
-    /// individuellement plutôt que de perdre toute la synchronisation pour
-    /// une seule valeur illisible.
     private string
     TryReadCell(
         DataRow row,
@@ -976,9 +874,6 @@ public partial class ProjectInfoWindow
         GoToPreviousMatch();
     }
 
-    /// Ne relance une recherche complète que si le texte a changé depuis
-    /// la dernière fois -- sinon Suivant/Précédent se contente d'avancer
-    /// dans les résultats déjà trouvés.
     private bool
     RunSearchIfQueryChanged()
     {
@@ -1077,8 +972,6 @@ public partial class ProjectInfoWindow
 
         var (card, grid, table) = controls;
 
-        // Une section repliée cache son DataGrid : le déplier d'abord,
-        // sinon ScrollIntoView/Focus ci-dessous n'ont aucun effet visible.
         if (grid.Visibility != Visibility.Visible)
         {
             _sectionExpanded[section] = true;
@@ -1100,9 +993,6 @@ public partial class ProjectInfoWindow
             return;
         }
 
-        // Amène d'abord la carte dans le champ visible du ScrollViewer
-        // parent : un DataGrid jamais rendu (hors du viewport) ignore
-        // silencieusement ScrollIntoView tant qu'il n'a pas été mesuré.
         card.BringIntoView();
 
         var rowView = table.DefaultView[rowIndex];

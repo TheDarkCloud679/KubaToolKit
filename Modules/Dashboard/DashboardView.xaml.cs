@@ -24,8 +24,6 @@ public partial class DashboardView
     private string? _currentProfile;
     private CancellationTokenSource? _loadCancellation;
 
-    // Hauteur de la section RDS mémorisée avant repli, pour la restaurer
-    // (y compris si l'utilisateur l'a redimensionnée via le splitter).
     private GridLength _rdsExpandedHeight = new(280);
 
     private DataGridColumn? _rdsSortColumn;
@@ -68,11 +66,6 @@ public partial class DashboardView
     private void
     UpdateSectionRows()
     {
-        // IsExpanded="True" en XAML déclenche l'évènement Expanded dès la
-        // construction de l'élément, avant que les éléments suivants du
-        // même document (ici RdsEc2Splitter / Ec2Expander) n'existent
-        // encore : sans ce garde, ce serait un NullReferenceException au
-        // démarrage.
         if (RdsRow == null
             || Ec2Row == null
             || RdsExpander == null
@@ -85,10 +78,6 @@ public partial class DashboardView
         bool rdsExpanded = RdsExpander.IsExpanded;
         bool ec2Expanded = Ec2Expander.IsExpanded;
 
-        // Une section repliée ne garde que la hauteur de son titre (Auto).
-        // La dernière section encore dépliée récupère l'espace ainsi
-        // libéré (Height="*") ; les autres sections dépliées gardent leur
-        // hauteur fixe/redimensionnée.
         if (ec2Expanded)
         {
             Ec2Row.Height = new GridLength(1, GridUnitType.Star);
@@ -100,8 +89,6 @@ public partial class DashboardView
             RdsRow.Height = rdsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         }
 
-        // Redimensionner n'a de sens que si les deux sections sont
-        // dépliées ; sinon il n'y a rien à répartir entre elles.
         RdsEc2Splitter.IsEnabled = rdsExpanded && ec2Expanded;
     }
 
@@ -122,7 +109,7 @@ public partial class DashboardView
             return;
         }
 
-        Logger.Debug($"DashboardView: rafraîchissement (profil '{_currentProfile}').");
+        Logger.Debug($"DashboardView: refreshing (profile '{_currentProfile}').");
 
         try
         {
@@ -176,17 +163,17 @@ public partial class DashboardView
                 System.Windows.Threading.DispatcherPriority.Loaded);
 
             Logger.Info(
-                $"DashboardView: rafraîchissement terminé, {rdsTask.Result.Count} RDS, {ec2Task.Result.Count} EC2.");
+                $"DashboardView: refresh completed, {rdsTask.Result.Count} RDS, {ec2Task.Result.Count} EC2.");
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("DashboardView: rafraîchissement annulé.");
+            Logger.Debug("DashboardView: refresh cancelled.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("DashboardView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("DashboardView: SSO session expired, attempting reconnection.");
 
                 var success =
                     await AwsSsoService.Login();
@@ -199,7 +186,7 @@ public partial class DashboardView
             }
 
             Logger.Error(
-                $"DashboardView: échec du rafraîchissement (profil '{_currentProfile}').",
+                $"DashboardView: refresh failed (profile '{_currentProfile}').",
                 ex);
 
             MessageBox.Show(
@@ -232,7 +219,7 @@ public partial class DashboardView
         if (string.IsNullOrWhiteSpace(_currentProfile))
         {
             MessageBox.Show(
-                "Choisir un profil AWS d'abord.",
+                "Please select an AWS profile first.",
                 "Project Info");
 
             return;
@@ -401,10 +388,6 @@ public partial class DashboardView
             },
             new ChartSeriesRequest
             {
-                // Nécessite l'agent CloudWatch installé sur l'instance ;
-                // sans lui cette courbe restera vide (signalé dans la
-                // légende), seul le CPU (toujours disponible nativement)
-                // s'affichera.
                 Namespace = "CWAgent",
                 MetricName = "mem_used_percent",
                 DisplayName = "RAM",

@@ -10,7 +10,6 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Bucket -->
         <Border
             Padding="{StaticResource CardPadding}"
             Margin="0,0,0,10"
@@ -44,10 +43,8 @@ Margin="0,0,0,10">
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Ligne barre -->
             <Grid Grid.Row="0">
 
-                <!-- Barre -->
                 <ProgressBar
     x:Name="SearchProgressBar"
     Minimum="0"
@@ -57,7 +54,6 @@ Margin="0,0,0,10">
     Margin="0,0,90,0"
     Visibility="Collapsed"/>
 
-                <!-- Pourcentage -->
                 <TextBlock
     x:Name="S3LoadingText"
     HorizontalAlignment="Center"
@@ -68,7 +64,6 @@ Margin="0,0,0,10">
     Visibility="Collapsed"
     Text="0%"/>
 
-                <!-- Cancel -->
                 <Button
     x:Name="CancelDownloadButton"
     Width="80"
@@ -80,7 +75,6 @@ Margin="0,0,0,10">
     Click="CancelDownloadButton_Click"/>
             </Grid>
 
-            <!-- Queue -->
             <TextBlock
                 x:Name="S3QueueText"
                 Grid.Row="1"
@@ -94,7 +88,6 @@ Margin="0,0,0,10">
                 Visibility="Collapsed"/>
         </Grid>
 
-        <!-- Main split -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
@@ -102,7 +95,6 @@ Margin="0,0,0,10">
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Tree -->
             <Border
         BorderBrush="{StaticResource BorderBrush}"
         BorderThickness="1"
@@ -158,13 +150,11 @@ Margin="0,0,0,10">
                 </TreeView>
             </Border>
 
-            <!-- Splitter -->
             <GridSplitter
                 Grid.Column="1"
                 Width="6"
                 HorizontalAlignment="Stretch"/>
 
-            <!-- Right panel -->
             <Border
 Grid.Column="2"
 BorderBrush="{StaticResource BorderBrush}"

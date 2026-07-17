@@ -14,12 +14,6 @@ namespace KubaToolKit.Modules.ApiClient;
 
 public class ApiClientService
 {
-    // Instance HttpClient partagée et réutilisée pour toutes les requêtes :
-    // en créer une nouvelle par appel épuiserait les sockets disponibles
-    // sous charge (limitation connue de HttpClient/IDisposable).
-    // AutomaticDecompression fait ajouter par le framework un en-tête
-    // Accept-Encoding cohérent avec les en-têtes "auto-générés" affichés
-    // dans l'UI (Host/Content-Length le sont aussi nativement).
     private static readonly HttpClient Client =
         new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All })
         {
@@ -60,8 +54,6 @@ public class ApiClientService
                 SubstituteVariables(header.Value, variables)
                 ?? "";
 
-            // Content-Type doit être posé sur les headers du Content, pas
-            // de la requête, sans quoi HttpClient l'ignore silencieusement.
             if (string.Equals(
                     header.Key,
                     "Content-Type",
@@ -82,9 +74,6 @@ public class ApiClientService
                 BuildContent(body, variables, explicitContentType);
         }
 
-        // Repli identique à ce que montre l'UI comme en-têtes
-        // "auto-générés" : on ne les ajoute que si l'utilisateur ne les a
-        // pas déjà définis explicitement dans sa liste de headers.
         if (!request.Headers.Contains("User-Agent"))
         {
             request.Headers.TryAddWithoutValidation(
@@ -131,10 +120,6 @@ public class ApiClientService
         !string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase)
         && !string.Equals(method, "HEAD", StringComparison.OrdinalIgnoreCase);
 
-    /// Construit le HttpContent selon le mode Postman sélectionné dans
-    /// l'UI. urlencoded/formdata/graphql posent leur propre Content-Type
-    /// (boundary multipart compris) : un Content-Type explicite de
-    /// l'utilisateur n'est appliqué que pour raw/binary, où il a un sens.
     private static HttpContent?
     BuildContent(
         RequestBody body,
@@ -252,9 +237,6 @@ public class ApiClientService
         }
     }
 
-    /// Remplace les {{clé}} (syntaxe Postman) par la valeur correspondante
-    /// de l'environnement sélectionné ; laisse le texte tel quel si aucun
-    /// environnement n'est actif ou si la clé est introuvable.
     [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(text))]
     private static string?
     SubstituteVariables(
@@ -276,21 +258,18 @@ public class ApiClientService
                     : match.Value);
     }
 
-    /// Ne journalise jamais un secret en clair : montre juste de quoi
-    /// vérifier qu'un placeholder {{...}} a bien été remplacé, sans
-    /// exposer le token complet dans les logs.
     private static string
     MaskForLog(
         string? value)
     {
         if (string.IsNullOrEmpty(value))
         {
-            return "(vide)";
+            return "(empty)";
         }
 
         return value.Length <= 12
             ? value
-            : $"{value[..12]}…({value.Length} car.)";
+            : $"{value[..12]}…({value.Length} chars)";
     }
 
     private static void
@@ -307,9 +286,9 @@ public class ApiClientService
                     SubstituteVariables(auth.BearerToken, variables);
 
                 Logger.Debug(
-                    $"ApiClientService: ApplyAuth Bearer -- brut='{MaskForLog(auth.BearerToken)}', "
-                    + $"après substitution='{MaskForLog(token)}', "
-                    + $"{variables?.Count ?? 0} variable(s) d'environnement disponible(s).");
+                    $"ApiClientService: ApplyAuth Bearer -- raw='{MaskForLog(auth.BearerToken)}', "
+                    + $"after substitution='{MaskForLog(token)}', "
+                    + $"{variables?.Count ?? 0} environment variable(s) available.");
 
                 if (!string.IsNullOrWhiteSpace(token))
                 {

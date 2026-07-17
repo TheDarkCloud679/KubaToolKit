@@ -2,8 +2,6 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Shared.Services;
 
-/// Coloration des cellules des métriques du Dashboard.
-
 public static class MetricColorHelper
 {
     private static readonly Color LowColor = Color.FromRgb(0x2F, 0x6F, 0xED);
@@ -37,8 +35,6 @@ public static class MetricColorHelper
         return ToBrush(r, g, b, opacity);
     }
 
-    /// Coloration des états des EC2
-  
     public static Brush?
     GetStatusBrush(
         string? status,
@@ -88,7 +84,6 @@ public static class MetricColorHelper
             opacity);
     }
 
-    /// Colore un code de statut HTTP : vert 2xx, orange 3xx, rouge 4xx/5xx.
     public static Brush?
     GetHttpStatusBrush(
         int statusCode,

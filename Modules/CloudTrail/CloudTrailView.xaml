@@ -33,7 +33,7 @@
                 VerticalAlignment="Center"/>
         </Grid>
 
-        <!-- Results, groupés par service AWS (EventSource) -->
+        <!-- Results, grouped by AWS service (EventSource) -->
         <Border
             Grid.Row="1"
             BorderBrush="{StaticResource BorderBrush}"

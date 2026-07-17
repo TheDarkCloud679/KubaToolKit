@@ -30,9 +30,6 @@ public partial class ApiClientView
     private string? _binaryFilePath;
     private string _lastResponseBody = "";
 
-    // Le nœud dont le contenu est actuellement chargé dans l'éditeur (null
-    // pour une requête ad hoc jamais enregistrée) : sert à résoudre "Inherit
-    // auth from parent" en remontant node.Parent.
     private CollectionNode? _currentRequestNode;
 
     public ApiClientView()
@@ -59,13 +56,9 @@ public partial class ApiClientView
 
         RefreshAutoHeaders();
 
-        Logger.Debug("ApiClientView: constructeur terminé.");
+        Logger.Debug("ApiClientView: constructor finished.");
     }
 
-    // Utilise des accès null-conditionnels : lors du parsing XAML initial,
-    // le Checked du premier RadioButton coché peut se déclencher avant que
-    // ses frères déclarés plus loin dans le fichier (ex. BodyGraphQlRadio)
-    // n'existent encore.
     private string
     GetSelectedBodyMode()
     {
@@ -194,9 +187,6 @@ public partial class ApiClientView
         _headers.Add(new HeaderItem());
     }
 
-    /// Bouton "✕" partagé par Params/Headers/BodyFormGrid : retire la
-    /// ligne cliquée de la collection actuellement liée à SA grille (peu
-    /// importe laquelle), pas besoin d'un handler par grille.
     private void
     DeleteHeaderItemRow_Click(
         object sender,
@@ -221,9 +211,6 @@ public partial class ApiClientView
         }
         else if (grid == ParamsGrid)
         {
-            // Sans ça, l'URL garde le paramètre supprimé et
-            // SyncParamsFromUrl le réinjecterait au prochain changement
-            // d'URL (les deux vues restent normalement synchronisées).
             SyncUrlFromParams();
         }
     }
@@ -264,14 +251,10 @@ public partial class ApiClientView
 
         ToggleAutoHeadersText.Text =
             _showAutoHeaders
-                ? "Masquer les en-têtes générés automatiquement"
-                : "Afficher les en-têtes générés automatiquement";
+                ? "Hide automatically generated headers"
+                : "Show automatically generated headers";
     }
 
-    /// Aperçu des en-têtes que KubaToolKit ajoute lui-même à l'envoi
-    /// (User-Agent, Accept, Accept-Encoding via HttpClient, Host,
-    /// Content-Length) quand l'utilisateur ne les a pas déjà définis
-    /// explicitement dans la grille Headers.
     private void
     RefreshAutoHeaders()
     {
@@ -287,16 +270,8 @@ public partial class ApiClientView
                 h.Enabled
                 && string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
 
-        // Reflète l'Authorization réellement envoyée (onglet Auth de la
-        // requête, ou celle héritée du dossier/collection parent), comme
-        // Postman qui l'affiche calculée plutôt que de la faire saisir
-        // dans la grille Headers elle-même.
         var resolvedAuth = ResolveAuthConfigForSend();
 
-        // Dès qu'un type d'auth concret est résolu (pas None/Inherit non
-        // résolu), la ligne apparaît toujours, même si le token/mot de
-        // passe est encore vide au moment de l'aperçu — comme Postman, qui
-        // l'affiche avec une valeur "tentative" plutôt que de l'omettre.
         switch (resolvedAuth.Type)
         {
             case AuthType.Bearer:
@@ -305,7 +280,7 @@ public partial class ApiClientView
                 {
                     var value =
                         string.IsNullOrWhiteSpace(resolvedAuth.BearerToken)
-                            ? "Bearer <calculé à l'envoi>"
+                            ? "Bearer <computed on send>"
                             : "Bearer " + Mask(resolvedAuth.BearerToken);
 
                     _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
@@ -320,7 +295,7 @@ public partial class ApiClientView
                     var value =
                         string.IsNullOrWhiteSpace(resolvedAuth.Username)
                         && string.IsNullOrEmpty(resolvedAuth.Password)
-                            ? "Basic <calculé à l'envoi>"
+                            ? "Basic <computed on send>"
                             : "Basic " + Mask($"{resolvedAuth.Username}:{resolvedAuth.Password}");
 
                     _autoHeaders.Add(new HeaderItem { Key = "Authorization", Value = value });
@@ -339,7 +314,7 @@ public partial class ApiClientView
                 {
                     var value =
                         string.IsNullOrEmpty(resolvedAuth.ApiKeyValue)
-                            ? "<calculé à l'envoi>"
+                            ? "<computed on send>"
                             : Mask(resolvedAuth.ApiKeyValue);
 
                     _autoHeaders.Add(new HeaderItem { Key = keyName, Value = value });
@@ -370,7 +345,7 @@ public partial class ApiClientView
         {
             var contentType = mode switch
             {
-                "formdata" => "multipart/form-data; boundary=<calculé à l'envoi>",
+                "formdata" => "multipart/form-data; boundary=<computed on send>",
                 "urlencoded" => "application/x-www-form-urlencoded",
                 "binary" => "application/octet-stream",
                 "graphql" => "application/json",
@@ -384,7 +359,7 @@ public partial class ApiClientView
         if (hasBody)
         {
             _autoHeaders.Add(
-                new HeaderItem { Key = "Content-Length", Value = "<calculé à l'envoi>" });
+                new HeaderItem { Key = "Content-Length", Value = "<computed on send>" });
         }
 
         if (!Has("Host"))
@@ -395,7 +370,7 @@ public partial class ApiClientView
                     : null;
 
             _autoHeaders.Add(
-                new HeaderItem { Key = "Host", Value = host ?? "<calculé à l'envoi>" });
+                new HeaderItem { Key = "Host", Value = host ?? "<computed on send>" });
         }
 
         if (!Has("User-Agent"))
@@ -451,9 +426,6 @@ public partial class ApiClientView
         SortNodes(_collections, _collectionsSortDescending);
     }
 
-    /// Les favoris restent toujours en tête de leur fratrie, quel que soit
-    /// le sens du tri ; seul l'ordre alphabétique à l'intérieur de chaque
-    /// groupe (favoris / non-favoris) suit le sens demandé.
     private static void
     SortNodes(
         ObservableCollection<CollectionNode> nodes,
@@ -477,12 +449,6 @@ public partial class ApiClientView
         }
     }
 
-    /// Insère, en tête de chaque collection racine, un pseudo-dossier
-    /// "Favoris" regroupant (mêmes références, pas de copie) toutes les
-    /// requêtes marquées favorites où qu'elles soient nichées dans cette
-    /// collection, triées par ordre alphabétique. Purement visuel : ne
-    /// touche ni Parent ni le fichier .json (voir CollectionStorageService,
-    /// qui l'ignore explicitement à la sauvegarde).
     private void
     RebuildFavoritesFolders()
     {
@@ -507,7 +473,7 @@ public partial class ApiClientView
             var favoritesFolder =
                 new CollectionNode
                 {
-                    Name = "Favoris",
+                    Name = "Favorites",
                     IsRequest = false,
                     IsFavorite = true,
                     IsFavoritesFolder = true
@@ -545,8 +511,6 @@ public partial class ApiClientView
         }
     }
 
-    /// Reconstruit la grille Params à partir de la chaîne de requête de
-    /// l'URL (Postman : les deux vues restent synchronisées).
     private void
     SyncParamsFromUrl()
     {
@@ -589,8 +553,6 @@ public partial class ApiClientView
         }
     }
 
-    /// Reconstruit la chaîne de requête de l'URL à partir de la grille
-    /// Params (lignes activées et avec une clé non vide seulement).
     private void
     SyncUrlFromParams()
     {
@@ -673,7 +635,7 @@ public partial class ApiClientView
         }
         catch (Exception ex)
         {
-            Logger.Error("ApiClientView: échec du chargement des collections/environnements.", ex);
+            Logger.Error("ApiClientView: failed to load collections/environments.", ex);
 
             MessageBox.Show(
                 ex.Message,
@@ -719,12 +681,6 @@ public partial class ApiClientView
             });
     }
 
-    /// Ouvre ValueLabels.json (créé avec un exemple s'il n'existe pas
-    /// encore, voir CollectionStorageService.LoadValueLabels) dans
-    /// l'application associée (Bloc-notes par défaut) : ce fichier
-    /// s'édite à la main, pas via l'UI de KubaToolKit. Rechargé à chaque
-    /// réponse affichée en Cartes, donc les changements sont pris en
-    /// compte au prochain envoi sans redémarrer l'appli.
     private void
     OpenValueLabels_Click(
         object sender,
@@ -757,8 +713,8 @@ public partial class ApiClientView
             || string.IsNullOrEmpty(environment.FilePath))
         {
             MessageBox.Show(
-                "Sélectionner d'abord un environnement (ou en ajouter un via \"+\").",
-                "Aucun environnement sélectionné");
+                "Select an environment first (or add one via \"+\").",
+                "No environment selected");
 
             return;
         }
@@ -801,7 +757,6 @@ public partial class ApiClientView
             }
         }
 
-        // Déclenche TextChanged -> SyncParamsFromUrl() automatiquement.
         UrlTextBox.Text = node.Url;
 
         _headers.Clear();
@@ -816,7 +771,7 @@ public partial class ApiClientView
         _bodyFormData.Clear();
         _bodyUrlEncoded.Clear();
         _binaryFilePath = null;
-        BinaryFilePathText.Text = "Aucun fichier sélectionné";
+        BinaryFilePathText.Text = "No file selected";
         GraphQlQueryTextBox.Text = "";
         GraphQlVariablesTextBox.Text = "";
 
@@ -863,17 +818,9 @@ public partial class ApiClientView
             _ => 0
         };
 
-        // Ne pas dépendre uniquement des événements Checked/SelectionChanged
-        // déclenchés ci-dessus : si la requête chargée a la même méthode,
-        // le même mode de body ou le même type d'auth que la précédente,
-        // ils ne se redéclenchent pas (la valeur ne change pas), et
-        // l'aperçu resterait basé sur l'état d'avant le chargement.
         RefreshAutoHeaders();
     }
 
-    /// Un clic droit ne sélectionne pas le TreeViewItem visé par défaut en
-    /// WPF : sans ça, le menu contextuel agirait sur l'élément sélectionné
-    /// précédemment plutôt que celui sous le curseur.
     private void
     CollectionsTreeView_PreviewMouseRightButtonDown(
         object sender,
@@ -919,9 +866,6 @@ public partial class ApiClientView
         }
     }
 
-    /// Cherche par nom parmi les requêtes uniquement (pas les dossiers) --
-    /// Distinct() car une requête favorite apparaît deux fois dans l'arbre
-    /// (sa place réelle + le pseudo-dossier "Favoris", mêmes références).
     private void
     RunRequestSearch()
     {
@@ -999,11 +943,6 @@ public partial class ApiClientView
                 : $"{_requestSearchMatchIndex + 1}/{_requestSearchMatches.Count}";
     }
 
-    /// Déplie chaque ancêtre (en remontant via Parent, donc toujours la
-    /// vraie position du nœud, jamais le pseudo-dossier "Favoris") avant de
-    /// sélectionner et défiler jusqu'à la requête trouvée -- les conteneurs
-    /// TreeViewItem d'un niveau ne sont générés qu'une fois leur parent
-    /// développé, d'où l'UpdateLayout() après chaque IsExpanded.
     private void
     ExpandAndSelectTreeNode(
         CollectionNode node)
@@ -1058,10 +997,6 @@ public partial class ApiClientView
         var isRealNode = node != null && node.IsFavoritesFolder != true;
         var isFolder = isRealNode && !isRequest;
 
-        // Le pseudo-dossier "Favoris" n'est pas un vrai nœud : rien n'y
-        // est modifiable directement (les requêtes qu'il liste le restent
-        // depuis leur vrai dossier, ou via ce même menu puisque ce sont
-        // les mêmes objets).
         AddRequestMenuItem.IsEnabled = isFolder;
         AddFolderMenuItem.IsEnabled = isFolder;
         UpdateRequestMenuItem.IsEnabled = isRequest;
@@ -1071,11 +1006,9 @@ public partial class ApiClientView
         FavoriteMenuItem.IsEnabled = isRequest;
         FavoriteMenuItem.Header =
             node?.IsFavorite == true
-                ? "★ Retirer des favoris"
-                : "☆ Ajouter aux favoris";
+                ? "★ Remove from favorites"
+                : "☆ Add to favorites";
 
-        // Pour une requête, l'onglet Auth de l'éditeur suffit déjà ; ce
-        // menu ne sert qu'à définir l'auth partagée d'un dossier/collection.
         FolderAuthMenuItem.IsEnabled = isFolder;
         ApplyBearerToAllMenuItem.IsEnabled = isFolder;
     }
@@ -1093,9 +1026,6 @@ public partial class ApiClientView
 
         node.IsFavorite = !node.IsFavorite;
 
-        // Fait remonter/redescendre immédiatement le nœud dans sa fratrie,
-        // et met à jour le pseudo-dossier "Favoris" en tête de sa
-        // collection, plutôt que d'attendre un rechargement.
         SortNodes(_collections, _collectionsSortDescending);
         RebuildFavoritesFolders();
 
@@ -1142,8 +1072,8 @@ public partial class ApiClientView
         var token =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
-                "Bearer Token pour toutes les requêtes",
-                "Token (une variable {{...}} d'environnement est possible) :",
+                "Bearer Token for all requests",
+                "Token (an environment {{...}} variable is allowed):",
                 "{{TMP_AUTH_Service_IdToken}}");
 
         if (token == null)
@@ -1157,8 +1087,8 @@ public partial class ApiClientView
         RefreshAutoHeaders();
 
         MessageBox.Show(
-            $"{count} requête(s) mise(s) à jour sous « {target.Name} ».",
-            "Bearer Token appliqué");
+            $"{count} request(s) updated under \"{target.Name}\".",
+            "Bearer Token applied");
     }
 
     private static int
@@ -1172,8 +1102,6 @@ public partial class ApiClientView
         {
             if (child.IsFavoritesFolder)
             {
-                // Mêmes objets que sous leur vrai dossier : les compter ici
-                // aussi les compterait deux fois.
                 continue;
             }
 
@@ -1199,9 +1127,9 @@ public partial class ApiClientView
         var name =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
-                "Nouvelle collection",
-                "Nom de la collection :",
-                "Ma collection");
+                "New collection",
+                "Collection name:",
+                "My collection");
 
         if (name == null)
         {
@@ -1233,9 +1161,9 @@ public partial class ApiClientView
         var name =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
-                "Nouveau dossier",
-                "Nom du dossier :",
-                "Nouveau dossier");
+                "New folder",
+                "Folder name:",
+                "New folder");
 
         if (name == null)
         {
@@ -1262,9 +1190,9 @@ public partial class ApiClientView
         var name =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
-                "Nouvelle requête",
-                "Nom de la requête :",
-                "Nouvelle requête");
+                "New request",
+                "Request name:",
+                "New request");
 
         if (name == null)
         {
@@ -1356,7 +1284,6 @@ public partial class ApiClientView
                 .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
                 .ToList();
 
-        // Method peut changer le texte affiché ("GET  Nom" -> "POST  Nom").
         RefreshNodeDisplay(node);
         RebuildFavoritesFolders();
 
@@ -1376,8 +1303,8 @@ public partial class ApiClientView
         var name =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
-                "Renommer",
-                "Nouveau nom :",
+                "Rename",
+                "New name:",
                 node.Name);
 
         if (name == null)
@@ -1406,8 +1333,8 @@ public partial class ApiClientView
         if (node.Parent == null)
         {
             if (MessageBox.Show(
-                    $"Supprimer définitivement la collection \"{node.Name}\" (fichier inclus) ?",
-                    "Supprimer la collection",
+                    $"Permanently delete the collection \"{node.Name}\" (including its file)?",
+                    "Delete collection",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning)
                 != MessageBoxResult.Yes)
@@ -1430,8 +1357,8 @@ public partial class ApiClientView
         }
 
         if (MessageBox.Show(
-                $"Supprimer \"{node.Name}\" ?",
-                "Supprimer",
+                $"Delete \"{node.Name}\"?",
+                "Delete",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning)
             != MessageBoxResult.Yes)
@@ -1447,10 +1374,6 @@ public partial class ApiClientView
         SaveCollectionOf(parent);
     }
 
-    /// CollectionNode n'implémente pas INotifyPropertyChanged : le retirer
-    /// puis le réinsérer au même endroit force le TreeView à régénérer son
-    /// conteneur et donc relire DisplayText/Name à jour (même trick que
-    /// SortNodes pour le tri).
     private void
     RefreshNodeDisplay(
         CollectionNode node)
@@ -1550,7 +1473,7 @@ public partial class ApiClientView
         if (string.IsNullOrWhiteSpace(url))
         {
             MessageBox.Show(
-                "Entrer une URL");
+                "Enter a URL");
 
             return;
         }
@@ -1559,9 +1482,6 @@ public partial class ApiClientView
             (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string
             ?? "GET";
 
-        // Les DataGrid gardent une ligne d'édition en cours (vide) tant
-        // qu'elles n'ont pas perdu le focus ; on force leur validation
-        // pour qu'elle soit bien incluse dans _headers/_params/le body.
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
         BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
@@ -1585,9 +1505,9 @@ public partial class ApiClientView
                 (EnvironmentCombo.SelectedItem as EnvironmentSet)?.ToSubstitutionMap();
 
             Logger.Debug(
-                $"ApiClientView: auth résolue pour l'envoi -- type={auth.Type}, "
+                $"ApiClientView: auth resolved for send -- type={auth.Type}, "
                 + $"bearerToken='{MaskForLog(auth.BearerToken)}', "
-                + $"variables disponibles=[{string.Join(", ", (variables ?? new()).Select(kv => $"{kv.Key}({kv.Value.Length} car.)"))}].");
+                + $"available variables=[{string.Join(", ", (variables ?? new()).Select(kv => $"{kv.Key}({kv.Value.Length} chars)"))}].");
 
             var requestBody =
                 new RequestBody
@@ -1602,7 +1522,7 @@ public partial class ApiClientView
                     GraphQlVariables = GraphQlVariablesTextBox.Text
                 };
 
-            Logger.Debug($"ApiClientView: envoi {method} {url}");
+            Logger.Debug($"ApiClientView: sending {method} {url}");
 
             var result =
                 await _apiClientService.SendAsync(
@@ -1632,11 +1552,11 @@ public partial class ApiClientView
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug($"ApiClientView: requête {method} {url} annulée.");
+            Logger.Debug($"ApiClientView: request {method} {url} cancelled.");
         }
         catch (Exception ex)
         {
-            Logger.Error($"ApiClientView: échec de la requête {method} {url}.", ex);
+            Logger.Error($"ApiClientView: request {method} {url} failed.", ex);
 
             ResponseHeadersTextBox.Text = "";
             ResponseBodyEditor.Text = "";
@@ -1679,12 +1599,6 @@ public partial class ApiClientView
         UpdateSizeSortControls();
     }
 
-    /// Détecte comment paginer la requête actuelle à partir de ses
-    /// propres Params (jamais de la réponse : c'est la requête qui porte
-    /// les paramètres à modifier pour changer de page) : "offset" (avec
-    /// un pas déduit de size/limit/pageSize, ou de la réponse à défaut)
-    /// ou "page"/"pageNumber"/"pageIndex" (pas de 1). Retourne null si
-    /// aucun des deux schémas n'est présent dans les Params.
     private (HeaderItem Param, string Mode, int Step)?
     DetectPagination()
     {
@@ -1758,12 +1672,6 @@ public partial class ApiClientView
         }
     }
 
-    /// Affiche/active les boutons Page précédente/suivante selon ce que
-    /// DetectPagination() trouve dans les Params actuels, et essaie
-    /// d'estimer s'il reste une page suivante à partir de champs
-    /// habituels de la réponse (items/total/totalItems/count, ou
-    /// pages/totalPages) -- purement indicatif, jamais bloquant si ces
-    /// champs sont absents ou nommés différemment par l'API.
     private void
     UpdatePaginationControls()
     {
@@ -1857,9 +1765,6 @@ public partial class ApiClientView
 
         param.Value = next.ToString();
 
-        // HeaderItem n'implémente pas INotifyPropertyChanged (mutation
-        // depuis le code, pas depuis une cellule éditée) : forcer le
-        // DataGrid à relire la valeur affichée.
         ParamsGrid.Items.Refresh();
 
         SyncUrlFromParams();
@@ -1867,8 +1772,6 @@ public partial class ApiClientView
         await SendAsync();
     }
 
-    /// Un param de taille de page parmi les mêmes noms déjà reconnus
-    /// comme pas d'"offset" dans DetectPagination (size/limit/pageSize).
     private HeaderItem?
     DetectSizeParam()
     {
@@ -1880,9 +1783,6 @@ public partial class ApiClientView
             && sizeKeys.Contains(p.Key.Trim().ToLowerInvariant()));
     }
 
-    /// Un param de tri parmi les noms usuels, dont la valeur actuelle
-    /// ressemble déjà à "asc"/"desc" -- sinon impossible de savoir sans
-    /// se tromper si l'API attend "1"/"-1", "+champ"/"-champ", etc.
     private HeaderItem?
     DetectSortParam()
     {
@@ -1918,14 +1818,10 @@ public partial class ApiClientView
         {
             var isDescending = string.Equals(sortParam.Value?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
 
-            SortToggleButton.Content = isDescending ? "Tri ▼ Décroissant" : "Tri ▲ Croissant";
+            SortToggleButton.Content = isDescending ? "Sort ▼ Descending" : "Sort ▲ Ascending";
         }
     }
 
-    /// Changer la taille de page ou le tri invalide la position actuelle
-    /// dans la liste : repartir de la première page évite un décalage
-    /// incohérent (offset 40 avec une taille de page qui vient de
-    /// changer, par exemple).
     private void
     ResetPageToStart()
     {
@@ -2019,17 +1915,9 @@ public partial class ApiClientView
         RoutedEventArgs e) =>
         RefreshResponseView();
 
-    /// Bascule entre la vue "Brut" (JSON tel quel, avec coloration) et la
-    /// vue "Cartes" (un bloc par objet/élément de tableau, voir
-    /// JsonCardViewBuilder). Reconstruit la vue Cartes à chaque appel :
-    /// pas de cache, la réponse ne change qu'après un nouvel envoi.
     private void
     RefreshResponseView()
     {
-        // Le RadioButton "Cartes" a IsChecked="True" dans le XAML : son
-        // événement Checked se déclenche pendant InitializeComponent(),
-        // avant que ResponseBodyEditor/ResponsePrettyContainer (plus bas
-        // dans l'arbre) n'existent encore.
         if (ResponseBodyEditor == null
             || ResponsePrettyContainer == null
             || ResponsePrettyContent == null)
@@ -2056,7 +1944,7 @@ public partial class ApiClientView
 
             ValueLabelsWarningText.ToolTip =
                 _collectionStorage.LastValueLabelsError != null
-                    ? $"ValueLabels.json invalide, aucune traduction appliquée : {_collectionStorage.LastValueLabelsError}"
+                    ? $"Invalid ValueLabels.json, no labels applied: {_collectionStorage.LastValueLabelsError}"
                     : null;
 
             _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody, valueLabels);
@@ -2065,16 +1953,13 @@ public partial class ApiClientView
                 _lastCardsView?.Root
                 ?? new TextBlock
                 {
-                    Text = "Réponse non-JSON : voir la vue \"Brut\".",
+                    Text = "Non-JSON response: see the \"Raw\" view.",
                     FontStyle = FontStyles.Italic,
                     Foreground = (Brush)FindResource("TextMutedBrush"),
                     Margin = new Thickness(8)
                 };
         }
 
-        // Le contenu vient d'être reconstruit (nouvelle réponse, ou
-        // changement de mode) : toute référence à un élément mis en
-        // surbrillance précédemment est maintenant obsolète.
         RunResponseSearch();
     }
 
@@ -2134,12 +2019,6 @@ public partial class ApiClientView
         RoutedEventArgs e) =>
         MoveToSearchMatch(1);
 
-    /// Recherche mode-consciente : en vue Cartes, filtre les entrées
-    /// indexées par JsonCardViewBuilder (clés, valeurs, badges, titres
-    /// de bloc) et surligne le résultat courant ; en vue Brut, cherche
-    /// directement dans le texte de l'éditeur AvalonEdit et sélectionne
-    /// le résultat courant. Les deux se pilotent avec les mêmes boutons
-    /// ▲/▼ et le même compteur.
     private void
     RunResponseSearch()
     {
@@ -2272,13 +2151,6 @@ public partial class ApiClientView
                 : $"{_searchMatchIndex + 1}/{totalMatches}";
     }
 
-    /// Les blocs de la vue Cartes sont repliés par défaut (voir
-    /// JsonCardViewBuilder.BuildCard) : sauter directement dessus ne
-    /// sert à rien tant qu'il reste replié, ou que l'un de ses parents
-    /// (lui aussi replié) le cache. Déplie toute la chaîne, puis attend
-    /// que la mise en page ait pris en compte la nouvelle hauteur avant
-    /// de défiler (BringIntoView() juste après IsExpanded=true utiliserait
-    /// encore les anciennes dimensions, repliées).
     private static void
     ExpandAndScrollTo(
         FrameworkElement target,
@@ -2299,11 +2171,6 @@ public partial class ApiClientView
             new Action(() => target.BringIntoView()));
     }
 
-    /// Équivalent simplifié d'un script Postman "pm.environment.set(...)" :
-    /// pour chaque règle activée (grille "Extraction → Environnement"),
-    /// copie le champ JSON de premier niveau correspondant de la réponse
-    /// dans la variable d'environnement visée (créée si elle n'existe pas
-    /// encore), puis sauvegarde le fichier d'environnement.
     private void
     ApplyPostResponseExtractions(
         string responseBody)
@@ -2316,15 +2183,15 @@ public partial class ApiClientView
                 .ToList();
 
         Logger.Debug(
-            $"ApiClientView: extraction post-réponse -- {rules.Count} règle(s) active(s) "
+            $"ApiClientView: post-response extraction -- {rules.Count} active rule(s) "
             + $"({string.Join(", ", rules.Select(r => $"{r.Key}->{r.Value}"))}), "
-            + $"environnement sélectionné = "
-            + $"{(EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name ?? "(aucun)"}.");
+            + $"selected environment = "
+            + $"{(EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name ?? "(none)"}.");
 
         if (rules.Count == 0)
         {
             Logger.Debug(
-                "ApiClientView: extraction ignorée -- aucune règle active sur cette requête.");
+                "ApiClientView: extraction skipped -- no active rule on this request.");
 
             return;
         }
@@ -2333,7 +2200,7 @@ public partial class ApiClientView
             || string.IsNullOrEmpty(environment.FilePath))
         {
             Logger.Debug(
-                "ApiClientView: extraction ignorée -- aucun environnement (avec fichier) sélectionné.");
+                "ApiClientView: extraction skipped -- no environment (with file) selected.");
 
             return;
         }
@@ -2347,7 +2214,7 @@ public partial class ApiClientView
         catch (JsonException ex)
         {
             Logger.Debug(
-                $"ApiClientView: extraction ignorée -- réponse non-JSON ({ex.Message}).");
+                $"ApiClientView: extraction skipped -- non-JSON response ({ex.Message}).");
 
             return;
         }
@@ -2355,7 +2222,7 @@ public partial class ApiClientView
         if (root.ValueKind != JsonValueKind.Object)
         {
             Logger.Debug(
-                $"ApiClientView: extraction ignorée -- réponse JSON de type {root.ValueKind}, objet attendu.");
+                $"ApiClientView: extraction skipped -- JSON response of type {root.ValueKind}, expected an object.");
 
             return;
         }
@@ -2367,7 +2234,7 @@ public partial class ApiClientView
             if (!root.TryGetProperty(rule.Key, out var valueElement))
             {
                 Logger.Debug(
-                    $"ApiClientView: extraction -- champ '{rule.Key}' absent du premier niveau de la réponse.");
+                    $"ApiClientView: extraction -- field '{rule.Key}' missing from top level of the response.");
 
                 continue;
             }
@@ -2382,12 +2249,6 @@ public partial class ApiClientView
                     _ => valueElement.GetRawText()
                 };
 
-            // S'il existe plusieurs entrées pour la même clé (import Postman
-            // ou édition manuelle malencontreuse), ToSubstitutionMap() ne
-            // regarde que la dernière : ne mettre à jour que la première et
-            // laisser une copie obsolète/vide trainer casserait
-            // silencieusement la substitution. On nettoie donc les doublons
-            // ici pour ne garder qu'une seule entrée, à jour.
             var duplicates =
                 environment.Variables
                     .Where(v => v.Key == rule.Value)
@@ -2405,8 +2266,8 @@ public partial class ApiClientView
                 foreach (var duplicate in duplicates.Skip(1))
                 {
                     Logger.Debug(
-                        $"ApiClientView: extraction -- doublon de la variable '{rule.Value}' supprimé "
-                        + $"(valeur obsolète='{MaskForLog(duplicate.Value)}').");
+                        $"ApiClientView: extraction -- duplicate of variable '{rule.Value}' removed "
+                        + $"(stale value='{MaskForLog(duplicate.Value)}').");
 
                     environment.Variables.Remove(duplicate);
                 }
@@ -2419,7 +2280,7 @@ public partial class ApiClientView
 
             Logger.Debug(
                 $"ApiClientView: extraction -- '{rule.Key}' = '{value}' -> variable '{rule.Value}' "
-                + $"({(wasExisting ? "mise à jour" : "créée")}).");
+                + $"({(wasExisting ? "updated" : "created")}).");
 
             updated++;
         }
@@ -2427,7 +2288,7 @@ public partial class ApiClientView
         if (updated == 0)
         {
             Logger.Debug(
-                "ApiClientView: extraction -- aucune règle ne correspondait à un champ de la réponse, rien à sauvegarder.");
+                "ApiClientView: extraction -- no rule matched a field of the response, nothing to save.");
 
             return;
         }
@@ -2437,35 +2298,28 @@ public partial class ApiClientView
             _collectionStorage.SaveEnvironment(environment);
 
             Logger.Info(
-                $"ApiClientView: environnement '{environment.Name}' mis à jour ({updated} variable(s) extraite(s) de la réponse) -> fichier '{environment.FilePath}'.");
+                $"ApiClientView: environment '{environment.Name}' updated ({updated} variable(s) extracted from the response) -> file '{environment.FilePath}'.");
         }
         catch (Exception ex)
         {
-            Logger.Error("ApiClientView: échec de la mise à jour de l'environnement après extraction.", ex);
+            Logger.Error("ApiClientView: failed to update the environment after extraction.", ex);
         }
     }
 
-    /// Ne journalise jamais un secret en clair : montre juste de quoi
-    /// vérifier qu'un placeholder {{...}} a bien été remplacé par autre
-    /// chose (longueur + début), sans exposer le token complet dans les
-    /// logs.
     private static string
     MaskForLog(
         string? value)
     {
         if (string.IsNullOrEmpty(value))
         {
-            return "(vide)";
+            return "(empty)";
         }
 
         return value.Length <= 12
             ? value
-            : $"{value[..12]}…({value.Length} car.)";
+            : $"{value[..12]}…({value.Length} chars)";
     }
 
-    /// État brut du panneau Auth (peut être "Inherit") : à utiliser pour
-    /// sauvegarder sur un CollectionNode, jamais directement pour envoyer
-    /// une requête (voir ResolveAuthConfigForSend).
     private AuthConfig
     BuildAuthConfig()
     {
@@ -2489,10 +2343,6 @@ public partial class ApiClientView
         };
     }
 
-    /// Résout "Inherit" en remontant vers le parent du nœud actuellement
-    /// chargé dans l'éditeur (le nœud lui-même est ignoré : c'est justement
-    /// lui qui vaut "Inherit" dans ce cas). Sans nœud chargé (nouvelle
-    /// requête non enregistrée) ou sans parent concret, retombe sur "None".
     private AuthConfig
     ResolveAuthConfigForSend()
     {

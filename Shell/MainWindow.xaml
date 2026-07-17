@@ -80,7 +80,7 @@
                                 Margin="6,0,0,2"
                                 VerticalAlignment="Bottom"
                                 Foreground="{StaticResource TextMutedBrush}"
-                                ToolTip="Version de KubaToolKit"/>
+                                ToolTip="KubaToolKit Version"/>
                         </StackPanel>
                         <TextBlock
                             Text="AWS Ops &amp; API Toolkit"
@@ -173,7 +173,6 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Profile : utile à tous les modules AWS, seule la ligne entière se masque (API Client) -->
                     <Grid x:Name="ProfileGroup" Grid.Column="0" Margin="0,0,20,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="70"/>
@@ -194,7 +193,6 @@
                             SelectionChanged="ProfileCombo_SelectionChanged"/>
                     </Grid>
 
-                    <!-- Pattern : uniquement utile en mode CloudWatch -->
                     <Grid x:Name="PatternGroup" Grid.Column="1" Margin="0,0,20,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="70"/>
@@ -215,9 +213,6 @@
                             SelectionChanged="PatternCombo_SelectionChanged"/>
                     </Grid>
 
-                    <!-- Attribute : uniquement utile en mode CloudTrail. Partage la
-                         colonne de Pattern (CloudWatch) puisque les deux modes ne
-                         sont jamais actifs en même temps. -->
                     <Grid x:Name="AttributeGroup" Grid.Column="1" Margin="0,0,20,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="70"/>
@@ -237,8 +232,6 @@
                             Margin="6,0,0,0"/>
                     </Grid>
 
-                    <!-- Search : utile en CloudWatch (filtre logs), CloudTrail
-                         (valeur de l'attribut) et S3 (recherche dans les dossiers) -->
                     <Grid x:Name="SearchGroup" Grid.Column="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="55"/>
@@ -260,7 +253,6 @@
                             KeyDown="SearchTextBox_KeyDown"/>
                     </Grid>
 
-                    <!-- Bouton d'action partagé (Search/Refresh/Cancel selon le module) : toujours sur la même ligne que Search -->
                     <Button
                         x:Name="SearchButton"
                         Grid.Column="3"
@@ -270,7 +262,6 @@
                         Click="SearchButton_Click"/>
                 </Grid>
 
-                <!-- Ligne 2 : dates/heures, uniquement utiles en mode CloudWatch -->
                 <Grid
                     x:Name="DateRangeRow"
                     Grid.Row="3"
@@ -296,7 +287,7 @@
                             x:Name="StartDatePicker"
                             Grid.Column="1"
                             Width="85"
-                            Tag="Date de début"
+                            Tag="Start date"
                             VerticalContentAlignment="Center"
                             CalendarOpened="DatePicker_CalendarOpened"/>
                         <TextBox
@@ -318,7 +309,7 @@
                             x:Name="EndDatePicker"
                             Grid.Column="4"
                             Width="85"
-                            Tag="Date de fin"
+                            Tag="End date"
                             VerticalContentAlignment="Center"
                             CalendarOpened="DatePicker_CalendarOpened"/>
                         <TextBox

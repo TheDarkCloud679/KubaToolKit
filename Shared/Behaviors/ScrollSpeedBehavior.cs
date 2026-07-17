@@ -4,10 +4,6 @@ using System.Windows.Input;
 
 namespace KubaToolKit.Shared.Behaviors;
 
-/// Permet de régler depuis le XAML la vitesse de défilement à la molette
-/// d'un ScrollViewer (utile pour les popups à petits éléments, comme la
-/// liste déroulante d'un ComboBox, où le défilement par défaut peut
-/// paraître trop rapide).
 public static class ScrollSpeedBehavior
 {
     public static readonly DependencyProperty LinesPerNotchProperty =
@@ -68,10 +64,6 @@ public static class ScrollSpeedBehavior
         double linesPerNotch =
             GetLinesPerNotch(scrollViewer);
 
-        // Un "notch" standard de molette vaut 120 en delta ; on le
-        // convertit en un décalage vertical proportionnel au nombre de
-        // lignes voulu (16px par ligne, gabarit courant d'une ligne de
-        // texte).
         double offset =
             -e.Delta / 120.0
             * linesPerNotch

@@ -10,15 +10,6 @@ using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ApiClient;
 
-/// Une entrée cherchable de la vue Cartes (clé, valeur, badge ou titre
-/// de bloc) : Element est un conteneur dédié (Border transparent) dont
-/// on peut basculer Background sans jamais perturber l'apparence
-/// d'origine de son contenu (y compris un badge déjà coloré). Ancestors
-/// liste les Expander parents (du plus extérieur au plus proche) à
-/// déplier avant de défiler jusqu'à Element -- capturés explicitement à
-/// la construction plutôt que remontés depuis l'arbre visuel à
-/// l'exécution, qui peut ne pas être entièrement connecté tant qu'un
-/// Expander reste replié.
 public sealed record JsonCardSearchEntry(
     string Text,
     Border Element,
@@ -28,11 +19,6 @@ public sealed record JsonCardViewResult(
     UIElement Root,
     IReadOnlyList<JsonCardSearchEntry> SearchEntries);
 
-/// Transforme un corps de réponse JSON en une arborescence de "cartes"
-/// WPF lisibles (un bloc par objet/élément de tableau, badges colorés
-/// pour les champs d'état, dates reformatées) plutôt que le JSON brut.
-/// Purement un rendu alternatif : la vue "Brut" (AvalonEdit) reste la
-/// source de vérité, celle-ci ne fait qu'aider à la lecture.
 public static class JsonCardViewBuilder
 {
     private const int MaxArrayItemsRendered = 200;
@@ -52,29 +38,16 @@ public static class JsonCardViewBuilder
 
     private static readonly Brush CopyFeedbackBrush = MakeAlphaBrush(0x50, SuccessColor);
 
-    /// Contexte de construction interne, filé à travers la récursion :
-    /// évite de répéter plusieurs paramètres dans chaque signature.
     private sealed class BuildContext
     {
         public readonly List<JsonCardSearchEntry> SearchEntries = new();
 
-        /// Pile des Expander "en cours" pendant la récursion : chaque
-        /// BeginCard pousse sa carte avant de construire son contenu, et
-        /// la retire une fois fini -- un instantané de cette pile au
-        /// moment où une entrée est enregistrée donne exactement la
-        /// chaîne de parents à déplier pour la révéler.
         public readonly List<Expander> AncestorStack = new();
 
-        /// Correspondance "champ JSON -> {code -> libellé}" (voir
-        /// CollectionStorageService.LoadValueLabels) : un champ scalaire
-        /// dont le nom et la valeur matchent s'affiche "Libellé (code)"
-        /// plutôt que le code brut.
         public IReadOnlyDictionary<string, Dictionary<string, string>> ValueLabels =
             new Dictionary<string, Dictionary<string, string>>();
     }
 
-    /// Null si le texte n'est pas du JSON valide (l'appelant doit alors
-    /// se rabattre sur la vue brute). valueLabels : voir BuildContext.
     public static JsonCardViewResult?
     Build(
         string json,
@@ -127,7 +100,7 @@ public static class JsonCardViewBuilder
 
         if (depth > MaxDepth)
         {
-            panel.Children.Add(MutedText("(imbrication trop profonde, voir la vue Brut)"));
+            panel.Children.Add(MutedText("(too deeply nested, see Raw view)"));
 
             return panel;
         }
@@ -150,7 +123,7 @@ public static class JsonCardViewBuilder
         if (scalarProps.Count == 0
             && complexProps.Count == 0)
         {
-            panel.Children.Add(MutedText("(objet vide)"));
+            panel.Children.Add(MutedText("(empty object)"));
 
             return panel;
         }
@@ -252,11 +225,11 @@ public static class JsonCardViewBuilder
 
             case JsonValueKind.True:
 
-                return new TextBlock { Text = "Oui", Foreground = TextPrimaryBrush, FontSize = 12 };
+                return new TextBlock { Text = "Yes", Foreground = TextPrimaryBrush, FontSize = 12 };
 
             case JsonValueKind.False:
 
-                return new TextBlock { Text = "Non", Foreground = TextPrimaryBrush, FontSize = 12 };
+                return new TextBlock { Text = "No", Foreground = TextPrimaryBrush, FontSize = 12 };
 
             case JsonValueKind.Number:
 
@@ -313,8 +286,6 @@ public static class JsonCardViewBuilder
         }
     }
 
-    /// Voir BuildContext.ValueLabels : null si aucune correspondance
-    /// n'est configurée pour ce champ+valeur.
     private static string?
     TryGetValueLabel(
         BuildContext ctx,
@@ -336,12 +307,6 @@ public static class JsonCardViewBuilder
             _ => element.GetRawText()
         };
 
-    /// Comme FormatScalarElement, mais applique aussi la correspondance
-    /// de BuildContext.ValueLabels à chaque élément d'un tableau de
-    /// codes (ex: "allowedOperators": [9, 165] -> "Movima (9), Transdev
-    /// Marsan (165)") -- la lecture d'un champ scalaire simple appliquait
-    /// déjà la même règle, un tableau ne devrait pas se comporter
-    /// différemment juste parce qu'il a plusieurs valeurs.
     private static string
     FormatScalarElementWithLabel(
         BuildContext ctx,
@@ -378,9 +343,6 @@ public static class JsonCardViewBuilder
         return card;
     }
 
-    /// Pousse `card` sur la pile d'ancêtres avant d'appeler `build()`
-    /// (donc avant que son contenu n'enregistre la moindre entrée
-    /// cherchable), puis la retire -- voir BuildContext.AncestorStack.
     private static UIElement
     BuildCardContent(
         Expander card,
@@ -407,7 +369,7 @@ public static class JsonCardViewBuilder
 
         if (items.Count == 0)
         {
-            itemsPanel.Children.Add(MutedText("Aucun élément."));
+            itemsPanel.Children.Add(MutedText("No items."));
 
             return itemsPanel;
         }
@@ -465,7 +427,7 @@ public static class JsonCardViewBuilder
         if (items.Count > renderCount)
         {
             itemsPanel.Children.Add(
-                MutedText($"… {items.Count - renderCount} élément(s) de plus (voir la vue Brut)."));
+                MutedText($"… {items.Count - renderCount} more item(s) (see Raw view)."));
         }
 
         return itemsPanel;
@@ -605,15 +567,6 @@ public static class JsonCardViewBuilder
             : text;
     }
 
-    /// Un Expander (style global de l'appli : coins arrondis, flèche,
-    /// déjà utilisé pour "Response Headers"/"Body"/etc.) plutôt qu'un
-    /// simple Border : replié par défaut, la réponse peut compter des
-    /// dizaines de blocs imbriqués et les afficher tous dépliés d'un
-    /// coup serait illisible. Content n'est délibérément pas encore
-    /// affecté ici : l'appelant doit pousser la carte retournée sur
-    /// BuildContext.AncestorStack (via BuildCardContent) avant de
-    /// construire son contenu, pour que toute entrée cherchable qui y
-    /// est enregistrée connaisse cette carte comme ancêtre.
     private static Expander
     BeginCard(
         string header,
@@ -696,11 +649,6 @@ public static class JsonCardViewBuilder
         };
     }
 
-    /// Enveloppe un élément dans un Border transparent dédié et
-    /// enregistre (texte affiché, wrapper) comme entrée cherchable : le
-    /// wrapper peut ensuite être surligné (Background) par la recherche
-    /// sans jamais avoir à mémoriser/restaurer l'apparence d'origine de
-    /// son contenu (y compris un badge déjà coloré).
     private static Border
     WrapForSearch(
         string text,
@@ -723,12 +671,6 @@ public static class JsonCardViewBuilder
         return wrapper;
     }
 
-    /// Double-clic, Ctrl+C (une fois la valeur cliquée pour lui donner le
-    /// focus) ou clic droit -> "Copier" : trois façons de récupérer une
-    /// valeur affichée (identifiant, email, numéro...) sans devoir passer
-    /// par la vue Brut. Un bref flash vert confirme la copie plutôt qu'une
-    /// boîte de dialogue, qui interromprait la lecture pour un geste aussi
-    /// fréquent.
     private static void
     MakeCopyable(
         Border wrapper,
@@ -740,7 +682,7 @@ public static class JsonCardViewBuilder
         }
 
         wrapper.Cursor = Cursors.Hand;
-        wrapper.ToolTip = "Double-clic, Ctrl+C ou clic droit pour copier";
+        wrapper.ToolTip = "Double-click, Ctrl+C, or right-click to copy";
         wrapper.Focusable = true;
 
         void Copy()
@@ -753,8 +695,6 @@ public static class JsonCardViewBuilder
             }
             catch
             {
-                // Presse-papiers verrouillé par une autre appli (rare) :
-                // pas grave si une copie échoue silencieusement ici.
             }
         }
 
@@ -778,7 +718,7 @@ public static class JsonCardViewBuilder
             }
         };
 
-        var copyMenuItem = new MenuItem { Header = "Copier" };
+        var copyMenuItem = new MenuItem { Header = "Copy" };
         copyMenuItem.Click += (_, __) => Copy();
 
         wrapper.ContextMenu = new ContextMenu { Items = { copyMenuItem } };
@@ -803,9 +743,6 @@ public static class JsonCardViewBuilder
         timer.Start();
     }
 
-    /// Petite bulle "Copié" flottant au-dessus de la valeur, plutôt que de
-    /// se fier au seul flash de fond -- pas assez explicite pour que
-    /// l'utilisateur comprenne que la copie a bien eu lieu.
     private static void
     ShowCopiedBubble(
         Border wrapper)
@@ -817,7 +754,7 @@ public static class JsonCardViewBuilder
             Padding = new Thickness(8, 3, 8, 3),
             Child = new TextBlock
             {
-                Text = "Copié ✓",
+                Text = "Copied ✓",
                 Foreground = Brushes.White,
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold

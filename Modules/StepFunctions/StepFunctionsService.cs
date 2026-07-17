@@ -11,10 +11,6 @@ using System.Text.Json;
 
 namespace KubaToolKit.Modules.StepFunctions;
 
-/// Levée quand une state machine EXPRESS n'a pas de journalisation
-/// CloudWatch Logs configurée : dans ce cas, ni l'API Step Functions
-/// (non supportée pour EXPRESS) ni la reconstruction via les logs ne
-/// peuvent fournir la liste des exécutions.
 public class ExpressLoggingNotConfiguredException : Exception
 {
     public ExpressLoggingNotConfiguredException(string message) : base(message)
@@ -24,9 +20,6 @@ public class ExpressLoggingNotConfiguredException : Exception
 
 public class StepFunctionsService
 {
-    // Fenêtre de recherche dans les logs CloudWatch pour les state
-    // machines EXPRESS : pas de bornes de date exposées dans l'UI pour ce
-    // module, on se limite donc à un passé récent raisonnable.
     private const int ExpressLogsLookbackDays = 7;
     private Amazon.Runtime.AWSCredentials
         GetCredentials(
@@ -51,7 +44,7 @@ public class StepFunctionsService
         string profile,
         CancellationToken cancellationToken = default)
     {
-        Logger.Debug($"StepFunctionsService: chargement des state machines (profil '{profile}').");
+        Logger.Debug($"StepFunctionsService: loading state machines (profile '{profile}').");
 
         var credentials =
             GetCredentials(profile);
@@ -95,7 +88,7 @@ public class StepFunctionsService
         }
         while (!string.IsNullOrEmpty(nextToken));
 
-        Logger.Info($"StepFunctionsService: {items.Count} state machine(s) chargée(s).");
+        Logger.Info($"StepFunctionsService: {items.Count} state machine(s) loaded.");
 
         return items
             .OrderBy(x => x.Name)
@@ -108,7 +101,7 @@ public class StepFunctionsService
         string stateMachineArn,
         CancellationToken cancellationToken = default)
     {
-        Logger.Debug($"StepFunctionsService: chargement des exécutions de '{stateMachineArn}'.");
+        Logger.Debug($"StepFunctionsService: loading executions for '{stateMachineArn}'.");
 
         var credentials =
             GetCredentials(profile);
@@ -123,8 +116,6 @@ public class StepFunctionsService
 
         string? nextToken = null;
 
-        // Se limiter à un historique récent raisonnable plutôt que de
-        // paginer sur potentiellement des dizaines de milliers d'exécutions.
         const int MaxExecutions = 200;
 
         do
@@ -162,18 +153,13 @@ public class StepFunctionsService
             && items.Count < MaxExecutions);
 
         Logger.Info(
-            $"StepFunctionsService: {items.Count} exécution(s) chargée(s) pour '{stateMachineArn}'.");
+            $"StepFunctionsService: {items.Count} execution(s) loaded for '{stateMachineArn}'.");
 
         return items
             .OrderByDescending(x => x.StartDate)
             .ToList();
     }
 
-    /// AWS Step Functions ne conserve pas la liste des exécutions des state
-    /// machines EXPRESS (ListExecutions/GetExecutionHistory ne les
-    /// supportent pas) ; la console AWS les retrouve en interrogeant les
-    /// logs CloudWatch de la state machine, si la journalisation est
-    /// activée. On fait de même ici.
     public async Task<List<ExecutionItem>>
     ListExpressExecutionsFromLogs(
         string profile,
@@ -189,9 +175,9 @@ public class StepFunctionsService
         if (logGroupIdentifier == null)
         {
             throw new ExpressLoggingNotConfiguredException(
-                "Aucune journalisation CloudWatch Logs n'est configurée sur cette state machine EXPRESS. " +
-                "Step Functions ne conserve la liste de ses exécutions que si la journalisation est activée " +
-                "(onglet \"Journalisation\" dans la console AWS).");
+                "No CloudWatch Logs logging is configured on this EXPRESS state machine. " +
+                "Step Functions only retains the list of its executions if logging is enabled " +
+                "(\"Logging\" tab in the AWS console).");
         }
 
         var rawMessages =
@@ -274,9 +260,6 @@ public class StepFunctionsService
             .ToList();
     }
 
-    /// Équivalent de GetExecutionHistory pour les state machines EXPRESS,
-    /// reconstruit à partir des mêmes logs CloudWatch que
-    /// ListExpressExecutionsFromLogs (voir sa remarque ci-dessus).
     public async Task<List<HistoryEventItem>>
     GetExpressExecutionHistoryFromLogs(
         string profile,
@@ -379,8 +362,6 @@ public class StepFunctionsService
             return null;
         }
 
-        // Le format renvoyé se termine par ":*" (toutes les log streams) ;
-        // StartQueryRequest.LogGroupIdentifiers attend l'ARN sans ce suffixe.
         return logGroupArn.EndsWith(":*")
             ? logGroupArn[..^2]
             : logGroupArn;
@@ -557,9 +538,6 @@ public class StepFunctionsService
         };
     }
 
-    /// HistoryEvent expose une quarantaine de propriétés "XxxEventDetails"
-    /// (une par valeur possible de Type) dont une seule est renseignée à la
-    /// fois ; plutôt que coder tous les cas, on la retrouve par réflexion.
     private (string? Step, string? Resource, string? DetailsJson)
     ExtractDetails(
         HistoryEvent evt)

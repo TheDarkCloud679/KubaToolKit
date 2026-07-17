@@ -100,7 +100,7 @@ public partial class CloudWatchLogsView
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("CloudWatchLogsView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("CloudWatchLogsView: SSO session expired, attempting reconnection.");
 
                 var success =
                     await AwsSsoService.Login();
@@ -113,12 +113,12 @@ public partial class CloudWatchLogsView
             }
 
             Logger.Error(
-                $"CloudWatchLogsView: échec du chargement des log groups (profil '{profile}').",
+                $"CloudWatchLogsView: failed to load log groups (profile '{profile}').",
                 ex);
 
             MessageBox.Show(
                 ex.ToString(),
-                "Erreur chargement log groups");
+                "Log groups loading error");
         }
     }
 
@@ -135,8 +135,6 @@ SearchAllLogsCheckBox_Changed(
         LogGroupsTreeView.IsEnabled =
             !searchAll;
 
-        // "Search in all log groups" doit visuellement cocher (ou décocher)
-        // tous les dossiers ; chaque nœud propage déjà l'état à ses enfants.
         foreach (var node in _logGroupTree)
         {
             node.IsChecked = searchAll;
@@ -156,7 +154,7 @@ SearchAllLogsCheckBox_Changed(
         _currentSearchText = searchText;
 
         Logger.Debug(
-            $"CloudWatchLogsView: recherche '{searchText}' (profil '{profile}', {startDate:yyyy-MM-dd} {startTime} -> {endDate:yyyy-MM-dd} {endTime}).");
+            $"CloudWatchLogsView: search '{searchText}' (profile '{profile}', {startDate:yyyy-MM-dd} {startTime} -> {endDate:yyyy-MM-dd} {endTime}).");
 
         try
         {
@@ -212,14 +210,14 @@ SearchAllLogsCheckBox_Changed(
                             .Token);
 
             Logger.Info(
-                $"CloudWatchLogsView: recherche '{searchText}' terminée, {results.Count} résultat(s).");
+                $"CloudWatchLogsView: search '{searchText}' completed, {results.Count} result(s).");
 
             DisplayResults(
                 results);
         }
         catch (OperationCanceledException)
         {
-            Logger.Debug("CloudWatchLogsView: recherche annulée.");
+            Logger.Debug("CloudWatchLogsView: search cancelled.");
 
             ProgressTextBlock.Text =
                 "Search cancelled";
@@ -231,7 +229,7 @@ SearchAllLogsCheckBox_Changed(
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("CloudWatchLogsView: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("CloudWatchLogsView: SSO session expired, attempting reconnection.");
 
                 var success =
                     await AwsSsoService.Login();
@@ -243,7 +241,7 @@ SearchAllLogsCheckBox_Changed(
                 }
             }
 
-            Logger.Error($"CloudWatchLogsView: échec de la recherche '{searchText}'.", ex);
+            Logger.Error($"CloudWatchLogsView: search '{searchText}' failed.", ex);
 
             MessageBox.Show(ex.ToString(), "Search error");
         }
@@ -300,7 +298,7 @@ SearchAllLogsCheckBox_Changed(
                     _currentProfile))
             {
                 MessageBox.Show(
-                    "Choisir un profil AWS");
+                    "Please select an AWS profile");
 
                 return;
             }
@@ -444,7 +442,6 @@ SearchAllLogsCheckBox_Changed(
         DebugPanel.Visibility =
             Visibility.Collapsed;
 
-        // Rendre à Log Groups l'espace qu'on lui avait emprunté.
         LogGroupsRow.Height =
             new GridLength(LogGroupsBaseHeight);
 
@@ -455,10 +452,6 @@ SearchAllLogsCheckBox_Changed(
             QueryEditorBaseHeight;
     }
 
-    /// Agrandit l'éditeur de requête pour afficher toutes les lignes
-    /// pré-remplies sans scroll interne (dans une limite raisonnable), en
-    /// empruntant l'espace nécessaire au panneau Log Groups plutôt qu'aux
-    /// résultats.
     private void
     ResizeQueryEditorToFitContent()
     {
@@ -680,13 +673,11 @@ BuildLogGroupTree(
     {
         _logGroupTree.Clear();
 
-        // dictionnaire des catégories
         var categoryNodes =
             new Dictionary<
                 string,
                 LogGroupNode>();
 
-        // créer catégories du JSON
         foreach (var category
                  in _logGroupCategories)
         {
@@ -708,7 +699,6 @@ BuildLogGroupTree(
                     categoryNode;
         }
 
-        // catégorie fallback
         var uncategorized =
             new LogGroupNode
             {
@@ -722,7 +712,6 @@ BuildLogGroupTree(
         _logGroupTree.Add(
             uncategorized);
 
-        // ranger les logs
         foreach (var logGroup
                  in logGroups
                      .OrderBy(x => x))
@@ -731,7 +720,6 @@ BuildLogGroupTree(
                 targetCategory =
                     null;
 
-            // chercher un match
             foreach (var category
                      in _logGroupCategories)
             {
@@ -755,12 +743,10 @@ BuildLogGroupTree(
                 break;
             }
 
-            // fallback
             targetCategory
                 ??=
                     uncategorized;
 
-            // sous-catégorie optionnelle
             var subCategory =
                 GetSubCategory(
                     logGroup);
@@ -769,7 +755,6 @@ BuildLogGroupTree(
                 parentNode =
                     targetCategory;
 
-            // seulement si utile
             if (!string.IsNullOrWhiteSpace(
                     subCategory))
             {
@@ -803,7 +788,6 @@ BuildLogGroupTree(
                     subCategoryNode;
             }
 
-            // stage plus profond
             var stageCategory =
                 GetStageCategory(
                     logGroup);
@@ -878,6 +862,5 @@ BuildLogGroupTree(
         object sender,
         MouseWheelEventArgs e)
     {
-        // laisser le Shell gérer
     }
 }

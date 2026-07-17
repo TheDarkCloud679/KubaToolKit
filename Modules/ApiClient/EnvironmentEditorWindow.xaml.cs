@@ -27,7 +27,6 @@ public partial class EnvironmentEditorWindow
 
         VariablesGrid.ItemsSource = _variables;
 
-        // Copie défensive : Cancel ne doit rien modifier de l'original.
         foreach (var variable in environment.Variables)
         {
             _variables.Add(
@@ -50,7 +49,7 @@ public partial class EnvironmentEditorWindow
         if (string.IsNullOrWhiteSpace(NameTextBox.Text))
         {
             MessageBox.Show(
-                "Entrer un nom d'environnement");
+                "Enter an environment name");
 
             return;
         }

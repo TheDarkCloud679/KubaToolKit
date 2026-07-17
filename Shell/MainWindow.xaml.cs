@@ -20,8 +20,6 @@ namespace KubaToolKit.Shell;
 public partial class MainWindow
     : Window
 {
-    // New bricks are registered in ToolModuleRegistry; add typed accessors below
-    // only if the Shell needs to talk to that module's specific API.
     private readonly IReadOnlyList<IToolModule> _modules = ToolModuleRegistry.CreateModules();
     private readonly DashboardView _dashboardView;
     private readonly CloudWatchLogsView _cloudWatchView;
@@ -38,12 +36,6 @@ public partial class MainWindow
     private bool _updatingDate = false;
     private DatePicker? _activeDatePicker;
 
-    // Pixels à défiler pour un "cran" standard de molette (delta = 120).
-    // La vitesse réelle appliquée est proportionnelle à e.Delta, pas un
-    // saut fixe par évènement : indispensable pour les souris/trackpads à
-    // défilement fluide qui envoient beaucoup de petits deltas par
-    // mouvement (sinon chacun d'eux sautait du même montant fixe, ce qui
-    // donnait une impression de scroll bien trop rapide).
     private const double PixelsPerNotch = 18;
 
     public MainWindow()
@@ -52,9 +44,6 @@ public partial class MainWindow
 
         InitializeComponent();
 
-        // Lu depuis <Version> du csproj (KubaToolKit.csproj) plutôt que
-        // codé en dur ici : un seul endroit à modifier pour publier une
-        // nouvelle version.
         var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
         VersionTextBlock.Text =
@@ -70,7 +59,7 @@ public partial class MainWindow
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
         _apiClientView = _modules.OfType<ApiClientModule>().Single().TypedView;
 
-        Logger.Debug($"MainWindow: {_modules.Count} module(s) instancié(s).");
+        Logger.Debug($"MainWindow: {_modules.Count} module(s) instantiated.");
 
         foreach (var module in _modules)
         {
@@ -80,7 +69,7 @@ public partial class MainWindow
 
         _dashboardView.Visibility = Visibility.Visible;
 
-        Logger.Info("MainWindow: constructeur terminé.");
+        Logger.Info("MainWindow: constructor finished.");
 
         _cloudWatchView.GetDateRange =
             () => (StartDatePicker.SelectedDate, StartTimeTextBox.Text, EndDatePicker.SelectedDate, EndTimeTextBox.Text);
@@ -131,11 +120,11 @@ MainWindow_Loaded(
                 this,
                 new RoutedEventArgs());
 
-            Logger.Info("MainWindow: chargement initial terminé.");
+            Logger.Info("MainWindow: initial load finished.");
         }
         catch (Exception ex)
         {
-            Logger.Error("MainWindow: échec du chargement initial.", ex);
+            Logger.Error("MainWindow: initial load failed.", ex);
 
             MessageBox.Show(
                 ex.ToString(),
@@ -240,8 +229,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
         else if (ApiClientModeRadio?.IsChecked == true)
         {
-            // Aucun profil AWS nécessaire : l'API Client est indépendant
-            // du système de credentials/profils de l'app.
         }
         else if (CloudWatchModeRadio?.IsChecked == true)
         {
@@ -249,9 +236,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
         else
         {
-            // CloudTrail interroge à la demande (bouton Search) : rien à
-            // précharger au changement de profil, contrairement à
-            // CloudWatch qui a besoin de la liste des log groups.
         }
     }
 
@@ -431,9 +415,6 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
     }
 
-    /// Valide le profil AWS et la plage date/heure partagée (Start/End)
-    /// avant une recherche CloudWatch ou CloudTrail -- les deux modes
-    /// utilisent exactement les mêmes champs du Shell et les mêmes règles.
     private bool
     TryGetValidatedTimeRange(
         out string profile)
@@ -445,7 +426,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (string.IsNullOrWhiteSpace(profile))
         {
             MessageBox.Show(
-                "Choisir un profil AWS");
+                "Please select an AWS profile");
 
             return false;
         }
@@ -455,7 +436,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 out var startTime))
         {
             MessageBox.Show(
-                "Invalid start time.\nFormat attendu : HH:mm",
+                "Invalid start time.\nExpected format: HH:mm",
                 "Time error");
 
             return false;
@@ -466,7 +447,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 out var endTime))
         {
             MessageBox.Show(
-                "Invalid end time.\nFormat attendu : HH:mm",
+                "Invalid end time.\nExpected format: HH:mm",
                 "Time error");
 
             return false;
@@ -518,13 +499,10 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             return;
         }
 
-        // Que ce soit Start ou End qu'on ouvre en premier, le même flux
-        // "1er clic = début, 2e clic = fin" s'applique.
         _activeDatePicker = picker;
         picker.SelectedDateChanged -= StartDatePicker_SelectedDateChanged;
         picker.SelectedDateChanged += StartDatePicker_SelectedDateChanged;
 
-        // Empêcher la fermeture automatique
         picker.CalendarClosed -= StartDatePicker_CalendarClosed;
         picker.CalendarClosed += StartDatePicker_CalendarClosed;
     }
@@ -539,19 +517,13 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             return;
         }
 
-        // on attend un 2e clic
         if (_waitingForEndDate && _forceKeepCalendarOpen)
         {
-            // Le 2e clic fixe toujours la date de fin : le calendrier doit
-            // se rouvrir sous le champ End, même si le 1er clic a eu lieu
-            // sur Start.
             var targetPicker = EndDatePicker;
 
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render,
                 new Action(() =>
                 {
-                    // On change de champ (le 1er clic avait ouvert Start) :
-                    // on ouvre directement le calendrier de fin.
                     if (!ReferenceEquals(picker, targetPicker))
                     {
                         targetPicker.IsDropDownOpen = true;
@@ -559,17 +531,12 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                         return;
                     }
 
-                    // Sinon (le 1er clic avait déjà ouvert End) : on garde
-                    // le comportement d'origine, basé sur le focus.
                     if (picker.IsKeyboardFocusWithin)
                     {
                         targetPicker.IsDropDownOpen = true;
                     }
                     else
                     {
-                        // utilisateur a cliqué ailleurs
-                        // garder start mémorisé
-                        // mais arrêter la réouverture
                         _forceKeepCalendarOpen = false;
                     }
                 }));
@@ -608,7 +575,6 @@ StartDatePicker_SelectedDateChanged(
                     .Value
                     .Date;
 
-            // PREMIER CLIC
             if (!_waitingForEndDate)
             {
                 _startRangeDate =
@@ -635,7 +601,6 @@ StartDatePicker_SelectedDateChanged(
                 return;
             }
 
-            // SECOND CLIC
             if (_startRangeDate
                 != null)
             {
@@ -646,7 +611,6 @@ StartDatePicker_SelectedDateChanged(
                     selectedDate;
             }
 
-            // sécurité
             if (EndDatePicker.SelectedDate
                 <
                 StartDatePicker.SelectedDate)
@@ -686,7 +650,6 @@ StartDatePicker_SelectedDateChanged(
       object sender,
       RoutedEventArgs e)
     {
-        // éviter exécution pendant InitializeComponent
         if (!_windowLoaded)
         {
             return;
@@ -749,20 +712,9 @@ StartDatePicker_SelectedDateChanged(
         ProfilePatternSearchRow.Visibility =
             isApiClient ? Visibility.Collapsed : Visibility.Visible;
 
-        // Dates/heures servent au filtrage CloudWatch et CloudTrail (tous
-        // deux interrogent une plage temporelle).
         DateRangeRow.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
 
-        // Pattern ne sert qu'au filtrage CloudWatch ; Attribute ne sert
-        // qu'à CloudTrail (les deux partagent la même colonne, jamais
-        // visibles ensemble). Search sert aussi en S3 (recherche dans les
-        // dossiers). Dashboard/SQS/Step Functions ont chacun leur propre
-        // bouton "Refresh" et n'utilisent ni le texte de recherche ni le
-        // bouton d'action partagé : les deux disparaissent complètement
-        // pour ces modules plutôt que d'occuper une ligne pour rien. Le
-        // bouton reste toujours sur la même ligne que Search, jamais avec
-        // les dates.
         PatternGroup.Visibility =
             isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
@@ -803,9 +755,6 @@ StartDatePicker_SelectedDateChanged(
             await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
-
-        // isCloudTrail : rien à précharger, la recherche se fait à la
-        // demande (bouton Search).
     }
 
     private void
@@ -842,9 +791,6 @@ MainWindow_PreviewMouseWheel(
             return;
         }
 
-        // Certains ScrollViewer (ex: popup de ComboBox) gèrent eux-mêmes
-        // leur vitesse de défilement via ScrollSpeedBehavior ; on ne doit
-        // pas leur imposer la vitesse générique par-dessus.
         if (ScrollSpeedBehavior.GetLinesPerNotch(currentScroll) > 0)
         {
             return;
@@ -860,13 +806,10 @@ MainWindow_PreviewMouseWheel(
             currentScroll.VerticalOffset >=
             currentScroll.ScrollableHeight;
 
-        // Proportionnel à e.Delta (et non un saut fixe par évènement) :
-        // un demi-cran ne doit déplacer qu'à moitié moins qu'un cran plein.
         double delta =
             -e.Delta / 120.0
             * PixelsPerNotch;
 
-        // Scroll interne normal
         if ((!scrollingUp && !atBottom)
             ||
             (scrollingUp && !atTop))
@@ -882,7 +825,6 @@ MainWindow_PreviewMouseWheel(
             return;
         }
 
-        // Chercher un parent scrollable
         DependencyObject? parent =
             VisualTreeHelper
                 .GetParent(

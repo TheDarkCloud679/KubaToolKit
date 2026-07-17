@@ -18,7 +18,7 @@ public partial class FolderAuthWindow
 
         _node = node;
 
-        TitleText.Text = $"Authentification — {node.Name}";
+        TitleText.Text = $"Authentication — {node.Name}";
 
         BearerTokenTextBox.Text = node.Auth.BearerToken;
         BasicUsernameTextBox.Text = node.Auth.Username;

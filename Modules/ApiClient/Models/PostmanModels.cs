@@ -3,11 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace KubaToolKit.Modules.ApiClient.Models;
 
-// Sous-ensemble du schéma d'export Postman (collection v2.1 / environment)
-// suffisant pour importer method/url/headers/body et des variables
-// {{clé}} : pas besoin de supporter form-data, GraphQL, auth par requête,
-// etc. pour une première version.
-
 public class PostmanCollection
 {
     [JsonPropertyName("info")]
@@ -31,16 +26,12 @@ public class PostmanItem
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
 
-    // Présent pour un dossier.
     [JsonPropertyName("item")]
     public List<PostmanItem>? Item { get; set; }
 
-    // Présent pour une requête (feuille).
     [JsonPropertyName("request")]
     public PostmanRequest? Request { get; set; }
 
-    // Postman autorise aussi un auth directement sur un dossier (hérité
-    // par ses enfants), en plus de celui sur la collection ou la requête.
     [JsonPropertyName("auth")]
     public PostmanAuth? Auth { get; set; }
 }
@@ -56,13 +47,9 @@ public class PostmanRequest
     [JsonPropertyName("body")]
     public PostmanBody? Body { get; set; }
 
-    // Postman exporte tantôt une simple string, tantôt un objet
-    // {raw, host, path, query...} : JsonElement capture les deux formes.
     [JsonPropertyName("url")]
     public JsonElement Url { get; set; }
 
-    // Champs propres à KubaToolKit (absents des exports Postman standards,
-    // ignorés sans risque si le fichier est réimporté dans Postman).
     [JsonPropertyName("_kubatoolkit_favorite")]
     public bool? Favorite { get; set; }
 
@@ -73,8 +60,6 @@ public class PostmanRequest
     public PostmanAuth? Auth { get; set; }
 }
 
-// Absent = hérite du parent (comportement par défaut de Postman).
-// {"type":"noauth"} = explicitement aucune auth (n'hérite pas).
 public class PostmanAuth
 {
     [JsonPropertyName("type")]

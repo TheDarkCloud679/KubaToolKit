@@ -14,7 +14,6 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Tree archive -->
         <Border
             Grid.Column="0"
             BorderBrush="{StaticResource BorderBrush}"
@@ -51,7 +50,6 @@
 
         </Border>
 
-        <!-- Preview -->
         <Border
             Grid.Column="1"
             BorderBrush="{StaticResource BorderBrush}"

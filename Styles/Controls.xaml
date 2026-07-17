@@ -214,7 +214,6 @@
                             Focusable="False"
                             IsHitTestVisible="False"
                             Margin="{TemplateBinding Padding}"/>
-                        <!-- Invisible overlay: the whole field opens the calendar, no icon shown. -->
                         <Button x:Name="PART_Button" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
                             <Button.Style>
                                 <Style TargetType="Button">
@@ -236,11 +235,6 @@
                             StaysOpen="False"
                             AllowsTransparency="True"
                             PopupAnimation="Slide">
-                            <!--
-                                DatePicker's own code expects the Popup's direct Child to be
-                                the Calendar (it casts _popUp.Child as Calendar) - wrapping it
-                                in another element here would silently break date selection.
-                            -->
                             <Calendar
                                 x:Name="Calendar"
                                 Margin="0,4,0,0"
@@ -249,10 +243,6 @@
                                 BorderThickness="1"
                                 Effect="{StaticResource CardShadowEffect}"/>
                         </Popup>
-                        <!--
-                            Purely decorative label synced to the calendar Popup via an
-                            ElementName binding, so it never touches PART_Popup's content.
-                        -->
                         <Popup
                             PlacementTarget="{Binding ElementName=Bd}"
                             Placement="Top"
@@ -592,13 +582,6 @@
         </Style.Triggers>
     </Style>
 
-    <!--
-        Pour les colonnes de texte librement éditables (clé/valeur des
-        grilles Headers/Params/Environment) : une légère bordure signale
-        que la cellule se comporte comme un champ de saisie, contrairement
-        aux grilles en lecture seule qui utilisent le style par défaut
-        ci-dessus (sans bordure).
-    -->
     <Style x:Key="EditableDataGridCellStyle" TargetType="DataGridCell">
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="Margin" Value="2,3"/>
@@ -638,17 +621,6 @@
         <Setter Property="Padding" Value="2"/>
     </Style>
 
-    <!--
-        Un template personnalisé (flèche pivotante + ItemsPresenter animé)
-        a été tenté ici pour animer le dépli de l'arborescence des buckets
-        S3/collections API Client/groupes de logs CloudWatch, mais cassait
-        l'alignement des lignes dans certains arbres (CloudWatch notamment,
-        dont le HeaderTemplate contient sa propre CheckBox). Revenu au
-        template OS par défaut (juste ces trois Setters, sans Template
-        personnalisé) : l'animation de hauteur s'est avérée peu fiable
-        avec ce genre de contenu (voir aussi le retour en arrière sur
-        l'Expander, pour la même raison).
-    -->
     <Style TargetType="TreeViewItem">
         <Setter Property="Padding" Value="4,3"/>
         <Setter Property="FontSize" Value="13"/>
@@ -746,14 +718,6 @@
          PROGRESS BAR
          ===================================================== -->
 
-    <!--
-        PART_Indicator (déterminé, Width bindée par ProgressBar lui-même)
-        était le seul visuel présent : en mode IsIndeterminate=True, rien
-        ne pilotait sa largeur, donc la barre ne montrait tout simplement
-        rien qui bouge pendant un chargement. IndeterminateIndicator est
-        un second rectangle, cette fois animé en boucle (glissement de
-        gauche à droite), affiché uniquement quand IsIndeterminate=True.
-    -->
     <Style TargetType="ProgressBar">
         <Setter Property="Height" Value="6"/>
         <Setter Property="Background" Value="{StaticResource BorderBrush}"/>

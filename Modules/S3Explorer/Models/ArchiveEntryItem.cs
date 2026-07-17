@@ -31,7 +31,6 @@ public class ArchiveEntryItem
     } =
         new();
 
-    // nouveau
     public string
         ArchivePath
     {
@@ -39,7 +38,6 @@ public class ArchiveEntryItem
         set;
     } = "";
 
-    // nouveau
     public string
         EntryPath
     {

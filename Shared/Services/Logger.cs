@@ -9,12 +9,6 @@ public enum LogLevel
     Error = 2
 }
 
-/// Journalisation fichier minimale : un fichier par jour dans un dossier
-/// "Logs" à côté de l'exécutable (donc sous bin\... en dev, déjà ignoré
-/// par git ; à côté de l'exe dans un build publié). DEBUG par défaut dès
-/// le tout premier lancement (outil interne, le coût d'un fichier plus
-/// verbeux est négligeable) ; réglable en éditant Logs\loglevel.txt
-/// (DEBUG, INFO ou ERROR) puis en relançant l'application.
 public static class Logger
 {
     private static readonly object WriteLock = new();
@@ -33,7 +27,6 @@ public static class Logger
         }
         catch
         {
-            // La journalisation ne doit jamais empêcher l'appli de démarrer.
         }
     }
 
@@ -47,8 +40,8 @@ public static class Logger
             File.WriteAllText(
                 configPath,
                 """
-                # Niveau minimum des journaux dans ce dossier : DEBUG, INFO ou ERROR.
-                # (DEBUG par défaut. Modifier cette valeur puis relancer KubaToolKit.)
+                # Minimum log level for this folder: DEBUG, INFO or ERROR.
+                # (DEBUG by default. Change this value then restart KubaToolKit.)
                 DEBUG
                 """);
 
@@ -108,8 +101,6 @@ public static class Logger
             }
             catch
             {
-                // Idem : ne jamais planter l'appli à cause d'un problème
-                // d'écriture de log (dossier verrouillé, disque plein...).
             }
         }
     }

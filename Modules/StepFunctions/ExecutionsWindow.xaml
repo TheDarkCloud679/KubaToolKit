@@ -40,7 +40,7 @@
 
                 <TextBlock
                     x:Name="ExpressHintTextBlock"
-                    Text="EXPRESS : liste reconstruite depuis CloudWatch Logs (7 derniers jours, nécessite la journalisation activée)"
+                    Text="EXPRESS: list rebuilt from CloudWatch Logs (last 7 days, requires logging to be enabled)"
                     FontSize="11"
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"

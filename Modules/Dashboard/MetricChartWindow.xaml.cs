@@ -24,9 +24,6 @@ public partial class MetricChartWindow
     private readonly List<ChartSeriesRequest> _seriesRequests;
     private List<LoadedSeries> _series = new();
 
-    // Géométrie de la dernière zone de tracé dessinée, mémorisée pour
-    // convertir une position souris (survol / sélection) en instant --
-    // recalculée à chaque DrawChart() plutôt que dupliquée.
     private bool _hasPlotArea;
     private double _plotLeft;
     private double _plotTop;
@@ -54,10 +51,6 @@ public partial class MetricChartWindow
         TitleTextBlock.Text = title;
         SubtitleTextBlock.Text = subtitle;
 
-        // Plage par défaut à l'ouverture : la dernière heure, comme avant
-        // que la plage ne soit réglable -- l'utilisateur peut l'élargir
-        // ensuite (Start/End + Apply), même logique que la recherche de
-        // logs CloudWatch.
         var now = DateTime.Now;
 
         StartDatePicker.SelectedDate = now.AddHours(-1).Date;
@@ -107,8 +100,8 @@ public partial class MetricChartWindow
             if (endLocal <= startLocal)
             {
                 MessageBox.Show(
-                    "La date de fin doit être après la date de début.",
-                    "Plage invalide");
+                    "The end date must be after the start date.",
+                    "Invalid range");
 
                 return;
             }
@@ -148,13 +141,13 @@ public partial class MetricChartWindow
             DrawLegend();
 
             Logger.Info(
-                $"MetricChartWindow: {loaded.Sum(s => s.Points.Count)} point(s) chargé(s) sur {loaded.Count} série(s).");
+                $"MetricChartWindow: {loaded.Sum(s => s.Points.Count)} point(s) loaded over {loaded.Count} series.");
         }
         catch (Exception ex)
         {
             if (AwsSsoService.IsSsoExpired(ex))
             {
-                Logger.Debug("MetricChartWindow: session SSO expirée, tentative de reconnexion.");
+                Logger.Debug("MetricChartWindow: SSO session expired, attempting reconnection.");
 
                 var success =
                     await AwsSsoService.Login();
@@ -166,7 +159,7 @@ public partial class MetricChartWindow
                 }
             }
 
-            Logger.Error("MetricChartWindow: échec du chargement de la métrique.", ex);
+            Logger.Error("MetricChartWindow: failed to load metric.", ex);
 
             MessageBox.Show(
                 ex.ToString(),
@@ -192,8 +185,6 @@ public partial class MetricChartWindow
     {
         LegendPanel.Children.Clear();
 
-        // Une seule courbe : le nom est déjà dans le titre, pas besoin de
-        // légende séparée.
         if (_series.Count <= 1)
         {
             LegendPanel.Visibility = Visibility.Collapsed;
@@ -296,8 +287,6 @@ public partial class MetricChartWindow
 
         if (Math.Abs(maxValue - minValue) < 0.0001)
         {
-            // Plage plate : on ouvre un peu l'échelle pour que la ligne
-            // ne colle pas aux bords du graphique.
             maxValue += 1;
             minValue = Math.Max(0, minValue - 1);
         }
@@ -315,7 +304,6 @@ public partial class MetricChartWindow
             _series.FirstOrDefault()?.Unit
             ?? "";
 
-        // Gridlines horizontales + labels de valeur
         const int GridLines = 4;
 
         for (int i = 0; i <= GridLines; i++)
@@ -393,8 +381,6 @@ public partial class MetricChartWindow
                 })
                 .ToList();
 
-            // Zone remplie sous la courbe : seulement pour une courbe
-            // unique, pour ne pas superposer plusieurs dégradés opaques.
             if (singleSeries)
             {
                 var fillPoints = new PointCollection();
@@ -446,10 +432,6 @@ public partial class MetricChartWindow
             ChartCanvas.Children.Add(polyline);
         }
 
-        // Labels d'axe temporel (début / milieu / fin) : sur une plage
-        // courte l'heure seule suffit, mais dès qu'elle dépasse une
-        // journée "HH:mm" seul devient ambigu (quel jour ?), donc on
-        // ajoute la date.
         string timeFormat =
             totalSeconds >= 24 * 3600
                 ? "dd/MM HH:mm"
@@ -480,11 +462,6 @@ public partial class MetricChartWindow
             timeFormat);
     }
 
-    // Survol : ligne verticale + infobulle date/heure et valeur de chaque
-    // courbe au point le plus proche. Glisser : dessine un rectangle de
-    // sélection puis, au relâchement, recharge le graphique borné à la
-    // plage survolée -- un "zoom" sans dupliquer les champs Start/End,
-    // qui restent la seule source de vérité de la plage affichée.
     private void
     OverlayCanvas_MouseMove(
         object sender,
@@ -579,8 +556,6 @@ public partial class MetricChartWindow
         double left = Math.Min(_selectionStartX, x);
         double right = Math.Max(_selectionStartX, x);
 
-        // Un simple clic (pas un vrai glisser) ne doit pas déclencher de
-        // zoom sur une plage quasi nulle.
         const double MinDragPixels = 6;
 
         if (right - left < MinDragPixels)

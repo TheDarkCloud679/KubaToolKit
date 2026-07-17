@@ -12,7 +12,7 @@ namespace KubaToolKit
     {
         public App()
         {
-            Logger.Info("Application: démarrage.");
+            Logger.Info("Application: starting.");
 
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
                 ReportCrash(e.ExceptionObject as Exception);
@@ -24,20 +24,15 @@ namespace KubaToolKit
             };
         }
 
-        // Sans ça, une exception non gérée au démarrage (ex. dans le
-        // constructeur d'un module créé avant l'affichage de la fenêtre)
-        // fait quitter le process avec le code 0xE0434352 sans rien
-        // afficher : ce handler montre le message complet et le
-        // consigne dans Logs\ (voir Logger).
         private static void
         ReportCrash(
             Exception? ex)
         {
-            Logger.Error("Exception non gérée.", ex);
+            Logger.Error("Unhandled exception.", ex);
 
             MessageBox.Show(
-                $"{ex}\n\nDétails consignés dans {Logger.LogsFolder}",
-                "KubaToolKit - Erreur au démarrage");
+                $"{ex}\n\nDetails logged in {Logger.LogsFolder}",
+                "KubaToolKit - Startup Error");
         }
     }
 
