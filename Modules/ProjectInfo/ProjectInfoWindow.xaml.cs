@@ -314,8 +314,19 @@ public partial class ProjectInfoWindow
             nameEditBox.Text = section.Name;
             nameText.Visibility = Visibility.Collapsed;
             nameEditBox.Visibility = Visibility.Visible;
-            nameEditBox.Focus();
-            nameEditBox.SelectAll();
+
+            // Un élément qui vient de passer de Collapsed à Visible n'est
+            // pas encore réellement visible (pas de passe de mise en page
+            // faite) : Focus() appelé tout de suite ici échouerait
+            // silencieusement. Différer au prochain passage de mise en
+            // page, comme ailleurs dans l'appli pour le même problème.
+            nameEditBox.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    nameEditBox.Focus();
+                    nameEditBox.SelectAll();
+                }));
         };
 
         nameEditBox.LostFocus += (_, __) => CommitSectionRename();
