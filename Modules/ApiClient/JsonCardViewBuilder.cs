@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -46,6 +48,8 @@ public static class JsonCardViewBuilder
     private static readonly Brush TextPrimaryBrush = MakeBrush(0x1E, 0x24, 0x30);
     private static readonly Brush TextSecondaryBrush = MakeBrush(0x68, 0x70, 0x7E);
     private static readonly Brush TextMutedBrush = MakeBrush(0x98, 0xA1, 0xAF);
+
+    private static readonly Brush CopyFeedbackBrush = MakeAlphaBrush(0x50, SuccessColor);
 
     /// Contexte de construction interne, filé à travers la récursion :
     /// évite de répéter plusieurs paramètres dans chaque signature.
@@ -220,6 +224,8 @@ public static class JsonCardViewBuilder
             var valueWrapper = WrapForSearch(GetDisplayText(valueElement), valueElement, ctx);
             valueWrapper.Margin = new Thickness(0, 3, 0, 3);
             valueWrapper.HorizontalAlignment = HorizontalAlignment.Left;
+
+            MakeCopyable(valueWrapper, GetDisplayText(valueElement));
 
             Grid.SetRow(valueWrapper, row);
             Grid.SetColumn(valueWrapper, 1);
@@ -446,6 +452,8 @@ public static class JsonCardViewBuilder
 
                 var wrapper = WrapForSearch(text, scalarBlock, ctx);
                 wrapper.Margin = new Thickness(0, 0, 0, 4);
+
+                MakeCopyable(wrapper, text);
 
                 child = wrapper;
             }
@@ -714,6 +722,85 @@ public static class JsonCardViewBuilder
         return wrapper;
     }
 
+    /// Double-clic, Ctrl+C (une fois la valeur cliquée pour lui donner le
+    /// focus) ou clic droit -> "Copier" : trois façons de récupérer une
+    /// valeur affichée (identifiant, email, numéro...) sans devoir passer
+    /// par la vue Brut. Un bref flash vert confirme la copie plutôt qu'une
+    /// boîte de dialogue, qui interromprait la lecture pour un geste aussi
+    /// fréquent.
+    private static void
+    MakeCopyable(
+        Border wrapper,
+        string copyText)
+    {
+        if (string.IsNullOrEmpty(copyText))
+        {
+            return;
+        }
+
+        wrapper.Cursor = Cursors.Hand;
+        wrapper.ToolTip = "Double-clic, Ctrl+C ou clic droit pour copier";
+        wrapper.Focusable = true;
+
+        void Copy()
+        {
+            try
+            {
+                Clipboard.SetText(copyText);
+                FlashCopyFeedback(wrapper);
+            }
+            catch
+            {
+                // Presse-papiers verrouillé par une autre appli (rare) :
+                // pas grave si une copie échoue silencieusement ici.
+            }
+        }
+
+        wrapper.MouseLeftButtonDown += (_, e) =>
+        {
+            wrapper.Focus();
+
+            if (e.ClickCount == 2)
+            {
+                Copy();
+                e.Handled = true;
+            }
+        };
+
+        wrapper.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                Copy();
+                e.Handled = true;
+            }
+        };
+
+        var copyMenuItem = new MenuItem { Header = "Copier" };
+        copyMenuItem.Click += (_, __) => Copy();
+
+        wrapper.ContextMenu = new ContextMenu { Items = { copyMenuItem } };
+    }
+
+    private static void
+    FlashCopyFeedback(
+        Border wrapper)
+    {
+        var original = wrapper.Background;
+
+        wrapper.Background = CopyFeedbackBrush;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+
+        timer.Tick += (_, __) =>
+        {
+            timer.Stop();
+            wrapper.Background = original;
+        };
+
+        timer.Start();
+    }
+
     private static string
     GetDisplayText(
         FrameworkElement element) =>
@@ -731,6 +818,17 @@ public static class JsonCardViewBuilder
         byte b)
     {
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+
+        return brush;
+    }
+
+    private static Brush
+    MakeAlphaBrush(
+        byte alpha,
+        Color color)
+    {
+        var brush = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
         brush.Freeze();
 
         return brush;
