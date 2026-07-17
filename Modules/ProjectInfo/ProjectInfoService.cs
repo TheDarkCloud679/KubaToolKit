@@ -19,6 +19,32 @@ public class ProjectInfoService
     GetFilePath() =>
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "project-info.json");
 
+    /// Dossier partagé (Config/ProjectFiles/{clé}) où déposer des fichiers
+    /// pour ce projet -- pas de vraie fonction d'upload dans l'appli,
+    /// juste un raccourci vers un dossier ouvert dans l'explorateur,
+    /// créé au premier clic s'il n'existe pas encore.
+    public static string
+    GetProjectFolderPath(
+        string projectKey) =>
+        Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "Config",
+            "ProjectFiles",
+            SanitizeForFolderName(projectKey));
+
+    private static string
+    SanitizeForFolderName(
+        string value)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+
+        var sanitized =
+            new string(value.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray())
+                .Trim();
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "_" : sanitized;
+    }
+
     public ProjectInfoRoot
     Load()
     {

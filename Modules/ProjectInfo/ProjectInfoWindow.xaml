@@ -51,6 +51,13 @@
                 FontSize="11"
                 FontStyle="Italic"
                 Foreground="{StaticResource TextMutedBrush}"/>
+
+            <Button
+                Content="📁 Dossier de fichiers"
+                Margin="16,0,0,0"
+                Padding="10,2"
+                Click="OpenProjectFolderButton_Click"
+                ToolTip="Ouvre (et crée si besoin) un dossier partagé pour ce projet, pour y déposer des fichiers à côté de ce glossaire."/>
         </StackPanel>
 
         <StackPanel

@@ -2,6 +2,8 @@ using KubaToolKit.Modules.ProjectInfo.Models;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -127,6 +129,33 @@ public partial class ProjectInfoWindow
         UpdateTitle();
         RenderSections();
         Save();
+    }
+
+    private void
+    OpenProjectFolderButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            var folderPath = ProjectInfoService.GetProjectFolderPath(_project.Key);
+
+            Directory.CreateDirectory(folderPath);
+
+            Logger.Debug($"ProjectInfoWindow: ouverture du dossier de fichiers '{folderPath}'.");
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = folderPath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ProjectInfoWindow: échec de l'ouverture du dossier de fichiers.", ex);
+
+            MessageBox.Show(ex.ToString(), "Project Info - dossier de fichiers");
+        }
     }
 
     private void

@@ -11,5 +11,10 @@ Config/credentials
 # remove this line if you'd rather version it in git instead.
 Config/project-info.json
 
+# Files dropped in a project's "Dossier de fichiers" shortcut (Project
+# Info window) -- arbitrary documents, same reasoning as project-info.json
+# above: shared directly between colleagues, not meant for git.
+Config/ProjectFiles/
+
 # Per-user Visual Studio project settings (machine-specific paths)
 *.csproj.user
