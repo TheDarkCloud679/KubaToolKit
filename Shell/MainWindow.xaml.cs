@@ -142,10 +142,6 @@ MainWindow_Loaded(
                 .OrderBy(x => x)
                 .ToList();
         ProfileCombo.ItemsSource = profiles;
-        if (profiles.Any())
-        {
-            ProfileCombo.SelectedIndex = 0;
-        }
     }
 
     private void LoadPatterns()
