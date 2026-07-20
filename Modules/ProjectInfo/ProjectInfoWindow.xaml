@@ -82,6 +82,7 @@
             <Button
                 Content="▲"
                 Width="30"
+                Padding="0"
                 Margin="6,0,0,0"
                 Click="SearchPreviousButton_Click"
                 ToolTip="Previous result"/>
@@ -89,6 +90,7 @@
             <Button
                 Content="▼"
                 Width="30"
+                Padding="0"
                 Margin="4,0,0,0"
                 Click="SearchNextButton_Click"
                 ToolTip="Next result"/>

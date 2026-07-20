@@ -87,6 +87,16 @@ public partial class ProjectInfoWindow
             Save();
         };
 
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                SearchTextBox.Focus();
+                SearchTextBox.SelectAll();
+                e.Handled = true;
+            }
+        };
+
         UpdateTitle();
         RenderSections();
     }
@@ -199,6 +209,8 @@ public partial class ProjectInfoWindow
     private void
     RenderSections()
     {
+        ClearMatchHighlight();
+
         SectionsPanel.Children.Clear();
         _sectionControls.Clear();
 
@@ -1086,6 +1098,8 @@ public partial class ProjectInfoWindow
     RunSearch(
         string query)
     {
+        ClearMatchHighlight();
+
         _searchMatches.Clear();
         _currentMatchIndex = -1;
 
@@ -1193,8 +1207,58 @@ public partial class ProjectInfoWindow
         grid.CurrentCell = new DataGridCellInfo(rowView, column);
         grid.SelectedCells.Add(grid.CurrentCell);
         grid.ScrollIntoView(rowView, column);
-        grid.Focus();
+
+        // Focus stays on the search box (not the grid): keyboard focus on
+        // a cell means the *next* Enter is swallowed by the DataGrid's own
+        // "Enter = move to the row below" instead of advancing the search.
+        SearchTextBox.Focus();
+
+        ClearMatchHighlight();
+
+        // ScrollIntoView above hasn't necessarily realized the row's cell
+        // containers yet -- selection alone can be subtle when the grid
+        // isn't focused, so defer an explicit highlight to the next layout
+        // pass once the cell actually exists.
+        grid.Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() =>
+            {
+                if (grid.ItemContainerGenerator.ContainerFromIndex(rowIndex) is not DataGridRow row
+                    || column.GetCellContent(row)?.Parent is not DataGridCell cell)
+                {
+                    return;
+                }
+
+                _highlightedCell = cell;
+                _highlightedCellOriginalBackground = cell.Background;
+                cell.Background = SearchMatchBrush;
+            }));
 
         SearchResultsText.Text = $"{index + 1} / {_searchMatches.Count}";
+    }
+
+    private DataGridCell? _highlightedCell;
+    private Brush? _highlightedCellOriginalBackground;
+    private static readonly Brush SearchMatchBrush = CreateSearchMatchBrush();
+
+    private static Brush
+    CreateSearchMatchBrush()
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(0xFF, 0xE9, 0x8A));
+        brush.Freeze();
+
+        return brush;
+    }
+
+    private void
+    ClearMatchHighlight()
+    {
+        if (_highlightedCell != null)
+        {
+            _highlightedCell.Background = _highlightedCellOriginalBackground;
+        }
+
+        _highlightedCell = null;
+        _highlightedCellOriginalBackground = null;
     }
 }
