@@ -561,7 +561,7 @@ SearchAllLogsCheckBox_Changed(
                 groupedResults;
 
         SearchProgressBar.Value =
-            100;
+            0;
 
         ProgressTextBlock.Text =
             $"Done ({results.Count} results)";
