@@ -42,10 +42,10 @@
                 Width="220"
                 VerticalContentAlignment="Center"
                 LostFocus="ProjectKeyTextBox_LostFocus"
-                ToolTip="Use the same name across Prod/Preprod/Test profiles of the same project so they share this information."/>
+                ToolTip="Prod/Preprod/Test profiles of the same project share this information automatically (the _prod/_preprod/_test suffix is detected and stripped). Override it here to force two profiles to share, or to split them."/>
 
             <TextBlock
-                Text="(same name across Prod/Preprod/Test = shared info)"
+                Text="(Prod/Preprod/Test of the same project share info automatically)"
                 VerticalAlignment="Center"
                 Margin="8,0,0,0"
                 FontSize="11"

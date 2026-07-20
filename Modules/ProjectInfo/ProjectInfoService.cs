@@ -97,14 +97,106 @@ public class ProjectInfoService
         }
     }
 
+    // Longest/most specific marker first, so e.g. "_preprod" is tried before
+    // "_prod" -- checked in this order regardless of list order below.
+    private static readonly string[] EnvironmentSuffixes =
+    {
+        "preproduction", "preprod", "pre-prod",
+        "production", "prod",
+        "staging", "stage",
+        "recette", "uat", "test",
+        "development", "dev",
+        "sandbox", "demo"
+    };
+
+    /// A profile with no explicit key shares data with its Prod/Preprod/Test
+    /// siblings automatically: strips a trailing "_prod"/"-preprod"/"_test"
+    /// (etc.) suffix from the profile name to get a common base key, instead
+    /// of defaulting to the full profile name (which made every environment
+    /// its own separate, unshared project).
     public string
     ResolveProjectKey(
         ProjectInfoRoot root,
-        string profileName) =>
-        root.ProfileProjectKeys.TryGetValue(profileName, out var key)
-        && !string.IsNullOrWhiteSpace(key)
-            ? key
-            : profileName;
+        string profileName)
+    {
+        if (root.ProfileProjectKeys.TryGetValue(profileName, out var explicitKey)
+            && !string.IsNullOrWhiteSpace(explicitKey))
+        {
+            return explicitKey;
+        }
+
+        var derivedKey = DeriveDefaultProjectKey(profileName);
+
+        if (!string.Equals(derivedKey, profileName, StringComparison.OrdinalIgnoreCase))
+        {
+            MigrateProfileNamedProjectToSharedKey(root, profileName, derivedKey);
+        }
+
+        return derivedKey;
+    }
+
+    private static string
+    DeriveDefaultProjectKey(
+        string profileName)
+    {
+        var markers =
+            EnvironmentSuffixes
+                .SelectMany(suffix => new[] { "_" + suffix, "-" + suffix })
+                .OrderByDescending(marker => marker.Length);
+
+        foreach (var marker in markers)
+        {
+            if (!profileName.EndsWith(marker, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var baseName = profileName[..^marker.Length].TrimEnd('_', '-');
+
+            if (!string.IsNullOrWhiteSpace(baseName))
+            {
+                return baseName;
+            }
+        }
+
+        return profileName;
+    }
+
+    /// A project already saved under the old default (the full profile
+    /// name, from before this auto-sharing existed) keeps working: promoted
+    /// to the shared key if nothing claims it yet, or merged into the
+    /// already-shared project if a sibling environment got there first.
+    private void
+    MigrateProfileNamedProjectToSharedKey(
+        ProjectInfoRoot root,
+        string profileName,
+        string sharedKey)
+    {
+        var projectUnderProfileName =
+            root.Projects.FirstOrDefault(p =>
+                string.Equals(p.Key, profileName, StringComparison.OrdinalIgnoreCase));
+
+        if (projectUnderProfileName == null)
+        {
+            return;
+        }
+
+        var sharedProject =
+            root.Projects.FirstOrDefault(p =>
+                string.Equals(p.Key, sharedKey, StringComparison.OrdinalIgnoreCase));
+
+        if (sharedProject == null)
+        {
+            projectUnderProfileName.Key = sharedKey;
+        }
+        else if (sharedProject != projectUnderProfileName)
+        {
+            sharedProject.Sections.AddRange(projectUnderProfileName.Sections);
+            root.Projects.Remove(projectUnderProfileName);
+        }
+
+        Save(root);
+    }
 
     public void
     SetProjectKey(
