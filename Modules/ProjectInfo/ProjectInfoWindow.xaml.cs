@@ -612,10 +612,19 @@ public partial class ProjectInfoWindow
             // "2" -- sort rows ourselves with a comparer that treats values
             // as numbers when they parse as one, so 1/2/.../10/100 order
             // correctly instead of lexicographically.
+            var filledRows =
+                section.Rows.Where(r => !string.IsNullOrEmpty(GetCellValue(r, columnName)));
+
+            var emptyRows =
+                section.Rows.Where(r => string.IsNullOrEmpty(GetCellValue(r, columnName)));
+
+            // Blanks always go last, asc or desc, rather than leading an
+            // ascending sort just because "" compares before any text.
             var sortedRows =
                 (ascending
-                    ? section.Rows.OrderBy(r => GetCellValue(r, columnName), NaturalValueComparer.Instance)
-                    : section.Rows.OrderByDescending(r => GetCellValue(r, columnName), NaturalValueComparer.Instance))
+                    ? filledRows.OrderBy(r => GetCellValue(r, columnName), NaturalValueComparer.Instance)
+                    : filledRows.OrderByDescending(r => GetCellValue(r, columnName), NaturalValueComparer.Instance))
+                    .Concat(emptyRows)
                     .ToList();
 
             section.Rows = sortedRows;
