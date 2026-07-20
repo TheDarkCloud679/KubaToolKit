@@ -611,6 +611,108 @@ public partial class ProjectInfoWindow
                 ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
         };
 
+        // Right-click a row for Insert/Duplicate/Delete. Selects the row
+        // under the cursor first (rather than trusting whatever was already
+        // selected), and suppresses the menu entirely off a real row (empty
+        // area below the rows, or the CanUserAddRows "+" placeholder).
+        grid.PreviewMouseRightButtonDown += (_, e) =>
+        {
+            var row = DataGridSortHelper.FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
+
+            if (row == null || row.Item == CollectionView.NewItemPlaceholder)
+            {
+                e.Handled = true;
+
+                return;
+            }
+
+            grid.SelectedItem = row.Item;
+        };
+
+        var insertAboveItem = new MenuItem { Header = "Insert row above" };
+        insertAboveItem.Click += (_, __) =>
+        {
+            if (grid.SelectedItem is not DataRowView rowView)
+            {
+                return;
+            }
+
+            var index = table.Rows.IndexOf(rowView.Row);
+
+            if (index < 0)
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+            table.Rows.InsertAt(table.NewRow(), index);
+        };
+
+        var insertBelowItem = new MenuItem { Header = "Insert row below" };
+        insertBelowItem.Click += (_, __) =>
+        {
+            if (grid.SelectedItem is not DataRowView rowView)
+            {
+                return;
+            }
+
+            var index = table.Rows.IndexOf(rowView.Row);
+
+            if (index < 0)
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+            table.Rows.InsertAt(table.NewRow(), index + 1);
+        };
+
+        var duplicateItem = new MenuItem { Header = "Duplicate row" };
+        duplicateItem.Click += (_, __) =>
+        {
+            if (grid.SelectedItem is not DataRowView rowView)
+            {
+                return;
+            }
+
+            var index = table.Rows.IndexOf(rowView.Row);
+
+            if (index < 0)
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+
+            var newRow = table.NewRow();
+            newRow.ItemArray = rowView.Row.ItemArray;
+            table.Rows.InsertAt(newRow, index + 1);
+        };
+
+        var deleteRowItem = new MenuItem { Header = "Delete row" };
+        deleteRowItem.Click += (_, __) =>
+        {
+            if (grid.SelectedItem is not DataRowView rowView)
+            {
+                return;
+            }
+
+            TryCommitEdit(grid);
+            rowView.Row.Delete();
+        };
+
+        grid.ContextMenu = new ContextMenu
+        {
+            Items =
+            {
+                insertAboveItem,
+                insertBelowItem,
+                duplicateItem,
+                new Separator(),
+                deleteRowItem
+            }
+        };
+
         outer.Children.Add(grid);
 
         card = new Border
