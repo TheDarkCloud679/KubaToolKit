@@ -612,31 +612,54 @@ public partial class ProjectInfoWindow
             // "2" -- sort rows ourselves with a comparer that treats values
             // as numbers when they parse as one, so 1/2/.../10/100 order
             // correctly instead of lexicographically.
-            section.Rows =
+            var sortedRows =
                 (ascending
                     ? section.Rows.OrderBy(r => GetCellValue(r, columnName), NaturalValueComparer.Instance)
                     : section.Rows.OrderByDescending(r => GetCellValue(r, columnName), NaturalValueComparer.Instance))
                     .ToList();
 
-            ReplaceSectionCard(section, card);
+            section.Rows = sortedRows;
 
-            if (_sectionControls.TryGetValue(section, out var rebuilt))
+            // Reorder the bound table in place rather than rebuilding the
+            // whole card (BuildSectionCard again): that swapped in a new
+            // DataGrid/columns on every click, losing the SortDirection
+            // arrow (so toggling asc/desc never worked) and risking the
+            // same "index already in use" WPF quirk guarded against for
+            // column add/rename/delete. _isSyncing suppresses SyncAndSave
+            // while rows are torn down and re-added -- section.Rows above
+            // is already the correct final state.
+            _isSyncing = true;
+
+            try
             {
-                foreach (var col in rebuilt.Grid.Columns)
+                table.Rows.Clear();
+
+                foreach (var row in sortedRows)
                 {
-                    col.SortDirection = null;
+                    var dataRow = table.NewRow();
+
+                    foreach (var col in section.Columns)
+                    {
+                        dataRow[col] = row.TryGetValue(col, out var value) ? value : "";
+                    }
+
+                    table.Rows.Add(dataRow);
                 }
 
-                var rebuiltColumn =
-                    rebuilt.Grid.Columns.FirstOrDefault(c =>
-                        string.Equals(c.Header?.ToString(), columnName, StringComparison.Ordinal));
-
-                if (rebuiltColumn != null)
-                {
-                    rebuiltColumn.SortDirection =
-                        ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
-                }
+                table.AcceptChanges();
             }
+            finally
+            {
+                _isSyncing = false;
+            }
+
+            foreach (var col in grid.Columns)
+            {
+                col.SortDirection = null;
+            }
+
+            column.SortDirection =
+                ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
 
             Save();
         };
