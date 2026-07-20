@@ -3,6 +3,7 @@ using KubaToolKit.Shared.Services;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -604,15 +605,40 @@ public partial class ProjectInfoWindow
 
             var ascending = column.SortDirection != ListSortDirection.Ascending;
 
-            table.DefaultView.Sort = $"[{columnName}] {(ascending ? "ASC" : "DESC")}";
+            TryCommitEdit(grid);
 
-            foreach (var col in grid.Columns)
+            // DataView.Sort compares the column's values as text (every
+            // section column is a free-form string), so "10" sorted before
+            // "2" -- sort rows ourselves with a comparer that treats values
+            // as numbers when they parse as one, so 1/2/.../10/100 order
+            // correctly instead of lexicographically.
+            section.Rows =
+                (ascending
+                    ? section.Rows.OrderBy(r => GetCellValue(r, columnName), NaturalValueComparer.Instance)
+                    : section.Rows.OrderByDescending(r => GetCellValue(r, columnName), NaturalValueComparer.Instance))
+                    .ToList();
+
+            ReplaceSectionCard(section, card);
+
+            if (_sectionControls.TryGetValue(section, out var rebuilt))
             {
-                col.SortDirection = null;
+                foreach (var col in rebuilt.Grid.Columns)
+                {
+                    col.SortDirection = null;
+                }
+
+                var rebuiltColumn =
+                    rebuilt.Grid.Columns.FirstOrDefault(c =>
+                        string.Equals(c.Header?.ToString(), columnName, StringComparison.Ordinal));
+
+                if (rebuiltColumn != null)
+                {
+                    rebuiltColumn.SortDirection =
+                        ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
+                }
             }
 
-            column.SortDirection =
-                ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
+            Save();
         };
 
         // Right-click a row for Insert/Duplicate/Delete. Selects the row
@@ -802,6 +828,34 @@ public partial class ProjectInfoWindow
         catch
         {
             RenderSections();
+        }
+    }
+
+    private static string
+    GetCellValue(
+        Dictionary<string, string> row,
+        string columnName) =>
+        row.TryGetValue(columnName, out var value) ? value : "";
+
+    /// Numeric comparison when both values parse as a number (so 2 sorts
+    /// before 10), falling back to plain text comparison otherwise -- a
+    /// section column is free-form and may hold anything.
+    private sealed class NaturalValueComparer
+        : IComparer<string>
+    {
+        public static readonly NaturalValueComparer Instance = new();
+
+        public int
+        Compare(
+            string? a,
+            string? b)
+        {
+            var aIsNumber = double.TryParse(a, NumberStyles.Any, CultureInfo.InvariantCulture, out var aNumber);
+            var bIsNumber = double.TryParse(b, NumberStyles.Any, CultureInfo.InvariantCulture, out var bNumber);
+
+            return aIsNumber && bIsNumber
+                ? aNumber.CompareTo(bNumber)
+                : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
         }
     }
 
