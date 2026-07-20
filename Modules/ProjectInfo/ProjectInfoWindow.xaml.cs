@@ -568,7 +568,11 @@ public partial class ProjectInfoWindow
             RowHeaderWidth = 34,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             MaxHeight = 320,
-            SelectionUnit = DataGridSelectionUnit.Cell,
+            // Cell (search highlight, via SelectedCells) AND row selection
+            // (row context menu, via SelectedItem) both need to work --
+            // Cell alone throws on SelectedItem, FullRow alone throws on
+            // SelectedCells. CellOrRowHeader supports both.
+            SelectionUnit = DataGridSelectionUnit.CellOrRowHeader,
             Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
         };
 
