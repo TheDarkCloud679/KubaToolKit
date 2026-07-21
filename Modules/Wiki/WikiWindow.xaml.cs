@@ -200,7 +200,7 @@ public partial class WikiWindow
         }
 
         if (MessageBox.Show(
-                $"Delete section \"{section.Name}\" and its content? Attached image files are kept on disk.",
+                $"Delete section \"{section.Name}\" and its content? Attached files are kept on disk.",
                 "Confirm",
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes)
         {
@@ -299,7 +299,8 @@ public partial class WikiWindow
 
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Images (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp",
+            Filter =
+                "Images and PDF (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.pdf)|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.pdf",
             Multiselect = true
         };
 
@@ -395,7 +396,37 @@ public partial class WikiWindow
             ToolTip = fileName
         };
 
-        if (File.Exists(fullPath))
+        var isPdf = string.Equals(Path.GetExtension(fileName), ".pdf", StringComparison.OrdinalIgnoreCase);
+
+        if (!File.Exists(fullPath))
+        {
+            imageBorder.Child = new TextBlock
+            {
+                Text = "(missing file)",
+                FontSize = 10,
+                FontStyle = FontStyles.Italic,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = (System.Windows.Media.Brush)FindResource("TextMutedBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
+        else if (isPdf)
+        {
+            // WPF can't render a PDF preview without an extra library --
+            // a plain icon still supports the same double-click-to-link/
+            // right-click-to-open/remove behavior as an actual image.
+            imageBorder.Child = new TextBlock
+            {
+                Text = "📄 PDF",
+                FontSize = 13,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
+        else
         {
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
@@ -410,19 +441,6 @@ public partial class WikiWindow
                 Stretch = Stretch.Uniform
             };
         }
-        else
-        {
-            imageBorder.Child = new TextBlock
-            {
-                Text = "(missing file)",
-                FontSize = 10,
-                FontStyle = FontStyles.Italic,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = (System.Windows.Media.Brush)FindResource("TextMutedBrush"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-        }
 
         imageBorder.MouseLeftButtonDown += (_, e) =>
         {
@@ -432,7 +450,7 @@ public partial class WikiWindow
             }
         };
 
-        var openItem = new MenuItem { Header = "Open image" };
+        var openItem = new MenuItem { Header = "Open" };
         openItem.Click += (_, __) =>
         {
             try
@@ -447,7 +465,7 @@ public partial class WikiWindow
             }
         };
 
-        var removeItem = new MenuItem { Header = "Remove image" };
+        var removeItem = new MenuItem { Header = "Remove attachment" };
         removeItem.Click += (_, __) =>
         {
             _currentSection?.ImageFileNames.Remove(fileName);

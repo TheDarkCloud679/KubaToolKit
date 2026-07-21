@@ -231,14 +231,14 @@
 
                             <TextBlock
                                 Grid.Column="0"
-                                Text="Images (double-click: insert a reference at the cursor · right-click: open/remove)"
+                                Text="Images / PDF (double-click: insert a reference at the cursor · right-click: open/remove)"
                                 VerticalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{StaticResource TextSecondaryBrush}"/>
 
                             <Button
                                 Grid.Column="1"
-                                Content="+ Add image"
+                                Content="+ Add image / PDF"
                                 Padding="10,2"
                                 Click="AddImageButton_Click"/>
                         </Grid>
