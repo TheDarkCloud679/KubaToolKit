@@ -89,6 +89,19 @@ MainWindow_Closing(object? sender, CancelEventArgs e)
             _s3View.CancelSearch();
         }
         catch { }
+
+        // Popup windows (Project Info, Wiki, charts, viewers...) no longer
+        // have Owner set -- that stopped minimizing the main window from
+        // also minimizing them, but it also means they won't auto-close
+        // with it anymore. Close them explicitly here so closing the main
+        // window still quits the whole app, as before.
+        foreach (var window in Application.Current.Windows.Cast<Window>().ToList())
+        {
+            if (!ReferenceEquals(window, this))
+            {
+                window.Close();
+            }
+        }
     }
 
     private async void

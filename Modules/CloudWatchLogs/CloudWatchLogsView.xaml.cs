@@ -395,9 +395,6 @@ SearchAllLogsCheckBox_Changed(
                 new JsonViewerWindow(
                     selectedLog.Message);
 
-            viewer.Owner =
-                Window.GetWindow(this);
-
             viewer.Show();
         }
         catch (Exception ex)

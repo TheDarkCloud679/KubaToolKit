@@ -660,9 +660,9 @@ OpenS3File(
                         _currentProfile,
                         bucket);
 
-                _archiveExplorer.Owner =
-                    Window.GetWindow(this);
-
+                // No Owner: this window stays open (and independently
+                // minimizable/movable) even if the main window is
+                // minimized or moved.
                 _archiveExplorer.Closed +=
                     (_, __) =>
                     {
@@ -688,9 +688,6 @@ OpenS3File(
                 new FileViewerWindow(
                     file.Name,
                     content);
-
-            viewer.Owner =
-                Window.GetWindow(this);
 
             viewer.Show();
         }

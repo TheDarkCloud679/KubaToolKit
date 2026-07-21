@@ -143,8 +143,6 @@ public partial class SqsMessagesWindow
         var viewer =
             new JsonViewerWindow(message.Body);
 
-        viewer.Owner = this;
-
         viewer.Show();
     }
 }

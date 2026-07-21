@@ -131,7 +131,6 @@ public partial class CloudTrailView
             }
 
             var viewer = new JsonViewerWindow(selectedEvent.CloudTrailEventJson);
-            viewer.Owner = Window.GetWindow(this);
             viewer.Show();
         }
         catch (Exception ex)

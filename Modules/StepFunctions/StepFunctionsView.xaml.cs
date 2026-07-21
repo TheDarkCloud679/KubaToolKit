@@ -150,9 +150,6 @@ public partial class StepFunctionsView
                 stateMachine.Arn,
                 stateMachine.Type);
 
-        window.Owner =
-            Window.GetWindow(this);
-
         window.Show();
     }
 }

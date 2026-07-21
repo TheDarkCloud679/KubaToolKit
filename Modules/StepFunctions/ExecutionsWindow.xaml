@@ -7,7 +7,7 @@
     Height="650"
     MinWidth="700"
     MinHeight="400"
-    WindowStartupLocation="CenterOwner"
+    WindowStartupLocation="CenterScreen"
     Background="{StaticResource WindowBackgroundBrush}">
 
     <Grid Margin="14">

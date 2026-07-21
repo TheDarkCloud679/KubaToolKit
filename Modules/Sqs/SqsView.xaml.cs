@@ -139,9 +139,6 @@ public partial class SqsView
                 queue.Name,
                 queue.Url);
 
-        window.Owner =
-            Window.GetWindow(this);
-
         window.Show();
     }
 }

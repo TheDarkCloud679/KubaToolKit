@@ -154,8 +154,6 @@ public partial class ExecutionsWindow
                 execution.Arn,
                 execution.LogGroupIdentifier);
 
-        window.Owner = this;
-
         window.Show();
     }
 }

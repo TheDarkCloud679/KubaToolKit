@@ -138,8 +138,6 @@ public partial class ExecutionEventsWindow
         var viewer =
             new JsonViewerWindow(historyEvent.DetailsJson);
 
-        viewer.Owner = this;
-
         viewer.Show();
     }
 }

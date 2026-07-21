@@ -5,7 +5,7 @@
     Title="Archive Explorer"
     Width="1200"
     Height="750"
-    WindowStartupLocation="CenterOwner">
+    WindowStartupLocation="CenterScreen">
 
     <Grid Margin="14" Background="{StaticResource WindowBackgroundBrush}">
 

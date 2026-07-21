@@ -226,10 +226,7 @@ public partial class DashboardView
             return;
         }
 
-        var window = new ProjectInfoWindow(_currentProfile)
-        {
-            Owner = Window.GetWindow(this)
-        };
+        var window = new ProjectInfoWindow(_currentProfile);
 
         window.Show();
     }
@@ -248,10 +245,7 @@ public partial class DashboardView
             return;
         }
 
-        var window = new WikiWindow(_currentProfile)
-        {
-            Owner = Window.GetWindow(this)
-        };
+        var window = new WikiWindow(_currentProfile);
 
         window.Show();
     }
@@ -359,9 +353,6 @@ public partial class DashboardView
                 item.Identifier,
                 new List<ChartSeriesRequest> { request });
 
-        window.Owner =
-            Window.GetWindow(this);
-
         window.Show();
     }
 
@@ -426,9 +417,6 @@ public partial class DashboardView
                 "CPU / RAM",
                 item.Name,
                 seriesRequests);
-
-        window.Owner =
-            Window.GetWindow(this);
 
         window.Show();
     }
