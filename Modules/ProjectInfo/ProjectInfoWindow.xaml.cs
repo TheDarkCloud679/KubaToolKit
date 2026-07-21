@@ -561,10 +561,76 @@ public partial class ProjectInfoWindow
             Save();
         };
 
+        var exportToFileZillaButton = new Button
+        {
+            Content = "Export to FileZilla",
+            Margin = new Thickness(16, 0, 0, 0),
+            Padding = new Thickness(10, 2, 10, 2),
+            ToolTip = "Writes an SFTP entry per row into FileZilla's Site Manager (Name/Host columns you pick, shared login/port/key file)."
+        };
+        exportToFileZillaButton.Click += (_, __) =>
+        {
+            TryCommitEdit(grid);
+
+            var settings = FileZillaExportWindow.Prompt(
+                this,
+                section.Columns.ToList(),
+                section.FileZillaExport,
+                $"{_project.Key} - {section.Name}",
+                ProjectInfoService.GetProjectFolderPath(_project.Key));
+
+            if (settings == null)
+            {
+                return;
+            }
+
+            section.FileZillaExport = settings;
+            Save();
+
+            var entries =
+                section.Rows
+                    .Select(row =>
+                        new FileZillaSiteManagerService.SiteEntry(
+                            row.TryGetValue(settings.NameColumn, out var name) ? name : "",
+                            row.TryGetValue(settings.HostColumn, out var host) ? host : ""))
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Host))
+                    .ToList();
+
+            if (entries.Count == 0)
+            {
+                MessageBox.Show(
+                    $"No row has a value in the \"{settings.HostColumn}\" column.",
+                    "Export to FileZilla");
+
+                return;
+            }
+
+            try
+            {
+                FileZillaSiteManagerService.ExportFolder(
+                    settings.FolderName,
+                    entries,
+                    settings.Username,
+                    settings.Port,
+                    settings.KeyFilePath);
+
+                MessageBox.Show(
+                    $"Exported {entries.Count} site(s) to the \"{settings.FolderName}\" folder in FileZilla's Site Manager.\n\nClose and reopen FileZilla to see them (if FileZilla was already running, it may overwrite this file when it closes -- re-run the export afterwards if so).",
+                    "Export to FileZilla");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("ProjectInfoWindow: FileZilla export failed.", ex);
+
+                MessageBox.Show(ex.ToString(), "Export to FileZilla - error");
+            }
+        };
+
         columnManageRow.Children.Add(columnSelectCombo);
         columnManageRow.Children.Add(renameColumnTextBox);
         columnManageRow.Children.Add(renameColumnButton);
         columnManageRow.Children.Add(deleteColumnButton);
+        columnManageRow.Children.Add(exportToFileZillaButton);
 
         outer.Children.Add(columnManageRow);
 
