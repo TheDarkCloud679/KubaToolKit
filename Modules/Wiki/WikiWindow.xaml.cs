@@ -442,16 +442,7 @@ public partial class WikiWindow
             };
         }
 
-        imageBorder.MouseLeftButtonDown += (_, e) =>
-        {
-            if (e.ClickCount == 2)
-            {
-                InsertImageReference(fileName);
-            }
-        };
-
-        var openItem = new MenuItem { Header = "Open" };
-        openItem.Click += (_, __) =>
+        void OpenAttachment()
         {
             try
             {
@@ -459,11 +450,34 @@ public partial class WikiWindow
             }
             catch (Exception ex)
             {
-                Logger.Error("WikiWindow: failed to open image.", ex);
+                Logger.Error("WikiWindow: failed to open attachment.", ex);
 
-                MessageBox.Show(ex.ToString(), "Wiki - open image");
+                MessageBox.Show(ex.ToString(), "Wiki - open attachment");
+            }
+        }
+
+        imageBorder.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2)
+            {
+                return;
+            }
+
+            // A PDF has no inline preview to speak of, so double-click
+            // opens it in the OS default viewer instead of inserting a
+            // reference -- an actual image still links into the text.
+            if (isPdf)
+            {
+                OpenAttachment();
+            }
+            else
+            {
+                InsertImageReference(fileName);
             }
         };
+
+        var openItem = new MenuItem { Header = "Open" };
+        openItem.Click += (_, __) => OpenAttachment();
 
         var removeItem = new MenuItem { Header = "Remove attachment" };
         removeItem.Click += (_, __) =>

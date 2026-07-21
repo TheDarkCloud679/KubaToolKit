@@ -231,7 +231,7 @@
 
                             <TextBlock
                                 Grid.Column="0"
-                                Text="Images / PDF (double-click: insert a reference at the cursor · right-click: open/remove)"
+                                Text="Images / PDF (double-click: insert a reference for an image, open a PDF · right-click: open/remove)"
                                 VerticalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{StaticResource TextSecondaryBrush}"/>
