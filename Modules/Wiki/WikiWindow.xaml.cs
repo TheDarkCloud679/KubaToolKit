@@ -70,6 +70,16 @@ public partial class WikiWindow
         {
             SectionsListBox.SelectedIndex = 0;
         }
+
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                SearchTextBox.Focus();
+                SearchTextBox.SelectAll();
+                e.Handled = true;
+            }
+        };
     }
 
     private void
@@ -220,6 +230,14 @@ public partial class WikiWindow
     {
         SectionsListBox.ItemsSource = null;
         SectionsListBox.ItemsSource = _project.Sections;
+
+        // A stale match could point at a section that no longer exists
+        // (or no longer matches after a rename), or would jump to the
+        // wrong position after other sections got added/removed.
+        _searchMatches.Clear();
+        _currentMatchIndex = -1;
+        _lastSearchQuery = "";
+        SearchResultsText.Text = "";
     }
 
     private void
@@ -485,5 +503,192 @@ public partial class WikiWindow
         {
             MessageBox.Show(ex.ToString(), "Wiki - save error");
         }
+    }
+
+    // Offset == -1 for a section-name match (just select the section);
+    // >= 0 for a match inside that section's text, at that character index.
+    private readonly List<(WikiSection Section, int Offset)> _searchMatches = new();
+    private int _currentMatchIndex = -1;
+    private string _lastSearchQuery = "";
+
+    private void
+    SearchTextBox_KeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
+        {
+            SearchPreviousButton_Click(sender, e);
+        }
+        else
+        {
+            SearchNextButton_Click(sender, e);
+        }
+    }
+
+    private void
+    SearchNextButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (RunSearchIfQueryChanged())
+        {
+            return;
+        }
+
+        GoToNextMatch();
+    }
+
+    private void
+    SearchPreviousButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (RunSearchIfQueryChanged())
+        {
+            return;
+        }
+
+        GoToPreviousMatch();
+    }
+
+    private bool
+    RunSearchIfQueryChanged()
+    {
+        var query = SearchTextBox.Text.Trim();
+
+        if (string.Equals(query, _lastSearchQuery, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _lastSearchQuery = query;
+        RunSearch(query);
+
+        return true;
+    }
+
+    private void
+    RunSearch(
+        string query)
+    {
+        _searchMatches.Clear();
+        _currentMatchIndex = -1;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            SearchResultsText.Text = "";
+
+            return;
+        }
+
+        foreach (var section in _project.Sections)
+        {
+            if (section.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                _searchMatches.Add((section, -1));
+            }
+
+            var searchFrom = 0;
+
+            while (true)
+            {
+                var found = section.Text.IndexOf(query, searchFrom, StringComparison.OrdinalIgnoreCase);
+
+                if (found < 0)
+                {
+                    break;
+                }
+
+                _searchMatches.Add((section, found));
+                searchFrom = found + Math.Max(query.Length, 1);
+            }
+        }
+
+        if (_searchMatches.Count == 0)
+        {
+            SearchResultsText.Text = "No match";
+
+            return;
+        }
+
+        GoToNextMatch();
+    }
+
+    private void
+    GoToNextMatch()
+    {
+        if (_searchMatches.Count == 0)
+        {
+            return;
+        }
+
+        _currentMatchIndex = (_currentMatchIndex + 1) % _searchMatches.Count;
+
+        GoToMatch(_currentMatchIndex);
+    }
+
+    private void
+    GoToPreviousMatch()
+    {
+        if (_searchMatches.Count == 0)
+        {
+            return;
+        }
+
+        _currentMatchIndex =
+            (_currentMatchIndex - 1 + _searchMatches.Count) % _searchMatches.Count;
+
+        GoToMatch(_currentMatchIndex);
+    }
+
+    private void
+    GoToMatch(
+        int index)
+    {
+        var (section, offset) = _searchMatches[index];
+
+        if (!ReferenceEquals(SectionsListBox.SelectedItem, section))
+        {
+            SectionsListBox.SelectedItem = section;
+        }
+
+        if (offset >= 0)
+        {
+            // Deferred: switching sections just above reloads
+            // ContentTextBox.Text, and GetLineIndexFromCharacterIndex needs
+            // a layout pass over the new text before it answers correctly.
+            ContentTextBox.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    var length = Math.Min(_lastSearchQuery.Length, ContentTextBox.Text.Length - offset);
+
+                    if (length <= 0)
+                    {
+                        return;
+                    }
+
+                    // Not ContentTextBox.Focus(): keeping focus on the
+                    // search box is what makes repeated Enter presses keep
+                    // advancing through results (a TextBox has no
+                    // per-substring highlight, only selection -- which
+                    // stays visible, just in a muted color, without focus).
+                    ContentTextBox.Select(offset, length);
+
+                    var line = ContentTextBox.GetLineIndexFromCharacterIndex(offset);
+
+                    ContentTextBox.ScrollToLine(Math.Max(0, line - 2));
+                }));
+        }
+
+        SearchResultsText.Text = $"{index + 1} / {_searchMatches.Count}";
     }
 }
