@@ -47,8 +47,9 @@
                 x:Name="WikiButton"
                 Grid.Column="3"
                 Width="36"
+                Padding="0"
                 Margin="0,0,10,0"
-                Content="📖"
+                Content="🌐"
                 ToolTip="Wiki"
                 Click="WikiButton_Click"/>
 
