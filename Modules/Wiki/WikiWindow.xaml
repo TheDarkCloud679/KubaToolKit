@@ -1,0 +1,186 @@
+<Window
+    x:Class="KubaToolKit.Modules.Wiki.WikiWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Wiki"
+    Width="1000"
+    Height="700"
+    MinWidth="700"
+    MinHeight="450"
+    WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="TitleTextBlock"
+            Grid.Row="0"
+            FontWeight="Bold"
+            FontSize="16"
+            Margin="0,0,0,14"
+            Foreground="{StaticResource TextPrimaryBrush}"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sections -->
+            <Border
+                Grid.Column="0"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}"
+                Padding="10">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock
+                            Text="Sections"
+                            FontWeight="Bold"
+                            FontSize="13"
+                            Margin="0,0,0,8"
+                            Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                        <TextBox
+                            x:Name="NewSectionNameTextBox"
+                            Margin="0,0,0,6"
+                            VerticalContentAlignment="Center"
+                            ToolTip="Section name"
+                            KeyDown="NewSectionNameTextBox_KeyDown"/>
+
+                        <Button
+                            Content="+ Add section"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="AddSectionButton_Click"/>
+                    </StackPanel>
+
+                    <ListBox
+                        x:Name="SectionsListBox"
+                        Grid.Row="1"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        SelectionChanged="SectionsListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    Text="{Binding Name}"
+                                    Padding="4"
+                                    TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ContextMenu>
+                            <ContextMenu Opened="SectionsContextMenu_Opened">
+                                <MenuItem Header="Add section above" Click="AddSectionAbove_Click"/>
+                                <MenuItem Header="Add section below" Click="AddSectionBelow_Click"/>
+                                <MenuItem x:Name="RenameMenuItem" Header="Rename" Click="RenameSection_Click"/>
+                                <Separator/>
+                                <MenuItem x:Name="DeleteMenuItem" Header="Delete" Click="DeleteSection_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <GridSplitter
+                Grid.Column="1"
+                Width="6"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Content -->
+            <Border
+                x:Name="ContentBorder"
+                Grid.Column="2"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}"
+                Padding="14"
+                Visibility="Collapsed">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="160"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBox
+                        x:Name="ContentTextBox"
+                        Grid.Row="0"
+                        AcceptsReturn="True"
+                        AcceptsTab="True"
+                        TextWrapping="Wrap"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Auto"
+                        FontSize="13"
+                        TextChanged="ContentTextBox_TextChanged"/>
+
+                    <GridSplitter
+                        Grid.Row="1"
+                        Height="8"
+                        HorizontalAlignment="Stretch"
+                        ResizeBehavior="PreviousAndNext"
+                        ToolTip="Drag to resize"/>
+
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="Images (double-click: insert a reference at the cursor · right-click: open/remove)"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                            <Button
+                                Grid.Column="1"
+                                Content="+ Add image"
+                                Padding="10,2"
+                                Click="AddImageButton_Click"/>
+                        </Grid>
+
+                        <ScrollViewer
+                            Grid.Row="1"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled">
+                            <WrapPanel x:Name="ImagesPanel"/>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock
+                x:Name="NoSelectionText"
+                Grid.Column="2"
+                Text="Select or add a section on the left."
+                FontStyle="Italic"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Foreground="{StaticResource TextMutedBrush}"/>
+        </Grid>
+    </Grid>
+</Window>

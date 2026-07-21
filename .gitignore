@@ -16,5 +16,8 @@ Config/project-info.json
 # above: shared directly between colleagues, not meant for git.
 Config/ProjectFiles/
 
+# Wiki notes, same reasoning as project-info.json above.
+Config/wiki.json
+
 # Per-user Visual Studio project settings (machine-specific paths)
 *.csproj.user

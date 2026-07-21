@@ -1,6 +1,7 @@
 using Amazon.CloudWatch.Model;
 using KubaToolKit.Modules.Dashboard.Models;
 using KubaToolKit.Modules.ProjectInfo;
+using KubaToolKit.Modules.Wiki;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -226,6 +227,28 @@ public partial class DashboardView
         }
 
         var window = new ProjectInfoWindow(_currentProfile)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        window.Show();
+    }
+
+    private void
+    WikiButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            MessageBox.Show(
+                "Please select an AWS profile first.",
+                "Wiki");
+
+            return;
+        }
+
+        var window = new WikiWindow(_currentProfile)
         {
             Owner = Window.GetWindow(this)
         };

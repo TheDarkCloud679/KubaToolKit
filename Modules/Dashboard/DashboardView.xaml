@@ -16,6 +16,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -43,8 +44,17 @@
                 Click="ProjectInfoButton_Click"/>
 
             <Button
-                x:Name="RefreshButton"
+                x:Name="WikiButton"
                 Grid.Column="3"
+                Width="36"
+                Margin="0,0,10,0"
+                Content="📖"
+                ToolTip="Wiki"
+                Click="WikiButton_Click"/>
+
+            <Button
+                x:Name="RefreshButton"
+                Grid.Column="4"
                 Width="100"
                 Content="Refresh"
                 Click="RefreshButton_Click"/>
