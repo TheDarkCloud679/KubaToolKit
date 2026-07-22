@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.Dashboard;
 
@@ -346,14 +347,23 @@ public partial class DashboardView
             }
         };
 
-        var window =
-            new MetricChartWindow(
-                _currentProfile,
-                metricDisplayName,
-                item.Identifier,
-                new List<ChartSeriesRequest> { request });
+        // Deferred past the double-click's mouse-up: opening the window
+        // synchronously while that input is still being processed lets
+        // Windows mistake it for a drag on the new window, which
+        // immediately minimizes it (a known WPF double-click gotcha).
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                var window =
+                    new MetricChartWindow(
+                        _currentProfile,
+                        metricDisplayName,
+                        item.Identifier,
+                        new List<ChartSeriesRequest> { request });
 
-        window.Show();
+                window.Show();
+            }));
     }
 
     private void
@@ -411,14 +421,23 @@ public partial class DashboardView
             }
         };
 
-        var window =
-            new MetricChartWindow(
-                _currentProfile,
-                "CPU / RAM",
-                item.Name,
-                seriesRequests);
+        // See the comment in OpenRdsMetricChart: deferred so the
+        // double-click's mouse-up finishes processing before the window
+        // appears, instead of Windows treating it as a drag and minimizing
+        // it immediately.
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                var window =
+                    new MetricChartWindow(
+                        _currentProfile,
+                        "CPU / RAM",
+                        item.Name,
+                        seriesRequests);
 
-        window.Show();
+                window.Show();
+            }));
     }
 
 }
