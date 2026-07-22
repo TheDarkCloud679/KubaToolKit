@@ -23,6 +23,65 @@ public class ProjectInfoService
             "ProjectFiles",
             SanitizeForFolderName(projectKey));
 
+    /// Creates the shared project folder if needed, dropping a README the
+    /// first time so anyone who stumbles onto it (browsing the shared
+    /// drive, say) understands what it's for without having to ask.
+    /// Called from both Project Info's "Files folder" button and the Wiki
+    /// module, so the note is written at most once regardless of which
+    /// opens the folder first.
+    public static string
+    EnsureProjectFolder(
+        string projectKey)
+    {
+        var folderPath = GetProjectFolderPath(projectKey);
+        var isFirstRun = !Directory.Exists(folderPath);
+
+        Directory.CreateDirectory(folderPath);
+
+        if (isFirstRun)
+        {
+            WriteProjectFolderReadme(folderPath, projectKey);
+        }
+
+        return folderPath;
+    }
+
+    private static void
+    WriteProjectFolderReadme(
+        string folderPath,
+        string projectKey)
+    {
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(folderPath, "README.txt"),
+                $"""
+                KubaToolKit - Project files ({projectKey})
+                ===========================================
+
+                Shared storage for this project: drop any file here
+                (schemas, configs, exports, a key file for the FileZilla
+                export...) to share it with colleagues, the same way you
+                already share this KubaToolKit installation (network
+                drive, sync tool, git...).
+
+                Prod/Preprod/Test profiles of the same project
+                automatically share this same folder -- see the "Project"
+                field in the Project Info window.
+
+                WikiImages\ -> images/PDFs attached from the Wiki module.
+                               Don't rename or move these files: the Wiki
+                               refers to them by file name.
+                """);
+        }
+        catch (Exception ex)
+        {
+            // Not critical: a missing README doesn't stop the folder
+            // itself from working.
+            Logger.Error("ProjectInfoService: failed to write the project folder README.", ex);
+        }
+    }
+
     private static string
     SanitizeForFolderName(
         string value)

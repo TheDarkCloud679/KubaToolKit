@@ -23,6 +23,42 @@ public class WikiService
         string projectKey) =>
         Path.Combine(ProjectInfoService.GetProjectFolderPath(projectKey), "WikiImages");
 
+    /// Creates the images folder (and the shared project folder above it,
+    /// with its own README) if needed, dropping a short note the first
+    /// time explaining what these files are for someone who lands
+    /// straight in this subfolder without seeing the parent one.
+    public static string
+    EnsureImagesFolder(
+        string projectKey)
+    {
+        ProjectInfoService.EnsureProjectFolder(projectKey);
+
+        var imagesFolder = GetImagesFolderPath(projectKey);
+        var isFirstRun = !Directory.Exists(imagesFolder);
+
+        Directory.CreateDirectory(imagesFolder);
+
+        if (isFirstRun)
+        {
+            try
+            {
+                File.WriteAllText(
+                    Path.Combine(imagesFolder, "README.txt"),
+                    """
+                    Images and PDFs attached from the Wiki module (KubaToolKit)
+                    live here. Don't rename or move these files: the Wiki
+                    refers to each one by its exact file name.
+                    """);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("WikiService: failed to write the images folder README.", ex);
+            }
+        }
+
+        return imagesFolder;
+    }
+
     public WikiRoot
     Load()
     {

@@ -144,9 +144,7 @@ public partial class ProjectInfoWindow
     {
         try
         {
-            var folderPath = ProjectInfoService.GetProjectFolderPath(_project.Key);
-
-            Directory.CreateDirectory(folderPath);
+            var folderPath = ProjectInfoService.EnsureProjectFolder(_project.Key);
 
             Logger.Debug($"ProjectInfoWindow: opening files folder '{folderPath}'.");
 

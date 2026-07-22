@@ -311,9 +311,7 @@ public partial class WikiWindow
 
         try
         {
-            var imagesFolder = WikiService.GetImagesFolderPath(_project.Key);
-
-            Directory.CreateDirectory(imagesFolder);
+            var imagesFolder = WikiService.EnsureImagesFolder(_project.Key);
 
             foreach (var sourcePath in dialog.FileNames)
             {
