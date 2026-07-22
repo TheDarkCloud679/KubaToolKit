@@ -217,12 +217,28 @@
                         BorderThickness="1"
                         CornerRadius="6"
                         Background="{StaticResource SurfaceAltBrush}"
-                        Visibility="Collapsed">
+                        Visibility="Collapsed"
+                        ClipToBounds="True">
                         <Grid>
-                            <Image
-                                x:Name="FeaturedImage"
-                                Stretch="Uniform"
-                                Margin="8"/>
+                            <ScrollViewer
+                                x:Name="FeaturedImageScrollViewer"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto"
+                                PreviewMouseWheel="FeaturedImageScrollViewer_PreviewMouseWheel">
+                                <Image
+                                    x:Name="FeaturedImage"
+                                    Stretch="Uniform"
+                                    Margin="8"
+                                    Cursor="SizeAll"
+                                    MouseLeftButtonDown="FeaturedImage_MouseLeftButtonDown"
+                                    MouseMove="FeaturedImage_MouseMove"
+                                    MouseLeftButtonUp="FeaturedImage_MouseLeftButtonUp"
+                                    ToolTip="Scroll to zoom, drag to pan, double-click to reset">
+                                    <Image.LayoutTransform>
+                                        <ScaleTransform x:Name="FeaturedImageScale" ScaleX="1" ScaleY="1"/>
+                                    </Image.LayoutTransform>
+                                </Image>
+                            </ScrollViewer>
                             <TextBlock
                                 x:Name="FeaturedImageEmptyText"
                                 Text="No image attached yet -- add one below."
@@ -251,27 +267,18 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-
-                            <TextBlock
-                                Grid.Column="0"
-                                Text="Images / PDF (double-click: insert a reference for an image, open a PDF · right-click: open/remove)"
-                                VerticalAlignment="Center"
-                                FontSize="11"
-                                Foreground="{StaticResource TextSecondaryBrush}"/>
 
                             <CheckBox
                                 x:Name="ImageOnlyCheckBox"
-                                Grid.Column="1"
+                                Grid.Column="0"
                                 Content="Image only (hide notes, show the first image large)"
                                 VerticalAlignment="Center"
-                                Margin="0,0,10,0"
                                 Checked="ImageOnlyCheckBox_Changed"
                                 Unchecked="ImageOnlyCheckBox_Changed"/>
 
                             <Button
-                                Grid.Column="2"
+                                Grid.Column="1"
                                 Content="+ Add image / PDF"
                                 Padding="10,2"
                                 Click="AddImageButton_Click"/>

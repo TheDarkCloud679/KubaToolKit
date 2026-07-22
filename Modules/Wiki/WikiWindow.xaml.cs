@@ -445,6 +445,85 @@ public partial class WikiWindow
         bitmap.EndInit();
 
         FeaturedImage.Source = bitmap;
+
+        // A newly loaded image (new section, or attachments changed)
+        // starts fresh rather than keeping whatever zoom/pan was left
+        // over from a previous one.
+        ResetFeaturedImageZoom();
+    }
+
+    private Point? _featuredImagePanStart;
+    private double _featuredImagePanStartHorizontalOffset;
+    private double _featuredImagePanStartVerticalOffset;
+
+    private void
+    ResetFeaturedImageZoom()
+    {
+        FeaturedImageScale.ScaleX = 1;
+        FeaturedImageScale.ScaleY = 1;
+
+        FeaturedImageScrollViewer.ScrollToHorizontalOffset(0);
+        FeaturedImageScrollViewer.ScrollToVerticalOffset(0);
+    }
+
+    private void
+    FeaturedImageScrollViewer_PreviewMouseWheel(
+        object sender,
+        MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+
+        var zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
+        var newScale = Math.Clamp(FeaturedImageScale.ScaleX * zoomFactor, 0.2, 8.0);
+
+        FeaturedImageScale.ScaleX = newScale;
+        FeaturedImageScale.ScaleY = newScale;
+    }
+
+    private void
+    FeaturedImage_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            ResetFeaturedImageZoom();
+
+            return;
+        }
+
+        _featuredImagePanStart = e.GetPosition(FeaturedImageScrollViewer);
+        _featuredImagePanStartHorizontalOffset = FeaturedImageScrollViewer.HorizontalOffset;
+        _featuredImagePanStartVerticalOffset = FeaturedImageScrollViewer.VerticalOffset;
+
+        FeaturedImage.CaptureMouse();
+    }
+
+    private void
+    FeaturedImage_MouseMove(
+        object sender,
+        MouseEventArgs e)
+    {
+        if (_featuredImagePanStart == null || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var current = e.GetPosition(FeaturedImageScrollViewer);
+        var delta = current - _featuredImagePanStart.Value;
+
+        FeaturedImageScrollViewer.ScrollToHorizontalOffset(_featuredImagePanStartHorizontalOffset - delta.X);
+        FeaturedImageScrollViewer.ScrollToVerticalOffset(_featuredImagePanStartVerticalOffset - delta.Y);
+    }
+
+    private void
+    FeaturedImage_MouseLeftButtonUp(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        _featuredImagePanStart = null;
+
+        FeaturedImage.ReleaseMouseCapture();
     }
 
     private FrameworkElement
