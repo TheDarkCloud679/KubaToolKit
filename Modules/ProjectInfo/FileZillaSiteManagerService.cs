@@ -101,6 +101,16 @@ public static class FileZillaSiteManagerService
         string port,
         string keyFilePath)
     {
+        var hasKeyFile = !string.IsNullOrWhiteSpace(keyFilePath);
+
+        // FileZilla's LogonType enum (anonymous=0, normal=1, ask=2,
+        // interactive=3, account=4, key_file=5): a key path only takes
+        // effect as the actual auth method under key_file -- normal just
+        // ignores it and prompts for a password. Falls back to "ask" (no
+        // saved password) when no key is set, since we have no password
+        // to store either.
+        var logonType = hasKeyFile ? "5" : "2";
+
         var server = new XElement(
             "Server",
             new XElement("Host", entry.Host),
@@ -108,9 +118,9 @@ public static class FileZillaSiteManagerService
             new XElement("Protocol", "1"), // SFTP
             new XElement("Type", "0"),
             new XElement("User", username),
-            new XElement("Logontype", "1")); // Normal -- key file (below) takes over the actual auth
+            new XElement("Logontype", logonType));
 
-        if (!string.IsNullOrWhiteSpace(keyFilePath))
+        if (hasKeyFile)
         {
             server.Add(new XElement("Keyfile", keyFilePath));
         }
