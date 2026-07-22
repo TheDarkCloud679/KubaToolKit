@@ -473,11 +473,43 @@ public partial class WikiWindow
     {
         e.Handled = true;
 
+        var oldScale = FeaturedImageScale.ScaleX;
         var zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
-        var newScale = Math.Clamp(FeaturedImageScale.ScaleX * zoomFactor, 0.2, 8.0);
+        var newScale = Math.Clamp(oldScale * zoomFactor, 0.2, 8.0);
+
+        if (newScale == oldScale)
+        {
+            return;
+        }
+
+        // Whatever was at the viewport's center stays at its center after
+        // the zoom, instead of the content's top-left corner staying
+        // pinned (which visually drags the zoom toward that corner).
+        var viewportCenterX =
+            FeaturedImageScrollViewer.HorizontalOffset + FeaturedImageScrollViewer.ViewportWidth / 2;
+
+        var viewportCenterY =
+            FeaturedImageScrollViewer.VerticalOffset + FeaturedImageScrollViewer.ViewportHeight / 2;
+
+        var unscaledCenterX = viewportCenterX / oldScale;
+        var unscaledCenterY = viewportCenterY / oldScale;
 
         FeaturedImageScale.ScaleX = newScale;
         FeaturedImageScale.ScaleY = newScale;
+
+        // The ScrollViewer's extent only reflects the new scale after a
+        // layout pass -- adjusting offsets before that would clamp
+        // against the still-stale (pre-zoom) scrollable range.
+        FeaturedImageScrollViewer.Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() =>
+            {
+                FeaturedImageScrollViewer.ScrollToHorizontalOffset(
+                    unscaledCenterX * newScale - FeaturedImageScrollViewer.ViewportWidth / 2);
+
+                FeaturedImageScrollViewer.ScrollToVerticalOffset(
+                    unscaledCenterY * newScale - FeaturedImageScrollViewer.ViewportHeight / 2);
+            }));
     }
 
     private void
