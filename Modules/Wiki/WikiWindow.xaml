@@ -210,6 +210,30 @@
                         FontSize="13"
                         TextChanged="ContentTextBox_TextChanged"/>
 
+                    <Border
+                        x:Name="FeaturedImageBorder"
+                        Grid.Row="0"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Background="{StaticResource SurfaceAltBrush}"
+                        Visibility="Collapsed">
+                        <Grid>
+                            <Image
+                                x:Name="FeaturedImage"
+                                Stretch="Uniform"
+                                Margin="8"/>
+                            <TextBlock
+                                x:Name="FeaturedImageEmptyText"
+                                Text="No image attached yet -- add one below."
+                                FontStyle="Italic"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{StaticResource TextMutedBrush}"
+                                Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+
                     <GridSplitter
                         Grid.Row="1"
                         Height="8"
@@ -227,6 +251,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <TextBlock
@@ -236,8 +261,17 @@
                                 FontSize="11"
                                 Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                            <Button
+                            <CheckBox
+                                x:Name="ImageOnlyCheckBox"
                                 Grid.Column="1"
+                                Content="Image only (hide notes, show the first image large)"
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0"
+                                Checked="ImageOnlyCheckBox_Changed"
+                                Unchecked="ImageOnlyCheckBox_Changed"/>
+
+                            <Button
+                                Grid.Column="2"
                                 Content="+ Add image / PDF"
                                 Padding="10,2"
                                 Click="AddImageButton_Click"/>

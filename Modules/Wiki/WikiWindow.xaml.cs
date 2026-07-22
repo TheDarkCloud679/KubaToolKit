@@ -263,6 +263,7 @@ public partial class WikiWindow
         try
         {
             ContentTextBox.Text = _currentSection.Text;
+            ImageOnlyCheckBox.IsChecked = _currentSection.ImageOnlyMode;
         }
         finally
         {
@@ -370,6 +371,80 @@ public partial class WikiWindow
         {
             ImagesPanel.Children.Add(BuildThumbnail(fileName, Path.Combine(imagesFolder, fileName)));
         }
+
+        UpdateContentModeVisibility();
+    }
+
+    private void
+    ImageOnlyCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_loadingSection || _currentSection == null)
+        {
+            return;
+        }
+
+        _currentSection.ImageOnlyMode = ImageOnlyCheckBox.IsChecked == true;
+
+        UpdateContentModeVisibility();
+        Save();
+    }
+
+    private void
+    UpdateContentModeVisibility()
+    {
+        if (_currentSection == null)
+        {
+            return;
+        }
+
+        var imageOnly = _currentSection.ImageOnlyMode;
+
+        ContentTextBox.Visibility = imageOnly ? Visibility.Collapsed : Visibility.Visible;
+        FeaturedImageBorder.Visibility = imageOnly ? Visibility.Visible : Visibility.Collapsed;
+
+        if (!imageOnly)
+        {
+            return;
+        }
+
+        var firstImage =
+            _currentSection.ImageFileNames.FirstOrDefault(f =>
+                !string.Equals(Path.GetExtension(f), ".pdf", StringComparison.OrdinalIgnoreCase));
+
+        if (firstImage == null)
+        {
+            FeaturedImage.Source = null;
+            FeaturedImage.Visibility = Visibility.Collapsed;
+            FeaturedImageEmptyText.Text = "No image attached yet -- add one below.";
+            FeaturedImageEmptyText.Visibility = Visibility.Visible;
+
+            return;
+        }
+
+        var fullPath = Path.Combine(WikiService.GetImagesFolderPath(_project.Key), firstImage);
+
+        if (!File.Exists(fullPath))
+        {
+            FeaturedImage.Source = null;
+            FeaturedImage.Visibility = Visibility.Collapsed;
+            FeaturedImageEmptyText.Text = $"Missing file: {firstImage}";
+            FeaturedImageEmptyText.Visibility = Visibility.Visible;
+
+            return;
+        }
+
+        FeaturedImageEmptyText.Visibility = Visibility.Collapsed;
+        FeaturedImage.Visibility = Visibility.Visible;
+
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.UriSource = new Uri(fullPath, UriKind.Absolute);
+        bitmap.EndInit();
+
+        FeaturedImage.Source = bitmap;
     }
 
     private FrameworkElement
