@@ -11,9 +11,16 @@ public class WikiService
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
-    public static string
-    GetFilePath() =>
+    // Legacy global file every project used to share; migrated out into
+    // each project's own folder the first time it's still found to exist.
+    private static string
+    GetLegacyFilePath() =>
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "wiki.json");
+
+    public static string
+    GetProjectFilePath(
+        string projectKey) =>
+        Path.Combine(ProjectInfoService.GetProjectFolderPath(projectKey), "wiki.json");
 
     // Images live inside the same shared project files folder used by
     // Project Info's "Files folder" button, so both features point at one
@@ -59,29 +66,34 @@ public class WikiService
         return imagesFolder;
     }
 
-    public WikiRoot
-    Load()
+    public WikiProject
+    LoadProject(
+        string projectKey)
     {
-        var filePath = GetFilePath();
+        MigrateLegacyFileIfPresent();
+
+        var filePath = GetProjectFilePath(projectKey);
 
         if (!File.Exists(filePath))
         {
-            Logger.Debug($"WikiService: {filePath} missing, starting empty.");
+            Logger.Debug($"WikiService: {filePath} missing, starting empty for '{projectKey}'.");
 
-            return new WikiRoot();
+            return new WikiProject { Key = projectKey };
         }
 
         try
         {
             var json = File.ReadAllText(filePath);
 
-            var root =
-                JsonSerializer.Deserialize<WikiRoot>(json, SerializerOptions)
-                ?? new WikiRoot();
+            var project =
+                JsonSerializer.Deserialize<WikiProject>(json, SerializerOptions)
+                ?? new WikiProject { Key = projectKey };
 
-            Logger.Debug($"WikiService: {root.Projects.Count} project(s) loaded from {filePath}.");
+            project.Key = projectKey;
 
-            return root;
+            Logger.Debug($"WikiService: loaded '{projectKey}' from {filePath}.");
+
+            return project;
         }
         catch (Exception ex)
         {
@@ -92,25 +104,20 @@ public class WikiService
     }
 
     public void
-    Save(
-        WikiRoot root)
+    SaveProject(
+        WikiProject project)
     {
-        var filePath = GetFilePath();
+        ProjectInfoService.EnsureProjectFolder(project.Key);
+
+        var filePath = GetProjectFilePath(project.Key);
 
         try
         {
-            var directory = Path.GetDirectoryName(filePath);
-
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
             File.WriteAllText(
                 filePath,
-                JsonSerializer.Serialize(root, SerializerOptions));
+                JsonSerializer.Serialize(project, SerializerOptions));
 
-            Logger.Debug($"WikiService: {root.Projects.Count} project(s) saved to {filePath}.");
+            Logger.Debug($"WikiService: saved '{project.Key}' to {filePath}.");
         }
         catch (Exception ex)
         {
@@ -120,23 +127,46 @@ public class WikiService
         }
     }
 
-    public WikiProject
-    GetOrCreateProject(
-        WikiRoot root,
-        string projectKey)
+    /// One-time move of every project out of the old shared
+    /// Config/wiki.json into its own Config/ProjectFiles/{key}/wiki.json,
+    /// alongside that project's WikiImages and Project Info data. Renames
+    /// the legacy file once done so this never runs again.
+    private void
+    MigrateLegacyFileIfPresent()
     {
-        var project =
-            root.Projects.FirstOrDefault(p =>
-                string.Equals(p.Key, projectKey, StringComparison.OrdinalIgnoreCase));
+        var legacyPath = GetLegacyFilePath();
 
-        if (project != null)
+        if (!File.Exists(legacyPath))
         {
-            return project;
+            return;
         }
 
-        project = new WikiProject { Key = projectKey };
-        root.Projects.Add(project);
+        try
+        {
+            var json = File.ReadAllText(legacyPath);
 
-        return project;
+            var legacyRoot =
+                JsonSerializer.Deserialize<WikiRoot>(json, SerializerOptions)
+                ?? new WikiRoot();
+
+            foreach (var project in legacyRoot.Projects)
+            {
+                if (File.Exists(GetProjectFilePath(project.Key)))
+                {
+                    continue;
+                }
+
+                SaveProject(project);
+            }
+
+            var backupPath = legacyPath + $".migrated-{DateTime.Now:yyyyMMdd-HHmmss}";
+            File.Move(legacyPath, backupPath);
+
+            Logger.Debug($"WikiService: migrated {legacyRoot.Projects.Count} project(s) out of the legacy {legacyPath}, backed up to {backupPath}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"WikiService: failed to migrate the legacy {legacyPath}.", ex);
+        }
     }
 }

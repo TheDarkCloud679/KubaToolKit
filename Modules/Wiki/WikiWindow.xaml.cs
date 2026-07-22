@@ -17,7 +17,6 @@ public partial class WikiWindow
     : Window
 {
     private readonly WikiService _wikiService = new();
-    private readonly WikiRoot _root;
     private readonly string _profileName;
     private readonly WikiProject _project;
 
@@ -58,8 +57,7 @@ public partial class WikiWindow
         var projectInfoRoot = projectInfoService.Load();
         var projectKey = projectInfoService.ResolveProjectKey(projectInfoRoot, profileName);
 
-        _root = _wikiService.Load();
-        _project = _wikiService.GetOrCreateProject(_root, projectKey);
+        _project = _wikiService.LoadProject(projectKey);
 
         Title = $"Wiki - {_project.Key} (profile: {_profileName})";
         TitleTextBlock.Text = Title;
@@ -713,7 +711,7 @@ public partial class WikiWindow
     {
         try
         {
-            _wikiService.Save(_root);
+            _wikiService.SaveProject(_project);
         }
         catch (Exception ex)
         {

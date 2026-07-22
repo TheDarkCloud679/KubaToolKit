@@ -67,7 +67,7 @@ public partial class ProjectInfoWindow
 
         ProjectKeyTextBox.Text = projectKey;
 
-        _project = _projectInfoService.GetOrCreateProject(_root, projectKey);
+        _project = _projectInfoService.LoadProject(projectKey);
 
         SectionPresetCombo.ItemsSource = ProjectInfoService.SectionPresets.Keys.ToList();
         SectionPresetCombo.SelectedIndex = 0;
@@ -130,7 +130,8 @@ public partial class ProjectInfoWindow
         }
 
         _projectInfoService.SetProjectKey(_root, _profileName, newKey);
-        _project = _projectInfoService.GetOrCreateProject(_root, newKey);
+        _projectInfoService.Save(_root);
+        _project = _projectInfoService.LoadProject(newKey);
 
         UpdateTitle();
         RenderSections();
@@ -1086,7 +1087,7 @@ public partial class ProjectInfoWindow
     {
         try
         {
-            _projectInfoService.Save(_root);
+            _projectInfoService.SaveProject(_project);
         }
         catch (Exception ex)
         {

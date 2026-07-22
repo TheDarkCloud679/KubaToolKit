@@ -10,6 +10,9 @@ public class ProjectInfoService
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
+    // Global: only the profile -> project key map lives here. Each
+    // project's own sections/rows live in its own folder instead, next to
+    // its Wiki data and files -- see GetProjectDataFilePath.
     public static string
     GetFilePath() =>
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "project-info.json");
@@ -22,6 +25,11 @@ public class ProjectInfoService
             "Config",
             "ProjectFiles",
             SanitizeForFolderName(projectKey));
+
+    public static string
+    GetProjectDataFilePath(
+        string projectKey) =>
+        Path.Combine(GetProjectFolderPath(projectKey), "project-info.json");
 
     /// Creates the shared project folder if needed, dropping a README the
     /// first time so anyone who stumbles onto it (browsing the shared
@@ -59,11 +67,12 @@ public class ProjectInfoService
                 KubaToolKit - Project files ({projectKey})
                 ===========================================
 
-                Shared storage for this project: drop any file here
-                (schemas, configs, exports, a key file for the FileZilla
-                export...) to share it with colleagues, the same way you
-                already share this KubaToolKit installation (network
-                drive, sync tool, git...).
+                Everything about this project lives here: its Project Info
+                data (project-info.json), its Wiki (wiki.json, WikiImages\),
+                and any file you drop in yourself (schemas, configs,
+                exports, a key file for the FileZilla export...) to share
+                it with colleagues, the same way you already share this
+                KubaToolKit installation (network drive, sync tool, git...).
 
                 Prod/Preprod/Test profiles of the same project
                 automatically share this same folder -- see the "Project"
@@ -76,8 +85,6 @@ public class ProjectInfoService
         }
         catch (Exception ex)
         {
-            // Not critical: a missing README doesn't stop the folder
-            // itself from working.
             Logger.Error("ProjectInfoService: failed to write the project folder README.", ex);
         }
     }
@@ -115,7 +122,9 @@ public class ProjectInfoService
                 JsonSerializer.Deserialize<ProjectInfoRoot>(json, SerializerOptions)
                 ?? new ProjectInfoRoot();
 
-            Logger.Debug($"ProjectInfoService: {root.Projects.Count} project(s) loaded from {filePath}.");
+            MigrateLegacyProjectsIfPresent(json, root);
+
+            Logger.Debug($"ProjectInfoService: {root.ProfileProjectKeys.Count} profile key mapping(s) loaded from {filePath}.");
 
             return root;
         }
@@ -146,7 +155,114 @@ public class ProjectInfoService
                 filePath,
                 JsonSerializer.Serialize(root, SerializerOptions));
 
-            Logger.Debug($"ProjectInfoService: {root.Projects.Count} project(s) saved to {filePath}.");
+            Logger.Debug($"ProjectInfoService: saved {root.ProfileProjectKeys.Count} profile key mapping(s) to {filePath}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ProjectInfoService: failed to write {filePath}.", ex);
+
+            throw;
+        }
+    }
+
+    private class LegacyProjectInfoRoot
+    {
+        public List<ProjectInfoProject> Projects { get; set; } = new();
+    }
+
+    /// One-time move of every project out of the old shared
+    /// Config/project-info.json (which used to hold every project's
+    /// sections/rows together) into its own
+    /// Config/ProjectFiles/{key}/project-info.json, alongside that
+    /// project's Wiki data and files. Only the profile-to-key map is kept
+    /// in the global file afterwards, so this never runs twice.
+    private void
+    MigrateLegacyProjectsIfPresent(
+        string json,
+        ProjectInfoRoot root)
+    {
+        List<ProjectInfoProject> legacyProjects;
+
+        try
+        {
+            var legacy = JsonSerializer.Deserialize<LegacyProjectInfoRoot>(json, SerializerOptions);
+            legacyProjects = legacy?.Projects ?? new();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ProjectInfoService: failed to inspect the legacy project-info.json for a Projects list to migrate.", ex);
+
+            return;
+        }
+
+        if (legacyProjects.Count == 0)
+        {
+            return;
+        }
+
+        Logger.Debug($"ProjectInfoService: migrating {legacyProjects.Count} project(s) out of the legacy global project-info.json.");
+
+        foreach (var project in legacyProjects)
+        {
+            if (File.Exists(GetProjectDataFilePath(project.Key)))
+            {
+                continue;
+            }
+
+            SaveProject(project);
+        }
+
+        Save(root);
+    }
+
+    public ProjectInfoProject
+    LoadProject(
+        string projectKey)
+    {
+        var filePath = GetProjectDataFilePath(projectKey);
+
+        if (!File.Exists(filePath))
+        {
+            return new ProjectInfoProject { Key = projectKey };
+        }
+
+        try
+        {
+            var json = File.ReadAllText(filePath);
+
+            var project =
+                JsonSerializer.Deserialize<ProjectInfoProject>(json, SerializerOptions)
+                ?? new ProjectInfoProject { Key = projectKey };
+
+            project.Key = projectKey;
+
+            Logger.Debug($"ProjectInfoService: loaded '{projectKey}' from {filePath}.");
+
+            return project;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ProjectInfoService: failed to read {filePath}.", ex);
+
+            throw;
+        }
+    }
+
+    public void
+    SaveProject(
+        ProjectInfoProject project)
+    {
+        EnsureProjectFolder(project.Key);
+
+        var filePath = GetProjectDataFilePath(project.Key);
+
+        try
+        {
+            File.WriteAllText(
+                filePath,
+                JsonSerializer.Serialize(project, SerializerOptions));
+
+            Logger.Debug($"ProjectInfoService: saved '{project.Key}' to {filePath}.");
         }
         catch (Exception ex)
         {
@@ -188,7 +304,7 @@ public class ProjectInfoService
 
         if (!string.Equals(derivedKey, profileName, StringComparison.OrdinalIgnoreCase))
         {
-            MigrateProfileNamedProjectToSharedKey(root, profileName, derivedKey);
+            MigrateProfileNamedProjectToSharedKey(profileName, derivedKey);
         }
 
         return derivedKey;
@@ -222,39 +338,45 @@ public class ProjectInfoService
     }
 
     /// A project already saved under the old default (the full profile
-    /// name, from before this auto-sharing existed) keeps working: promoted
-    /// to the shared key if nothing claims it yet, or merged into the
-    /// already-shared project if a sibling environment got there first.
+    /// name, from before this auto-sharing existed) keeps working: its
+    /// per-project file is moved to the shared key's folder if nothing
+    /// claims it yet, or merged into the already-shared project's file if a
+    /// sibling environment got there first.
     private void
     MigrateProfileNamedProjectToSharedKey(
-        ProjectInfoRoot root,
         string profileName,
         string sharedKey)
     {
-        var projectUnderProfileName =
-            root.Projects.FirstOrDefault(p =>
-                string.Equals(p.Key, profileName, StringComparison.OrdinalIgnoreCase));
+        var oldFilePath = GetProjectDataFilePath(profileName);
 
-        if (projectUnderProfileName == null)
+        if (!File.Exists(oldFilePath))
         {
             return;
         }
 
-        var sharedProject =
-            root.Projects.FirstOrDefault(p =>
-                string.Equals(p.Key, sharedKey, StringComparison.OrdinalIgnoreCase));
+        var oldProject = LoadProject(profileName);
+        var sharedFilePath = GetProjectDataFilePath(sharedKey);
 
-        if (sharedProject == null)
+        if (!File.Exists(sharedFilePath))
         {
-            projectUnderProfileName.Key = sharedKey;
+            oldProject.Key = sharedKey;
+            SaveProject(oldProject);
         }
-        else if (sharedProject != projectUnderProfileName)
+        else
         {
-            sharedProject.Sections.AddRange(projectUnderProfileName.Sections);
-            root.Projects.Remove(projectUnderProfileName);
+            var sharedProject = LoadProject(sharedKey);
+            sharedProject.Sections.AddRange(oldProject.Sections);
+            SaveProject(sharedProject);
         }
 
-        Save(root);
+        try
+        {
+            File.Delete(oldFilePath);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ProjectInfoService: failed to remove the migrated legacy file {oldFilePath}.", ex);
+        }
     }
 
     public void
@@ -264,26 +386,6 @@ public class ProjectInfoService
         string projectKey)
     {
         root.ProfileProjectKeys[profileName] = projectKey;
-    }
-
-    public ProjectInfoProject
-    GetOrCreateProject(
-        ProjectInfoRoot root,
-        string projectKey)
-    {
-        var project =
-            root.Projects.FirstOrDefault(p =>
-                string.Equals(p.Key, projectKey, StringComparison.OrdinalIgnoreCase));
-
-        if (project != null)
-        {
-            return project;
-        }
-
-        project = new ProjectInfoProject { Key = projectKey };
-        root.Projects.Add(project);
-
-        return project;
     }
 
     public static readonly Dictionary<string, string[]> SectionPresets =

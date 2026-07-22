@@ -6,18 +6,21 @@
 Config/config
 Config/credentials
 
-# Project Info glossary (contacts, network/VPN details...) -- contains PII,
-# not committed by default. Share the file directly with your team, or
-# remove this line if you'd rather version it in git instead.
+# Profile -> project key map (small, no PII by itself, but kept out of git
+# for the same reason as the per-project data below).
 Config/project-info.json
 
-# Files dropped in a project's "Dossier de fichiers" shortcut (Project
-# Info window) -- arbitrary documents, same reasoning as project-info.json
-# above: shared directly between colleagues, not meant for git.
+# Each project's own Project Info data, Wiki notes, and any file dropped in
+# its "Dossier de fichiers" shortcut (contacts, network/VPN details,
+# schemas...) -- contains PII, shared directly between colleagues instead
+# of committed to git.
 Config/ProjectFiles/
 
-# Wiki notes, same reasoning as project-info.json above.
+# Legacy global files from before Project Info/Wiki data moved into each
+# project's own folder above; kept as migration backups on machines that
+# still have one.
 Config/wiki.json
+Config/*.migrated-*
 
 # Per-user Visual Studio project settings (machine-specific paths)
 *.csproj.user
