@@ -34,7 +34,10 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="KeyFileTextBox" Grid.Column="0" IsReadOnly="True"/>
+            <TextBox
+                x:Name="KeyFileTextBox"
+                Grid.Column="0"
+                ToolTip="You can type/paste a path directly -- useful if the key lives on another machine than the one you're exporting from."/>
             <Button Grid.Column="1" Content="Browse..." Margin="6,0,0,0" Click="BrowseKeyFile_Click"/>
         </Grid>
 
