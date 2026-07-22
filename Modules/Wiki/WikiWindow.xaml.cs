@@ -213,6 +213,39 @@ public partial class WikiWindow
     }
 
     private void
+    SortSectionsAscendingButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        SortSections(ascending: true);
+
+    private void
+    SortSectionsDescendingButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        SortSections(ascending: false);
+
+    private void
+    SortSections(
+        bool ascending)
+    {
+        var selected = _currentSection;
+
+        var sorted =
+            ascending
+                ? _project.Sections.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                : _project.Sections.OrderByDescending(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+        _project.Sections.Clear();
+        _project.Sections.AddRange(sorted);
+
+        RefreshSectionsList();
+
+        SectionsListBox.SelectedItem = selected;
+
+        Save();
+    }
+
+    private void
     SectionsContextMenu_Opened(
         object sender,
         RoutedEventArgs e)

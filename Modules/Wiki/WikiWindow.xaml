@@ -125,12 +125,38 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock
-                            Text="Sections"
-                            FontWeight="Bold"
-                            FontSize="13"
-                            Margin="0,0,0,8"
-                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="Sections"
+                                FontWeight="Bold"
+                                FontSize="13"
+                                VerticalAlignment="Center"
+                                Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                            <Button
+                                Grid.Column="1"
+                                Content="A→Z"
+                                Padding="6,0"
+                                Margin="0,0,4,0"
+                                FontSize="11"
+                                Click="SortSectionsAscendingButton_Click"
+                                ToolTip="Sort sections A to Z"/>
+
+                            <Button
+                                Grid.Column="2"
+                                Content="Z→A"
+                                Padding="6,0"
+                                FontSize="11"
+                                Click="SortSectionsDescendingButton_Click"
+                                ToolTip="Sort sections Z to A"/>
+                        </Grid>
 
                         <TextBox
                             x:Name="NewSectionNameTextBox"
