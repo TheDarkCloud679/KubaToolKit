@@ -17,7 +17,6 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -55,17 +54,8 @@
                 Click="WikiButton_Click"/>
 
             <Button
-                x:Name="DiskReportButton"
-                Grid.Column="4"
-                Width="110"
-                Margin="0,0,10,0"
-                Content="Disk report"
-                ToolTip="Scan every EC2 instance's disk usage and open a report"
-                Click="DiskReportButton_Click"/>
-
-            <Button
                 x:Name="RefreshButton"
-                Grid.Column="5"
+                Grid.Column="4"
                 Width="100"
                 Content="Refresh"
                 Click="RefreshButton_Click"/>
@@ -314,7 +304,7 @@
                                             CornerRadius="4"
                                             HorizontalAlignment="Left"
                                             Background="{Binding DiskBackground}"
-                                            ToolTip="Worst mount point found by the last &quot;Disk report&quot; scan">
+                                            ToolTip="Worst mount point found for this instance">
                                             <TextBlock
                                                 Text="{Binding DiskDisplay}"
                                                 FontWeight="SemiBold"

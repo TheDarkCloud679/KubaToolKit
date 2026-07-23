@@ -358,18 +358,17 @@ public class DashboardService
             || metricName.Contains("free", StringComparison.OrdinalIgnoreCase)
             || metricName.Contains("space", StringComparison.OrdinalIgnoreCase));
 
-    /// One row per instance x mount point. Disk space metrics aren't
-    /// published under one fixed namespace/metric name/dimension set --
-    /// it depends entirely on how each box's CloudWatch agent is
-    /// configured (classic JSON agent vs. a customized OTel-based one,
-    /// different namespaces, renamed metrics...) -- so instead of assuming
-    /// one, every metric CloudWatch has for that instance is pulled and
-    /// filtered by name.
-    public async Task<List<Ec2DiskUsage>>
+    /// Worst (highest used %) mount point found per instance. Disk space
+    /// metrics aren't published under one fixed namespace/metric name/
+    /// dimension set -- it depends entirely on how each box's CloudWatch
+    /// agent is configured (classic JSON agent vs. a customized OTel-based
+    /// one, different namespaces, renamed metrics...) -- so instead of
+    /// assuming one, every metric CloudWatch has for that instance is
+    /// pulled and filtered by name.
+    public async Task<Dictionary<string, double>>
     GetEc2DiskUsage(
         string profile,
         IReadOnlyList<Ec2MetricItem> instances,
-        IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
         Logger.Debug($"DashboardService: scanning disk usage for {instances.Count} EC2 instance(s) (profile '{profile}').");
@@ -382,21 +381,13 @@ public class DashboardService
                 credentials,
                 RegionEndpoint.EUWest3);
 
-        var results =
-            new List<Ec2DiskUsage>();
-
-        int processed = 0;
+        var worstByInstance =
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var instance in instances)
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
-
-            processed++;
-
-            progress?.Report(
-                (int)(processed * 100.0
-                    / Math.Max(1, instances.Count)));
 
             var instanceMetrics =
                 new List<Amazon.CloudWatch.Model.Metric>();
@@ -463,38 +454,22 @@ public class DashboardService
                     metric.MetricName.Contains("free", StringComparison.OrdinalIgnoreCase);
 
                 var usedPercent =
-                    isFreeSpaceMetric
-                        ? 100 - value.Value
-                        : value.Value;
+                    Math.Clamp(
+                        isFreeSpaceMetric ? 100 - value.Value : value.Value,
+                        0,
+                        100);
 
-                // Whatever extra dimension the agent tagged the volume with
-                // (a drive letter, a mount path...) identifies which disk
-                // this is; when there isn't one, the metric's own name is
-                // the next best label so two rows for the same instance
-                // aren't indistinguishable.
-                var mountLabel =
-                    metric.Dimensions?
-                        .FirstOrDefault(d => !string.Equals(d.Name, "InstanceId", StringComparison.OrdinalIgnoreCase))
-                        ?.Value
-                    ?? metric.MetricName;
-
-                results.Add(
-                    new Ec2DiskUsage
-                    {
-                        InstanceId = instance.InstanceId,
-                        InstanceName = instance.Name,
-                        MountPath = mountLabel,
-                        UsedPercent = Math.Clamp(usedPercent, 0, 100)
-                    });
+                if (!worstByInstance.TryGetValue(instance.InstanceId, out var worst)
+                    || usedPercent > worst)
+                {
+                    worstByInstance[instance.InstanceId] = usedPercent;
+                }
             }
         }
 
-        Logger.Info($"DashboardService: disk usage scan found {results.Count} mount point(s) across {instances.Count} instance(s) checked.");
+        Logger.Info($"DashboardService: disk usage found for {worstByInstance.Count} of {instances.Count} instance(s) checked.");
 
-        return results
-            .OrderBy(x => x.InstanceName)
-            .ThenBy(x => x.MountPath)
-            .ToList();
+        return worstByInstance;
     }
 
     private string?

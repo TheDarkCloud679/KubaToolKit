@@ -12,9 +12,7 @@ public class Ec2MetricItem
     public string AutoStart { get; set; } = "—";
     public string AutoStop { get; set; } = "—";
 
-    // Filled in by the "Disk report" button (the worst mount point found
-    // for this instance), not on every dashboard refresh -- scanning every
-    // mount point of every instance is too slow to run automatically.
+    // The worst mount point found for this instance's disk usage.
     public double? DiskPercent { get; set; }
 
     public string DiskDisplay =>
