@@ -78,14 +78,6 @@
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-
-                <Style x:Key="SectionHintStyle" TargetType="TextBlock">
-                    <Setter Property="FontSize" Value="11"/>
-                    <Setter Property="FontStyle" Value="Italic"/>
-                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
-                    <Setter Property="Margin" Value="8,0,0,0"/>
-                    <Setter Property="VerticalAlignment" Value="Bottom"/>
-                </Style>
             </Grid.Resources>
 
             <Grid.RowDefinitions>
@@ -108,10 +100,6 @@
                             FontWeight="SemiBold"
                             FontSize="13"
                             Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                        <TextBlock
-                            Text="(double-click a metric for its 1h chart, or a header to sort)"
-                            Style="{StaticResource SectionHintStyle}"/>
                     </StackPanel>
                 </Expander.Header>
 
@@ -247,10 +235,6 @@
                             FontWeight="SemiBold"
                             FontSize="13"
                             Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                        <TextBlock
-                            Text="(double-click a row for its 1h CPU/RAM chart, or a header to sort)"
-                            Style="{StaticResource SectionHintStyle}"/>
                     </StackPanel>
                 </Expander.Header>
 

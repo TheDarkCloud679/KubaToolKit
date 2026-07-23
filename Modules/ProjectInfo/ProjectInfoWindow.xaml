@@ -44,14 +44,6 @@
                 LostFocus="ProjectKeyTextBox_LostFocus"
                 ToolTip="Prod/Preprod/Test profiles of the same project share this information automatically (the _prod/_preprod/_test suffix is detected and stripped). Override it here to force two profiles to share, or to split them."/>
 
-            <TextBlock
-                Text="(Prod/Preprod/Test of the same project share info automatically)"
-                VerticalAlignment="Center"
-                Margin="8,0,0,0"
-                FontSize="11"
-                FontStyle="Italic"
-                Foreground="{StaticResource TextMutedBrush}"/>
-
             <Button
                 Content="📁 Files folder"
                 Margin="16,0,0,0"

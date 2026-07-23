@@ -32,13 +32,6 @@
                     Foreground="{StaticResource TextPrimaryBrush}"/>
 
                 <TextBlock
-                    Text="(double-click an execution for its event history, or a header to sort)"
-                    FontSize="11"
-                    FontStyle="Italic"
-                    Foreground="{StaticResource TextMutedBrush}"
-                    Margin="0,2,0,0"/>
-
-                <TextBlock
                     x:Name="ExpressHintTextBlock"
                     Text="EXPRESS: list rebuilt from CloudWatch Logs (last 7 days, requires logging to be enabled)"
                     FontSize="11"

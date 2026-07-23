@@ -30,13 +30,6 @@
                     FontWeight="Bold"
                     FontSize="15"
                     Foreground="{StaticResource TextPrimaryBrush}"/>
-
-                <TextBlock
-                    Text="(double-click an event to view its formatted request/details, or a header to sort)"
-                    FontSize="11"
-                    FontStyle="Italic"
-                    Foreground="{StaticResource TextMutedBrush}"
-                    Margin="0,2,0,0"/>
             </StackPanel>
 
             <ProgressBar

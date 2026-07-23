@@ -24,14 +24,6 @@
                     FontSize="14"
                     Foreground="{StaticResource TextPrimaryBrush}"
                     VerticalAlignment="Center"/>
-
-                <TextBlock
-                    Text="(double-click a state machine for its executions, or a header to sort)"
-                    FontSize="11"
-                    FontStyle="Italic"
-                    Foreground="{StaticResource TextMutedBrush}"
-                    Margin="10,0,0,0"
-                    VerticalAlignment="Center"/>
             </StackPanel>
 
             <ProgressBar
