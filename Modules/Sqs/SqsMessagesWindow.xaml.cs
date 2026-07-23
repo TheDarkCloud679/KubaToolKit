@@ -4,6 +4,7 @@ using KubaToolKit.Shared.Windows;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.Sqs;
 
@@ -140,9 +141,18 @@ public partial class SqsMessagesWindow
             return;
         }
 
-        var viewer =
-            new JsonViewerWindow(message.Body);
+        // Deferred past the double-click's mouse-up: opening the window
+        // synchronously while that input is still being processed lets
+        // Windows mistake it for a drag on the new window, which
+        // immediately minimizes it (a known WPF double-click gotcha).
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                var viewer =
+                    new JsonViewerWindow(message.Body);
 
-        viewer.Show();
+                viewer.Show();
+            }));
     }
 }

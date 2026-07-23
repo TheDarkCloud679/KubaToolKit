@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.StepFunctions;
 
@@ -143,13 +144,22 @@ public partial class StepFunctionsView
             return;
         }
 
-        var window =
-            new ExecutionsWindow(
-                _currentProfile,
-                stateMachine.Name,
-                stateMachine.Arn,
-                stateMachine.Type);
+        // Deferred past the double-click's mouse-up: opening the window
+        // synchronously while that input is still being processed lets
+        // Windows mistake it for a drag on the new window, which
+        // immediately minimizes it (a known WPF double-click gotcha).
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                var window =
+                    new ExecutionsWindow(
+                        _currentProfile,
+                        stateMachine.Name,
+                        stateMachine.Arn,
+                        stateMachine.Type);
 
-        window.Show();
+                window.Show();
+            }));
     }
 }

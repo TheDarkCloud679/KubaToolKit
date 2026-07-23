@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.CloudWatchLogs;
 
@@ -391,11 +392,20 @@ SearchAllLogsCheckBox_Changed(
                 return;
             }
 
-            var viewer =
-                new JsonViewerWindow(
-                    selectedLog.Message);
+            // Deferred past the double-click's mouse-up: opening the window
+            // synchronously while that input is still being processed lets
+            // Windows mistake it for a drag on the new window, which
+            // immediately minimizes it (a known WPF double-click gotcha).
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Input,
+                new Action(() =>
+                {
+                    var viewer =
+                        new JsonViewerWindow(
+                            selectedLog.Message);
 
-            viewer.Show();
+                    viewer.Show();
+                }));
         }
         catch (Exception ex)
         {
