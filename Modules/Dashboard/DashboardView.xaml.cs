@@ -251,6 +251,106 @@ public partial class DashboardView
         window.Show();
     }
 
+    private async void
+    DiskReportButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            MessageBox.Show(
+                "Please select an AWS profile first.",
+                "Disk report");
+
+            return;
+        }
+
+        if (_ec2Metrics.Count == 0)
+        {
+            MessageBox.Show(
+                "No EC2 instances loaded -- refresh the dashboard first.",
+                "Disk report");
+
+            return;
+        }
+
+        await RunDiskReportAsync();
+    }
+
+    private async Task
+    RunDiskReportAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            return;
+        }
+
+        Logger.Debug($"DashboardView: running EC2 disk report (profile '{_currentProfile}').");
+
+        try
+        {
+            DiskReportButton.IsEnabled = false;
+            LoadingProgressBar.Visibility = Visibility.Visible;
+
+            var report =
+                await _dashboardService.GetEc2DiskUsage(
+                    _currentProfile,
+                    _ec2Metrics.ToList());
+
+            var worstByInstance =
+                report
+                    .GroupBy(r => r.InstanceId, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Max(r => r.UsedPercent),
+                        StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in _ec2Metrics)
+            {
+                item.DiskPercent =
+                    worstByInstance.TryGetValue(item.InstanceId, out var worst)
+                        ? worst
+                        : (double?)null;
+            }
+
+            Ec2Grid.Items.Refresh();
+
+            var window = new Ec2DiskReportWindow(report);
+            window.Show();
+
+            Logger.Info($"DashboardView: disk report done, {report.Count} mount point(s) found.");
+        }
+        catch (Exception ex)
+        {
+            if (AwsSsoService.IsSsoExpired(ex))
+            {
+                Logger.Debug("DashboardView: SSO session expired, attempting reconnection.");
+
+                var success =
+                    await AwsSsoService.Login();
+
+                if (success)
+                {
+                    await RunDiskReportAsync();
+                    return;
+                }
+            }
+
+            Logger.Error(
+                $"DashboardView: disk report failed (profile '{_currentProfile}').",
+                ex);
+
+            MessageBox.Show(
+                ex.ToString(),
+                "Disk report error");
+        }
+        finally
+        {
+            LoadingProgressBar.Visibility = Visibility.Collapsed;
+            DiskReportButton.IsEnabled = true;
+        }
+    }
+
     private void
     RdsGrid_MouseDoubleClick(
         object sender,

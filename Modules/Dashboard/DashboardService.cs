@@ -96,18 +96,29 @@ public class DashboardService
                 (int)(processed * 100.0
                     / Math.Max(1, instances.Count)));
 
+            var dimensions = new List<Dimension>
+            {
+                new Dimension
+                {
+                    Name = "DBInstanceIdentifier",
+                    Value = instance.DBInstanceIdentifier
+                }
+            };
+
             var cpu =
-                await GetLatestMetric(
+                await GetLatestMetricValue(
                     cloudWatchClient,
-                    instance.DBInstanceIdentifier,
+                    "AWS/RDS",
                     "CPUUtilization",
+                    dimensions,
                     cancellationToken);
 
             var connections =
-                await GetLatestMetric(
+                await GetLatestMetricValue(
                     cloudWatchClient,
-                    instance.DBInstanceIdentifier,
+                    "AWS/RDS",
                     "DatabaseConnections",
+                    dimensions,
                     cancellationToken);
 
             var tags =
@@ -147,10 +158,11 @@ public class DashboardService
     }
 
     private async Task<double?>
-    GetLatestMetric(
+    GetLatestMetricValue(
         AmazonCloudWatchClient client,
-        string dbInstanceIdentifier,
+        string @namespace,
         string metricName,
+        List<Dimension> dimensions,
         CancellationToken cancellationToken)
     {
         var now =
@@ -160,16 +172,9 @@ public class DashboardService
             await client.GetMetricStatisticsAsync(
                 new GetMetricStatisticsRequest
                 {
-                    Namespace = "AWS/RDS",
+                    Namespace = @namespace,
                     MetricName = metricName,
-                    Dimensions = new List<Dimension>
-                    {
-                        new Dimension
-                        {
-                            Name = "DBInstanceIdentifier",
-                            Value = dbInstanceIdentifier
-                        }
-                    },
+                    Dimensions = dimensions,
                     StartTime = now.AddMinutes(-15),
                     EndTime = now,
                     Period = 300,
@@ -333,6 +338,131 @@ public class DashboardService
 
         return items
             .OrderBy(x => x.Name)
+            .ToList();
+    }
+
+    /// One row per instance x mount point: disk_used_percent isn't
+    /// published with a fixed dimension set (it depends on how the
+    /// CloudWatch agent on each box is configured), so the actual
+    /// dimensions are discovered per instance via ListMetrics instead of
+    /// assumed up front, then each matching time series is read
+    /// individually.
+    public async Task<List<Ec2DiskUsage>>
+    GetEc2DiskUsage(
+        string profile,
+        IReadOnlyList<Ec2MetricItem> instances,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        Logger.Debug($"DashboardService: scanning disk usage for {instances.Count} EC2 instance(s) (profile '{profile}').");
+
+        var credentials =
+            GetCredentials(profile);
+
+        using var client =
+            new AmazonCloudWatchClient(
+                credentials,
+                RegionEndpoint.EUWest3);
+
+        var instanceNamesById =
+            instances.ToDictionary(
+                x => x.InstanceId,
+                x => x.Name,
+                StringComparer.OrdinalIgnoreCase);
+
+        var metrics =
+            new List<Amazon.CloudWatch.Model.Metric>();
+
+        string? nextToken = null;
+
+        do
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var response =
+                await client.ListMetricsAsync(
+                    new ListMetricsRequest
+                    {
+                        Namespace = "CWAgent",
+                        MetricName = "disk_used_percent",
+                        NextToken = nextToken
+                    },
+                    cancellationToken);
+
+            if (response.Metrics != null)
+            {
+                metrics.AddRange(response.Metrics);
+            }
+
+            nextToken = response.NextToken;
+        }
+        while (!string.IsNullOrEmpty(nextToken));
+
+        var relevant =
+            metrics
+                .Where(m =>
+                    m.Dimensions != null
+                    && m.Dimensions.Any(d =>
+                        string.Equals(d.Name, "InstanceId", StringComparison.OrdinalIgnoreCase)
+                        && instanceNamesById.ContainsKey(d.Value)))
+                .ToList();
+
+        var results =
+            new List<Ec2DiskUsage>();
+
+        int processed = 0;
+
+        foreach (var metric in relevant)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            processed++;
+
+            progress?.Report(
+                (int)(processed * 100.0
+                    / Math.Max(1, relevant.Count)));
+
+            var instanceId =
+                metric.Dimensions
+                    .First(d => string.Equals(d.Name, "InstanceId", StringComparison.OrdinalIgnoreCase))
+                    .Value;
+
+            var mountPath =
+                metric.Dimensions
+                    .FirstOrDefault(d => string.Equals(d.Name, "path", StringComparison.OrdinalIgnoreCase))
+                    ?.Value
+                ?? "/";
+
+            var usedPercent =
+                await GetLatestMetricValue(
+                    client,
+                    "CWAgent",
+                    "disk_used_percent",
+                    metric.Dimensions,
+                    cancellationToken);
+
+            if (!usedPercent.HasValue)
+            {
+                continue;
+            }
+
+            results.Add(
+                new Ec2DiskUsage
+                {
+                    InstanceId = instanceId,
+                    InstanceName = instanceNamesById.GetValueOrDefault(instanceId, instanceId),
+                    MountPath = mountPath,
+                    UsedPercent = usedPercent.Value
+                });
+        }
+
+        Logger.Info($"DashboardService: disk usage scan found {results.Count} mount point(s) across {relevant.Select(m => m.Dimensions.First(d => d.Name == "InstanceId").Value).Distinct().Count()} instance(s).");
+
+        return results
+            .OrderBy(x => x.InstanceName)
+            .ThenBy(x => x.MountPath)
             .ToList();
     }
 

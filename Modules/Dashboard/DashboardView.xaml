@@ -17,6 +17,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -54,8 +55,17 @@
                 Click="WikiButton_Click"/>
 
             <Button
-                x:Name="RefreshButton"
+                x:Name="DiskReportButton"
                 Grid.Column="4"
+                Width="110"
+                Margin="0,0,10,0"
+                Content="Disk report"
+                ToolTip="Scan every EC2 instance's disk usage and open a report"
+                Click="DiskReportButton_Click"/>
+
+            <Button
+                x:Name="RefreshButton"
+                Grid.Column="5"
                 Width="100"
                 Content="Refresh"
                 Click="RefreshButton_Click"/>
@@ -286,6 +296,27 @@
                                             Background="{Binding StateBackground}">
                                             <TextBlock
                                                 Text="{Binding State}"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn
+                                Header="Disk"
+                                SortMemberPath="DiskPercent"
+                                Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Padding="10,4"
+                                            CornerRadius="4"
+                                            HorizontalAlignment="Left"
+                                            Background="{Binding DiskBackground}"
+                                            ToolTip="Worst mount point found by the last &quot;Disk report&quot; scan">
+                                            <TextBlock
+                                                Text="{Binding DiskDisplay}"
                                                 FontWeight="SemiBold"
                                                 Foreground="{StaticResource TextPrimaryBrush}"/>
                                         </Border>
