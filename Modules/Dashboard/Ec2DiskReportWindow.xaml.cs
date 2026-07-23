@@ -38,7 +38,9 @@ public partial class Ec2DiskReportWindow
 
         SummaryTextBlock.Text =
             report.Count == 0
-                ? "No disk metric found -- check that the CloudWatch agent is installed and reporting disk_used_percent."
+                ? "No disk metric found. The agent running isn't enough: its config file also needs the \"disk\" "
+                    + "measurement enabled under metrics_collected (the same way \"mem\" is, since RAM does show up) "
+                    + "-- then restart the CloudWatch Agent service for the change to take effect."
                 : $"{report.Count} mount point(s) across {instanceCount} instance(s)."
                     + (warningCount > 0 ? $" {warningCount} at or above {WarningThresholdPercent:F0}%." : "");
     }
