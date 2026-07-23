@@ -487,14 +487,52 @@ public partial class WikiWindow
     private double _featuredImagePanStartHorizontalOffset;
     private double _featuredImagePanStartVerticalOffset;
 
+    // Default to fitting the whole image in the window instead of its
+    // native pixel size (which is usually bigger than the window and
+    // needs a manual zoom-out first) -- zooming in from a fully visible
+    // image beats zooming out then back in to the spot you wanted.
     private void
     ResetFeaturedImageZoom()
     {
-        FeaturedImageScale.ScaleX = 1;
-        FeaturedImageScale.ScaleY = 1;
-
         FeaturedImageScrollViewer.ScrollToHorizontalOffset(0);
         FeaturedImageScrollViewer.ScrollToVerticalOffset(0);
+
+        // The ScrollViewer's viewport size, and the image's natural size
+        // right after a fresh Source assignment, aren't available until
+        // after a layout pass.
+        FeaturedImageScrollViewer.Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(ApplyFitToViewportZoom));
+    }
+
+    private void
+    ApplyFitToViewportZoom()
+    {
+        var viewportWidth = FeaturedImageScrollViewer.ViewportWidth;
+        var viewportHeight = FeaturedImageScrollViewer.ViewportHeight;
+
+        if (FeaturedImage.Source is not BitmapSource bitmap
+            || viewportWidth <= 0 || viewportHeight <= 0
+            || bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0)
+        {
+            FeaturedImageScale.ScaleX = 1;
+            FeaturedImageScale.ScaleY = 1;
+
+            return;
+        }
+
+        // Never upscale past 100% by default: shrinking a large image to
+        // fit is the point, a small image just stays at its own size
+        // instead of being blown up and looking blurry.
+        var fitScale =
+            Math.Min(
+                viewportWidth / bitmap.PixelWidth,
+                viewportHeight / bitmap.PixelHeight);
+
+        var scale = Math.Min(1.0, fitScale);
+
+        FeaturedImageScale.ScaleX = scale;
+        FeaturedImageScale.ScaleY = scale;
     }
 
     private void
