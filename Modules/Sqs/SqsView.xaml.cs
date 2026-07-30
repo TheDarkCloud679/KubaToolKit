@@ -3,6 +3,7 @@ using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.Sqs;
 
@@ -14,12 +15,48 @@ public partial class SqsView
     private string? _currentProfile;
     private CancellationTokenSource? _loadCancellation;
 
+    private readonly DispatcherTimer _autoRefreshTimer =
+        new() { Interval = TimeSpan.FromSeconds(5) };
+
     public SqsView()
     {
         InitializeComponent();
 
         QueuesGrid.ItemsSource = _queues;
+
+        _autoRefreshTimer.Tick += async (_, __) => await RefreshAsync();
+
+        // Other modules aren't torn down when you switch away, only
+        // hidden (Visibility.Collapsed) -- without this, a running timer
+        // would keep silently polling AWS in the background for a module
+        // you're no longer looking at.
+        IsVisibleChanged += (_, __) => UpdateAutoRefreshTimerState();
     }
+
+    private void
+    UpdateAutoRefreshTimerState()
+    {
+        var selectedSeconds =
+            AutoRefreshCombo.SelectedItem is ComboBoxItem { Tag: string tag }
+            && int.TryParse(tag, out var seconds)
+                ? seconds
+                : 0;
+
+        if (selectedSeconds <= 0 || !IsVisible)
+        {
+            _autoRefreshTimer.Stop();
+            return;
+        }
+
+        _autoRefreshTimer.Interval = TimeSpan.FromSeconds(selectedSeconds);
+        _autoRefreshTimer.Start();
+    }
+
+    private void
+    AutoRefreshCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        UpdateAutoRefreshTimerState();
 
     public async Task
     OnProfileChanged(

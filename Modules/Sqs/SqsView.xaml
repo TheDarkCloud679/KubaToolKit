@@ -15,6 +15,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
@@ -41,9 +42,33 @@
                 IsIndeterminate="True"
                 VerticalAlignment="Center"/>
 
+            <StackPanel
+                Grid.Column="2"
+                Orientation="Horizontal"
+                Margin="0,0,10,0">
+                <TextBlock
+                    Text="Auto-refresh"
+                    VerticalAlignment="Center"
+                    Margin="0,0,6,0"
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                <ComboBox
+                    x:Name="AutoRefreshCombo"
+                    Width="80"
+                    SelectedIndex="0"
+                    SelectionChanged="AutoRefreshCombo_SelectionChanged">
+                    <ComboBoxItem Content="Off" Tag="0"/>
+                    <ComboBoxItem Content="5 s" Tag="5"/>
+                    <ComboBoxItem Content="10 s" Tag="10"/>
+                    <ComboBoxItem Content="30 s" Tag="30"/>
+                    <ComboBoxItem Content="1 min" Tag="60"/>
+                </ComboBox>
+            </StackPanel>
+
             <Button
                 x:Name="RefreshButton"
-                Grid.Column="2"
+                Grid.Column="3"
                 Width="100"
                 Content="Refresh"
                 Click="RefreshButton_Click"/>
