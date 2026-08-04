@@ -6,6 +6,10 @@
 Config/config
 Config/credentials
 
+# Personal Atlassian API token (Knowledge Search module) -- tied to one
+# person's account, same reasoning as the AWS files above.
+Config/atlassian.json
+
 # Profile -> project key map (small, no PII by itself, but kept out of git
 # for the same reason as the per-project data below).
 Config/project-info.json

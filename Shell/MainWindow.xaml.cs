@@ -4,6 +4,7 @@ using KubaToolKit.Modules.ApiClient;
 using KubaToolKit.Modules.CloudTrail;
 using KubaToolKit.Modules.CloudWatchLogs;
 using KubaToolKit.Modules.Dashboard;
+using KubaToolKit.Modules.KnowledgeSearch;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
 using KubaToolKit.Modules.StepFunctions;
@@ -28,6 +29,7 @@ public partial class MainWindow
     private readonly SqsView _sqsView;
     private readonly StepFunctionsView _stepFunctionsView;
     private readonly ApiClientView _apiClientView;
+    private readonly KnowledgeSearchView _knowledgeSearchView;
 
     private bool _windowLoaded = false;
     private bool _waitingForEndDate = false;
@@ -58,6 +60,7 @@ public partial class MainWindow
         _sqsView = _modules.OfType<SqsModule>().Single().TypedView;
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
         _apiClientView = _modules.OfType<ApiClientModule>().Single().TypedView;
+        _knowledgeSearchView = _modules.OfType<KnowledgeSearchModule>().Single().TypedView;
 
         Logger.Debug($"MainWindow: {_modules.Count} module(s) instantiated.");
 
@@ -689,13 +692,18 @@ StartDatePicker_SelectedDateChanged(
                 ?.IsChecked
             == true;
 
+        bool isKnowledgeSearch =
+            KnowledgeSearchModeRadio
+                ?.IsChecked
+            == true;
+
         bool isCloudTrail =
             CloudTrailModeRadio
                 ?.IsChecked
             == true;
 
         bool isCloudWatch =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isCloudTrail;
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isKnowledgeSearch && !isCloudTrail;
 
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
@@ -718,8 +726,11 @@ StartDatePicker_SelectedDateChanged(
         _apiClientView.Visibility =
             isApiClient ? Visibility.Visible : Visibility.Collapsed;
 
+        _knowledgeSearchView.Visibility =
+            isKnowledgeSearch ? Visibility.Visible : Visibility.Collapsed;
+
         ProfilePatternSearchRow.Visibility =
-            isApiClient ? Visibility.Collapsed : Visibility.Visible;
+            isApiClient || isKnowledgeSearch ? Visibility.Collapsed : Visibility.Visible;
 
         DateRangeRow.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
