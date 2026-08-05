@@ -43,30 +43,38 @@ public partial class AtlassianSearchView
         }
     }
 
+    private const string DefaultConfluenceSpaceName = "Service Client";
+
     // Populates every filter dropdown, each independently -- one endpoint
-    // being unavailable (a permission restriction, a site not having the
-    // newer Confluence label API...) shouldn't stop the others from
-    // loading, and any dropdown left empty still accepts typed text since
-    // it's editable.
+    // being unavailable (a permission restriction, a site configuration
+    // quirk...) shouldn't stop the others from loading, and any dropdown
+    // left empty still accepts typed text since it's editable.
     private async Task
     LoadFilterOptionsAsync()
     {
         var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
-        var labelsTask = _atlassianService.GetConfluenceLabels(_settings);
         var projectsTask = _atlassianService.GetJiraProjects(_settings);
         var prioritiesTask = _atlassianService.GetJiraPriorities(_settings);
         var statusesTask = _atlassianService.GetJiraStatuses(_settings);
         var usersTask = _atlassianService.GetJiraUsers(_settings);
 
-        await Task.WhenAll(spacesTask, labelsTask, projectsTask, prioritiesTask, statusesTask, usersTask);
+        await Task.WhenAll(spacesTask, projectsTask, prioritiesTask, statusesTask, usersTask);
 
         PopulateCombo(ConfluenceSpaceCombo, spacesTask.Result);
-        PopulateCombo(ConfluenceLabelCombo, labelsTask.Result);
         PopulateCombo(JiraProjectCombo, projectsTask.Result);
         PopulateCombo(JiraPriorityCombo, prioritiesTask.Result);
         PopulateCombo(JiraStatusCombo, statusesTask.Result);
         PopulateCombo(JiraReporterCombo, usersTask.Result);
         PopulateCombo(JiraAssigneeCombo, usersTask.Result);
+
+        var defaultSpace =
+            spacesTask.Result.FirstOrDefault(s =>
+                string.Equals(s.Display, DefaultConfluenceSpaceName, StringComparison.OrdinalIgnoreCase));
+
+        if (defaultSpace.Value != null)
+        {
+            SelectComboItemByTag(ConfluenceSpaceCombo, defaultSpace.Value);
+        }
     }
 
     private static void
@@ -86,16 +94,87 @@ public partial class AtlassianSearchView
         combo.SelectedIndex = 0;
     }
 
-    // The dropdown is editable, so a filter value can come from either
-    // picking an item (its Tag holds the raw key/name to filter on) or
-    // typing free text that matches nothing in the list (SelectedItem is
-    // then null, and combo.Text holds exactly what was typed).
+    private static void
+    SelectComboItemByTag(
+        ComboBox combo,
+        string tag)
+    {
+        foreach (var obj in combo.Items)
+        {
+            if (obj is ComboBoxItem { Tag: string itemTag } item
+                && string.Equals(itemTag, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                combo.SelectedItem = item;
+
+                return;
+            }
+        }
+    }
+
+    // The Space/Project/Priority/Status/Reporter/Assignee dropdowns stay
+    // editable, so a filter value can come from either picking an item
+    // (its Tag holds the raw key/name to filter on) or typing free text
+    // that matches nothing in the list (SelectedItem is then null, and
+    // combo.Text holds exactly what was typed).
     private static string
     GetComboFilterValue(
         ComboBox combo) =>
         combo.SelectedItem is ComboBoxItem { Tag: string tag }
             ? tag
             : (combo.Text ?? "").Trim();
+
+    // Group/Page aren't editable (their value is an opaque content Id, not
+    // something you could usefully type), so only a real selection counts.
+    private static string
+    GetComboSelectionValue(
+        ComboBox combo) =>
+        combo.SelectedItem is ComboBoxItem { Tag: string tag } ? tag : "";
+
+    private async void
+    ConfluenceSpaceCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        ConfluenceGroupCombo.Items.Clear();
+        ConfluenceGroupCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
+        ConfluenceGroupCombo.SelectedIndex = 0;
+
+        ConfluencePageCombo.Items.Clear();
+        ConfluencePageCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
+        ConfluencePageCombo.SelectedIndex = 0;
+
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+
+        if (string.IsNullOrWhiteSpace(spaceKey) || !_settings.IsComplete)
+        {
+            return;
+        }
+
+        var groups = await _atlassianService.GetConfluenceSpaceGroups(_settings, spaceKey);
+
+        PopulateCombo(ConfluenceGroupCombo, groups);
+    }
+
+    private async void
+    ConfluenceGroupCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        ConfluencePageCombo.Items.Clear();
+        ConfluencePageCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
+        ConfluencePageCombo.SelectedIndex = 0;
+
+        var groupId = GetComboSelectionValue(ConfluenceGroupCombo);
+
+        if (string.IsNullOrWhiteSpace(groupId))
+        {
+            return;
+        }
+
+        var pages = await _atlassianService.GetConfluenceChildPages(_settings, groupId);
+
+        PopulateCombo(ConfluencePageCombo, pages);
+    }
 
     private void
     UpdateStatusForMissingSettings()
@@ -219,12 +298,15 @@ public partial class AtlassianSearchView
     {
         try
         {
+            var pageId = GetComboSelectionValue(ConfluencePageCombo);
+            var groupId = GetComboSelectionValue(ConfluenceGroupCombo);
+
             var results =
                 await _atlassianService.SearchConfluence(
                     _settings,
                     query,
                     GetComboFilterValue(ConfluenceSpaceCombo),
-                    GetComboFilterValue(ConfluenceLabelCombo));
+                    string.IsNullOrWhiteSpace(pageId) ? groupId : pageId);
 
             return (results, null);
         }

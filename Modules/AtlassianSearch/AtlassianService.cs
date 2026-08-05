@@ -95,23 +95,87 @@ public class AtlassianService
             cancellationToken);
     }
 
-    // No reliable site-wide "list every label" endpoint exists in the
-    // classic Confluence REST API -- this uses the newer v2 endpoint on a
-    // best-effort basis. If it 404s (older site, different API version),
-    // the Label field just falls back to free text.
+    // "Groups" = the space's top-level pages (what shows as the root
+    // entries of the page tree in Confluence's own sidebar): the direct
+    // children of the space's homepage. Falls back to pages with no
+    // parent at all if the space has no homepage (or the call fails),
+    // since that's the closest equivalent.
     public async Task<List<NameValue>>
-    GetConfluenceLabels(
+    GetConfluenceSpaceGroups(
         AtlassianSettings settings,
+        string spaceKey,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(spaceKey))
+        {
+            return new List<NameValue>();
+        }
+
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        try
+        {
+            var spaceElements =
+                await GetJsonArray(
+                    settings,
+                    $"{baseUrl}/wiki/rest/api/space?spaceKey={Uri.EscapeDataString(spaceKey)}&expand=homepage",
+                    cancellationToken);
+
+            var homepageId =
+                spaceElements.Count > 0
+                    ? TryGetString(spaceElements[0], "homepage", "id")
+                    : null;
+
+            if (!string.IsNullOrWhiteSpace(homepageId))
+            {
+                var children = await GetConfluenceChildPages(settings, homepageId, cancellationToken);
+
+                if (children.Count > 0)
+                {
+                    return children;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load the homepage for space '{spaceKey}'.", ex);
+        }
+
+        // No homepage, or it has no children: fall back to pages that have
+        // no parent page of their own anywhere in the space.
+        return await GetNameValueList(
+            settings,
+            $"{baseUrl}/wiki/rest/api/content?spaceKey={Uri.EscapeDataString(spaceKey)}&type=page&expand=ancestors&limit=250",
+            "results",
+            el => TryGetString(el, "id"),
+            el => TryGetString(el, "title"),
+            cancellationToken,
+            swallowErrors: true,
+            include: el =>
+                el.TryGetProperty("ancestors", out var ancestorsEl)
+                && ancestorsEl.ValueKind == JsonValueKind.Array
+                && ancestorsEl.GetArrayLength() == 0);
+    }
+
+    public async Task<List<NameValue>>
+    GetConfluenceChildPages(
+        AtlassianSettings settings,
+        string parentPageId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(parentPageId))
+        {
+            return new List<NameValue>();
+        }
+
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
         return await GetNameValueList(
             settings,
-            $"{baseUrl}/wiki/api/v2/labels?limit=100",
+            $"{baseUrl}/wiki/rest/api/content/{parentPageId}/child/page?limit=250",
             "results",
-            el => TryGetString(el, "name"),
-            el => TryGetString(el, "name"),
+            el => TryGetString(el, "id"),
+            el => TryGetString(el, "title"),
             cancellationToken,
             swallowErrors: true);
     }
@@ -264,7 +328,8 @@ public class AtlassianService
         Func<JsonElement, string?> getValue,
         Func<JsonElement, string?> getDisplay,
         CancellationToken cancellationToken,
-        bool swallowErrors = false)
+        bool swallowErrors = false,
+        Func<JsonElement, bool>? include = null)
     {
         try
         {
@@ -294,6 +359,11 @@ public class AtlassianService
 
             foreach (var item in arrayEl.EnumerateArray())
             {
+                if (include != null && !include(item))
+                {
+                    continue;
+                }
+
                 var value = getValue(item);
                 var display = getDisplay(item);
 
@@ -325,7 +395,7 @@ public class AtlassianService
         AtlassianSettings settings,
         string query,
         string? spaceFilter,
-        string? labelFilter,
+        string? ancestorId,
         CancellationToken cancellationToken = default)
     {
         var cql = $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)";
@@ -335,9 +405,12 @@ public class AtlassianService
             cql += $" and space = \"{EscapeForQuery(spaceFilter)}\"";
         }
 
-        if (!string.IsNullOrWhiteSpace(labelFilter))
+        // Restricts to a group (a top-level page) or, more specifically,
+        // one of its pages -- "ancestor" matches the whole subtree, not
+        // just direct children, so either works with the same clause.
+        if (!string.IsNullOrWhiteSpace(ancestorId))
         {
-            cql += $" and label = \"{EscapeForQuery(labelFilter)}\"";
+            cql += $" and ancestor = {EscapeForQuery(ancestorId)}";
         }
 
         var baseUrl = settings.BaseUrl.TrimEnd('/');
