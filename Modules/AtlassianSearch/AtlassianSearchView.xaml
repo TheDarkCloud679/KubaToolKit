@@ -196,7 +196,7 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button
-                                            Content="Open"
+                                            Content="View"
                                             Width="70"
                                             Click="OpenConfluenceResult_Click"/>
                                     </DataTemplate>

@@ -595,6 +595,8 @@ public class AtlassianService
 
         foreach (var item in resultsEl.EnumerateArray())
         {
+            var id = TryGetString(item, "content", "id") ?? "";
+
             var title =
                 TryGetString(item, "title")
                 ?? TryGetString(item, "content", "title")
@@ -622,6 +624,7 @@ public class AtlassianService
             results.Add(
                 new ConfluenceSearchResult
                 {
+                    Id = id,
                     // Confluence's search API returns title/excerpt as
                     // HTML-entity-escaped text (e.g. "d&#39;obtenir").
                     Title = System.Net.WebUtility.HtmlDecode(title),
@@ -639,6 +642,39 @@ public class AtlassianService
             hasQuery
                 ? results.OrderByDescending(r => r.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList()
                 : results;
+    }
+
+    public async Task<ConfluencePageContent>
+    GetConfluencePageContent(
+        AtlassianSettings settings,
+        string pageId,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url = $"{baseUrl}/wiki/rest/api/content/{Uri.EscapeDataString(pageId)}?expand=body.view";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to load Confluence page: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        return new ConfluencePageContent
+        {
+            Title = TryGetString(doc.RootElement, "title") ?? "",
+            Html = TryGetString(doc.RootElement, "body", "view", "value") ?? ""
+        };
     }
 
     public async Task<List<JiraSearchResult>>

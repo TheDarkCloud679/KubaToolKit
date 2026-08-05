@@ -2,6 +2,7 @@ namespace KubaToolKit.Modules.AtlassianSearch.Models;
 
 public class ConfluenceSearchResult
 {
+    public string Id { get; set; } = "";
     public string Title { get; set; } = "";
     public string Space { get; set; } = "";
     public string Excerpt { get; set; } = "";

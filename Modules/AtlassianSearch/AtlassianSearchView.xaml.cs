@@ -592,7 +592,7 @@ public partial class AtlassianSearchView
 
         if (ConfluenceGrid.SelectedItem is ConfluenceSearchResult result)
         {
-            OpenUrl(result.Url);
+            OpenConfluenceResult(result);
         }
     }
 
@@ -627,8 +627,31 @@ public partial class AtlassianSearchView
     {
         if (sender is Button { DataContext: ConfluenceSearchResult result })
         {
-            OpenUrl(result.Url);
+            OpenConfluenceResult(result);
         }
+    }
+
+    // Falls back to the browser if a result somehow has no content Id
+    // (shouldn't happen for a real search hit, but the parsing here is
+    // defensive throughout, so this stays defensive too).
+    private void
+    OpenConfluenceResult(
+        ConfluenceSearchResult result)
+    {
+        if (string.IsNullOrWhiteSpace(result.Id))
+        {
+            OpenUrl(result.Url);
+
+            return;
+        }
+
+        var window =
+            new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+        window.Show();
     }
 
     private void
