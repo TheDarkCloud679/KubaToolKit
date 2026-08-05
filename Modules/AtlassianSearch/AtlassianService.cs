@@ -723,41 +723,66 @@ public class AtlassianService
         string? project,
         string? reporter,
         string? assignee,
+        bool assigneeIsUnassigned,
         string? priority,
+        string priorityOperator,
         string? status,
         CancellationToken cancellationToken = default)
     {
-        // Same reasoning as Confluence's search above: without the trailing
-        // "*", JQL's fuzzy "~" match won't catch a short fragment against a
-        // longer word once they're more than ~2 edits apart.
-        var jql = $"text ~ \"{EscapeForQuery(query)}*\"";
+        // A saved filter (e.g. "Unassigned > P2") may carry no search text
+        // at all -- built as a list of conditions instead of an always-
+        // present "text ~" prefix, so a text-less filter still produces
+        // valid JQL instead of an empty/invalid "text ~ *" clause. The
+        // caller only invokes this once at least one of query/project/
+        // reporter/assignee/priority/status is actually set.
+        var conditions = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            // Without the trailing "*", JQL's fuzzy "~" match won't catch
+            // a short fragment against a longer word once they're more
+            // than ~2 edits apart.
+            conditions.Add($"text ~ \"{EscapeForQuery(query)}*\"");
+        }
 
         if (!string.IsNullOrWhiteSpace(project))
         {
-            jql += $" and project = \"{EscapeForQuery(project)}\"";
+            conditions.Add($"project = \"{EscapeForQuery(project)}\"");
         }
 
         if (!string.IsNullOrWhiteSpace(reporter))
         {
-            jql += $" and reporter = \"{EscapeForQuery(reporter)}\"";
+            conditions.Add($"reporter = \"{EscapeForQuery(reporter)}\"");
         }
 
-        if (!string.IsNullOrWhiteSpace(assignee))
+        if (assigneeIsUnassigned)
         {
-            jql += $" and assignee = \"{EscapeForQuery(assignee)}\"";
+            conditions.Add("assignee is EMPTY");
+        }
+        else if (!string.IsNullOrWhiteSpace(assignee))
+        {
+            conditions.Add($"assignee = \"{EscapeForQuery(assignee)}\"");
         }
 
         if (!string.IsNullOrWhiteSpace(priority))
         {
-            jql += $" and priority = \"{EscapeForQuery(priority)}\"";
+            // Restricted to a known-safe set rather than trusted as-is --
+            // this ends up directly in the JQL string, unquoted.
+            var op = priorityOperator switch
+            {
+                ">" or ">=" or "<" or "<=" => priorityOperator,
+                _ => "="
+            };
+
+            conditions.Add($"priority {op} \"{EscapeForQuery(priority)}\"");
         }
 
         if (!string.IsNullOrWhiteSpace(status))
         {
-            jql += $" and status = \"{EscapeForQuery(status)}\"";
+            conditions.Add($"status = \"{EscapeForQuery(status)}\"");
         }
 
-        jql += " order by updated desc";
+        var jql = string.Join(" and ", conditions) + " order by updated desc";
 
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 

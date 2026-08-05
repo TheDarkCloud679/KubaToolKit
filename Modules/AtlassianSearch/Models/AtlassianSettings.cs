@@ -15,4 +15,6 @@ public class AtlassianSettings
     // Space dropdown starts narrowed to just these instead of every space
     // on the site (typing still searches everything).
     public List<string> FavoriteConfluenceSpaceKeys { get; set; } = new();
+
+    public List<SavedJiraFilter> SavedJiraFilters { get; set; } = new();
 }

@@ -250,10 +250,35 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Top">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Center">
+                            <TextBlock Text="Saved list" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox
+                                x:Name="JiraSavedFilterCombo"
+                                Width="200"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="A saved combination of the filters below (e.g. 'Unassigned &gt; P2')"
+                                SelectionChanged="JiraSavedFilterCombo_SelectionChanged"/>
+                            <Button
+                                x:Name="SaveJiraFilterButton"
+                                Content="Save current..."
+                                Width="110"
+                                Margin="8,0,0,0"
+                                Click="SaveJiraFilterButton_Click"/>
+                            <Button
+                                x:Name="DeleteJiraFilterButton"
+                                Content="Delete"
+                                Width="70"
+                                Margin="8,0,0,0"
+                                IsEnabled="False"
+                                Click="DeleteJiraFilterButton_Click"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
                         <StackPanel Width="140" Margin="0,0,14,0">
                             <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
@@ -302,16 +327,37 @@
                                 Margin="0,2,0,0"
                                 DisplayMemberPath="Display"
                                 SelectedValuePath="Value"/>
+                            <CheckBox
+                                x:Name="JiraUnassignedCheckBox"
+                                Content="Unassigned only"
+                                FontSize="11"
+                                Margin="0,4,0,0"
+                                Checked="JiraUnassignedCheckBox_Changed"
+                                Unchecked="JiraUnassignedCheckBox_Changed"/>
                         </StackPanel>
 
-                        <StackPanel Width="110" Margin="0,0,14,0">
+                        <StackPanel Width="150" Margin="0,0,14,0">
                             <TextBlock Text="Priority" FontSize="11" Margin="0,0,0,2"/>
                             <TextBox x:Name="JiraPrioritySearchBox" ToolTip="Type to search"/>
-                            <ComboBox
-                                x:Name="JiraPriorityCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox
+                                    x:Name="JiraPriorityOperatorCombo"
+                                    Width="52"
+                                    Margin="0,0,4,0"
+                                    SelectedIndex="0"
+                                    ToolTip="Comparison operator, e.g. '&gt;' for higher-urgency-than">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="&gt;"/>
+                                    <ComboBoxItem Content="&gt;="/>
+                                    <ComboBoxItem Content="&lt;"/>
+                                    <ComboBoxItem Content="&lt;="/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraPriorityCombo"
+                                    Width="90"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <StackPanel Width="130">
@@ -327,7 +373,7 @@
 
                         <DataGrid
                             x:Name="JiraGrid"
-                            Grid.Row="1"
+                            Grid.Row="2"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
                             CanUserAddRows="False"
