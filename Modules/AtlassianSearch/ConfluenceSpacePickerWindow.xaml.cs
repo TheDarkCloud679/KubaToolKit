@@ -105,11 +105,28 @@ public partial class ConfluenceSpacePickerWindow
     }
 
     private void
-    RestoreSelection()
+    RestoreSelection() =>
+        ApplySelection(SelectedKeys);
+
+    // SelectedItems can only be written to in Multiple mode -- Single mode
+    // requires going through SelectedItem instead, or WPF throws.
+    private void
+    ApplySelection(
+        IEnumerable<string> keys)
     {
+        var keySet = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
+
+        if (SpacesListBox.SelectionMode == SelectionMode.Single)
+        {
+            SpacesListBox.SelectedItem =
+                SpacesListBox.Items.Cast<SpaceItem>().FirstOrDefault(item => keySet.Contains(item.Value));
+
+            return;
+        }
+
         foreach (var item in SpacesListBox.Items.Cast<SpaceItem>())
         {
-            if (SelectedKeys.Any(k => string.Equals(k, item.Value, StringComparison.OrdinalIgnoreCase)))
+            if (keySet.Contains(item.Value))
             {
                 SpacesListBox.SelectedItems.Add(item);
             }
@@ -207,13 +224,7 @@ public partial class ConfluenceSpacePickerWindow
 
         RebuildItems();
 
-        foreach (var item2 in SpacesListBox.Items.Cast<SpaceItem>())
-        {
-            if (previousSelection.Any(v => string.Equals(v, item2.Value, StringComparison.OrdinalIgnoreCase)))
-            {
-                SpacesListBox.SelectedItems.Add(item2);
-            }
-        }
+        ApplySelection(previousSelection);
     }
 
     private void
