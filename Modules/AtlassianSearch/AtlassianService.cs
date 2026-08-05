@@ -364,6 +364,45 @@ public class AtlassianService
             cancellationToken);
     }
 
+    // Status names/workflows are entirely custom per site (and often per
+    // project), so there's no name to color mapping that would hold up --
+    // but every status, however it's named, is required to belong to one
+    // of Jira's three built-in categories ("new"/"indeterminate"/"done"),
+    // which is what the status color coding keys off instead.
+    public async Task<Dictionary<string, string>>
+    GetJiraStatusCategories(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        try
+        {
+            var items = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/status", cancellationToken);
+
+            var categoriesByStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in items)
+            {
+                var name = TryGetString(item, "name");
+                var categoryKey = TryGetString(item, "statusCategory", "key");
+
+                if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(categoryKey))
+                {
+                    categoriesByStatus[name] = categoryKey;
+                }
+            }
+
+            return categoriesByStatus;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load status categories from {baseUrl}.", ex);
+
+            return new Dictionary<string, string>();
+        }
+    }
+
     // Jira Cloud has no "list everyone" dropdown source that's both
     // complete and privacy-compliant -- this seeds the list with the first
     // page of the org's users, which covers most teams; anyone not in that

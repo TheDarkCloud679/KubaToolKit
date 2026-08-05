@@ -7,6 +7,8 @@
     <UserControl.Resources>
         <local:JiraPriorityBadgeBackgroundConverter x:Key="JiraPriorityBadgeBackgroundConverter"/>
         <local:JiraPriorityBadgeForegroundConverter x:Key="JiraPriorityBadgeForegroundConverter"/>
+        <local:JiraStatusBadgeBackgroundConverter x:Key="JiraStatusBadgeBackgroundConverter"/>
+        <local:JiraStatusBadgeForegroundConverter x:Key="JiraStatusBadgeForegroundConverter"/>
     </UserControl.Resources>
 
     <Grid>
@@ -351,7 +353,25 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" SortMemberPath="Status" Width="Auto"/>
+                            <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                            CornerRadius="3"
+                                            Padding="6,1"
+                                            Margin="0,0,6,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{Binding Status}"
+                                                FontSize="11"
+                                                FontWeight="Bold"
+                                                Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Reporter" Binding="{Binding Reporter}" SortMemberPath="Reporter" Width="*"/>
                             <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
 
