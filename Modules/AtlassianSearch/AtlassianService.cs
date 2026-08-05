@@ -511,15 +511,16 @@ public class AtlassianService
     {
         var hasQuery = !string.IsNullOrWhiteSpace(query);
 
-        // "text ~" alone ranks by Confluence's own relevance scoring, which
-        // can bury (or drop from the result window entirely) a page whose
-        // title is an obvious match if the term also appears often in other
-        // pages' bodies -- OR'ing in an explicit title match, then sorting
-        // title matches first below, makes sure an obvious match always
-        // surfaces regardless of how the body-relevance score ranks it.
+        // "text" already covers the title (per Atlassian's own CQL
+        // reference), and OR'ing in a separate "title ~" clause turned out
+        // to make pages vanish entirely once an "ancestor" filter was also
+        // in play -- some parenthesized-OR-plus-ancestor combination the
+        // query planner doesn't handle the way a flat AND chain does. Kept
+        // simple; the client-side sort below still surfaces title matches
+        // first among whatever comes back.
         var cql =
             hasQuery
-                ? $"(title ~ \"{EscapeForQuery(query)}\" or text ~ \"{EscapeForQuery(query)}\") and type in (page, blogpost)"
+                ? $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)"
                 : "type in (page, blogpost)";
 
         if (spaceKeys.Count == 1)
