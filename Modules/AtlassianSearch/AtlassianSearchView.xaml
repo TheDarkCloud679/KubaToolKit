@@ -106,70 +106,70 @@
                 Effect="{StaticResource CardShadowEffect}"
                 Padding="{StaticResource CardPadding}">
 
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Expander
+                    x:Name="ConfluenceResultsExpander"
+                    Header="Confluence pages"
+                    IsExpanded="False"
+                    Expanded="ResultsExpander_Changed"
+                    Collapsed="ResultsExpander_Changed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Top">
 
-                        <StackPanel Width="140" Margin="0,0,14,0">
-                            <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
-                            <Button
-                                x:Name="ConfluenceSpaceButton"
-                                Content="(Any)"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                ToolTip="Pick one or more Confluence spaces (favorites listed first, right-click to favorite)"
-                                Click="ConfluenceSpaceButton_Click"/>
+                            <StackPanel Width="140" Margin="0,0,14,0">
+                                <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
+                                <Button
+                                    x:Name="ConfluenceSpaceButton"
+                                    Content="(Any)"
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,4"
+                                    ToolTip="Pick one or more Confluence spaces (favorites listed first, right-click to favorite)"
+                                    Click="ConfluenceSpaceButton_Click"/>
+                            </StackPanel>
+
+                            <StackPanel Width="160" Margin="0,0,14,0">
+                                <TextBlock Text="Group" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox x:Name="ConfluenceGroupSearchBox" ToolTip="Type to search top-level pages"/>
+                                <ComboBox
+                                    x:Name="ConfluenceGroupCombo"
+                                    Margin="0,2,0,0"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Top-level page of the space"
+                                    SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Width="160" Margin="0,0,14,0">
+                                <TextBlock Text="Page" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox x:Name="ConfluencePageSearchBox" ToolTip="Type to search pages"/>
+                                <ComboBox
+                                    x:Name="ConfluencePageCombo"
+                                    Margin="0,2,0,0"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Page inside the selected group"
+                                    SelectionChanged="ConfluencePageCombo_SelectionChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Width="160">
+                                <TextBlock Text="Article" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox x:Name="ConfluenceArticleSearchBox" ToolTip="Type to search articles"/>
+                                <ComboBox
+                                    x:Name="ConfluenceArticleCombo"
+                                    Margin="0,2,0,0"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Article inside the selected page"/>
+                            </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Width="160" Margin="0,0,14,0">
-                            <TextBlock Text="Group" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="ConfluenceGroupSearchBox" ToolTip="Type to search top-level pages"/>
-                            <ComboBox
-                                x:Name="ConfluenceGroupCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="Top-level page of the space"
-                                SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
-                        </StackPanel>
-
-                        <StackPanel Width="160" Margin="0,0,14,0">
-                            <TextBlock Text="Page" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="ConfluencePageSearchBox" ToolTip="Type to search pages"/>
-                            <ComboBox
-                                x:Name="ConfluencePageCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="Page inside the selected group"
-                                SelectionChanged="ConfluencePageCombo_SelectionChanged"/>
-                        </StackPanel>
-
-                        <StackPanel Width="160">
-                            <TextBlock Text="Article" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="ConfluenceArticleSearchBox" ToolTip="Type to search articles"/>
-                            <ComboBox
-                                x:Name="ConfluenceArticleCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="Article inside the selected page"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <Expander
-                        x:Name="ConfluenceResultsExpander"
-                        Grid.Row="1"
-                        Header="Confluence pages"
-                        IsExpanded="False"
-                        Expanded="ResultsExpander_Changed"
-                        Collapsed="ResultsExpander_Changed">
                         <DataGrid
                             x:Name="ConfluenceGrid"
+                            Grid.Row="1"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
                             CanUserAddRows="False"
@@ -219,8 +219,8 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                    </Expander>
-                </Grid>
+                    </Grid>
+                </Expander>
             </Border>
 
             <GridSplitter
@@ -240,13 +240,19 @@
                 Effect="{StaticResource CardShadowEffect}"
                 Padding="{StaticResource CardPadding}">
 
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Expander
+                    x:Name="JiraResultsExpander"
+                    Header="Jira issues"
+                    IsExpanded="False"
+                    Expanded="ResultsExpander_Changed"
+                    Collapsed="ResultsExpander_Changed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Top">
 
                         <StackPanel Width="140" Margin="0,0,14,0">
                             <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
@@ -316,17 +322,11 @@
                                 DisplayMemberPath="Display"
                                 SelectedValuePath="Value"/>
                         </StackPanel>
-                    </StackPanel>
+                        </StackPanel>
 
-                    <Expander
-                        x:Name="JiraResultsExpander"
-                        Grid.Row="1"
-                        Header="Jira issues"
-                        IsExpanded="False"
-                        Expanded="ResultsExpander_Changed"
-                        Collapsed="ResultsExpander_Changed">
                         <DataGrid
                             x:Name="JiraGrid"
+                            Grid.Row="1"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
                             CanUserAddRows="False"
@@ -407,8 +407,8 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                    </Expander>
-                </Grid>
+                    </Grid>
+                </Expander>
             </Border>
         </Grid>
     </Grid>
