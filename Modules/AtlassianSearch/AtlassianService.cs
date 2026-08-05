@@ -541,12 +541,16 @@ public class AtlassianService
             cql += $" and space in ({quoted})";
         }
 
-        // Restricts to a group (a top-level page) or, more specifically,
-        // one of its pages -- "ancestor" matches the whole subtree, not
-        // just direct children, so either works with the same clause.
+        // Restricts to a group/page/article and its descendants. The
+        // selected one might itself be a leaf -- an "article" with no
+        // children of its own rather than an actual category -- and
+        // "ancestor" alone only ever matches descendants, never the node
+        // itself, which silently returned zero results for that case.
+        // "id =" covers picking the leaf directly; "ancestor =" still
+        // covers it turning out to have children after all.
         if (!string.IsNullOrWhiteSpace(ancestorId))
         {
-            cql += $" and ancestor = {EscapeForQuery(ancestorId)}";
+            cql += $" and (id = {EscapeForQuery(ancestorId)} or ancestor = {EscapeForQuery(ancestorId)})";
         }
 
         // With no search text, there's nothing to rank by relevance --
