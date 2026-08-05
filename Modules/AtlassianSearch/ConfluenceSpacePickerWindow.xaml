@@ -1,0 +1,53 @@
+<Window
+    x:Class="KubaToolKit.Modules.AtlassianSearch.ConfluenceSpacePickerWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Select Confluence space(s)"
+    Width="380"
+    Height="520"
+    WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBox
+            x:Name="SearchBox"
+            Grid.Row="0"
+            Margin="0,0,0,8"
+            VerticalContentAlignment="Center"
+            ToolTip="Type to filter"
+            TextChanged="SearchBox_TextChanged"/>
+
+        <CheckBox
+            x:Name="MultiSelectCheckBox"
+            Grid.Row="1"
+            Content="Search across multiple spaces"
+            Margin="0,0,0,8"
+            Checked="MultiSelectCheckBox_Changed"
+            Unchecked="MultiSelectCheckBox_Changed"/>
+
+        <ListBox
+            x:Name="SpacesListBox"
+            Grid.Row="2"
+            DisplayMemberPath="Display"
+            PreviewMouseRightButtonDown="SpacesListBox_PreviewMouseRightButtonDown"
+            MouseDoubleClick="SpacesListBox_MouseDoubleClick">
+            <ListBox.ContextMenu>
+                <ContextMenu Opened="ContextMenu_Opened">
+                    <MenuItem x:Name="ToggleFavoriteMenuItem" Click="ToggleFavorite_Click"/>
+                </ContextMenu>
+            </ListBox.ContextMenu>
+        </ListBox>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Clear" Width="80" Margin="0,0,8,0" Click="Clear_Click"/>
+            <Button Content="Cancel" Width="80" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button Content="OK" Width="80" Style="{StaticResource AccentButtonStyle}" Click="Ok_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -107,32 +107,13 @@
 
                         <StackPanel Width="140" Margin="0,0,14,0">
                             <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox
-                                    x:Name="ConfluenceSpaceSearchBox"
-                                    Grid.Column="0"
-                                    ToolTip="Type to search spaces"/>
-                                <ToggleButton
-                                    x:Name="FavoriteSpaceToggle"
-                                    Grid.Column="1"
-                                    Width="24"
-                                    Margin="4,0,0,0"
-                                    Padding="0"
-                                    ToolTip="Favorite this space -- when you have favorites, the Space list starts narrowed to just those"
-                                    Click="FavoriteSpaceToggle_Click">
-                                    <TextBlock x:Name="FavoriteSpaceToggleGlyph" Text="☆" FontSize="12"/>
-                                </ToggleButton>
-                            </Grid>
-                            <ComboBox
-                                x:Name="ConfluenceSpaceCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                SelectionChanged="ConfluenceSpaceCombo_SelectionChanged"/>
+                            <Button
+                                x:Name="ConfluenceSpaceButton"
+                                Content="(Any)"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                ToolTip="Pick one or more Confluence spaces (favorites listed first, right-click to favorite)"
+                                Click="ConfluenceSpaceButton_Click"/>
                         </StackPanel>
 
                         <StackPanel Width="160" Margin="0,0,14,0">

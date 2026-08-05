@@ -505,15 +505,21 @@ public class AtlassianService
     SearchConfluence(
         AtlassianSettings settings,
         string query,
-        string? spaceFilter,
+        IReadOnlyList<string> spaceKeys,
         string? ancestorId,
         CancellationToken cancellationToken = default)
     {
         var cql = $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)";
 
-        if (!string.IsNullOrWhiteSpace(spaceFilter))
+        if (spaceKeys.Count == 1)
         {
-            cql += $" and space = \"{EscapeForQuery(spaceFilter)}\"";
+            cql += $" and space = \"{EscapeForQuery(spaceKeys[0])}\"";
+        }
+        else if (spaceKeys.Count > 1)
+        {
+            var quoted = string.Join(", ", spaceKeys.Select(k => $"\"{EscapeForQuery(k)}\""));
+
+            cql += $" and space in ({quoted})";
         }
 
         // Restricts to a group (a top-level page) or, more specifically,

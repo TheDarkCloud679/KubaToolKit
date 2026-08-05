@@ -27,9 +27,10 @@ public partial class AtlassianSearchView
     private DataGridColumn? _jiraSortColumn;
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
 
-    // Cached so re-narrowing to favorites after a star toggle doesn't need
-    // a fresh network round-trip.
+    // Cached so the space picker doesn't need a fresh network round-trip
+    // every time it's opened.
     private List<NameValue> _allConfluenceSpaces = new();
+    private List<string> _selectedConfluenceSpaceKeys = new();
 
     // Set right when a search box's first keystroke opens its dropdown;
     // consumed (and cleared) the moment keyboard focus actually lands
@@ -52,8 +53,8 @@ public partial class AtlassianSearchView
         // exactly SelectedItem -- the one WPF behavior in this whole area
         // that's completely unambiguous) paired with its own search box
         // that only ever narrows which items are visible, never touching
-        // the dropdown's selection.
-        SetupSearchableCombo(ConfluenceSpaceSearchBox, ConfluenceSpaceCombo);
+        // the dropdown's selection. Space is the exception -- it's a
+        // separate popup window instead (see ConfluenceSpaceButton_Click).
         SetupSearchableCombo(ConfluenceGroupSearchBox, ConfluenceGroupCombo);
         SetupSearchableCombo(ConfluencePageSearchBox, ConfluencePageCombo);
         SetupSearchableCombo(JiraProjectSearchBox, JiraProjectCombo);
@@ -161,7 +162,15 @@ public partial class AtlassianSearchView
 
         _allConfluenceSpaces = spacesTask.Result;
 
-        PopulateConfluenceSpaceCombo();
+        // A single starred space becomes the default selection, same as
+        // starring used to auto-select it in the old combo; more than one
+        // favorite is ambiguous, so it's left as "any" until picked.
+        _selectedConfluenceSpaceKeys =
+            _settings.FavoriteConfluenceSpaceKeys.Count == 1
+                ? new List<string>(_settings.FavoriteConfluenceSpaceKeys)
+                : new List<string>();
+
+        await UpdateConfluenceSpaceSelectionAsync();
 
         PopulateCombo(JiraProjectCombo, projectsTask.Result);
         PopulateCombo(JiraPriorityCombo, prioritiesTask.Result);
@@ -172,35 +181,78 @@ public partial class AtlassianSearchView
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
 
-    // Favorited spaces sort to the top of the (still complete) list, marked
-    // with a star, instead of hiding the rest of the site.
     private void
-    PopulateConfluenceSpaceCombo()
+    ConfluenceSpaceButton_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        var favoriteKeys = _settings.FavoriteConfluenceSpaceKeys;
+        var result =
+            ConfluenceSpacePickerWindow.Prompt(
+                Window.GetWindow(this),
+                _settings,
+                _settingsService,
+                _allConfluenceSpaces,
+                _selectedConfluenceSpaceKeys);
 
-        var favoriteSet = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
-
-        var ordered =
-            _allConfluenceSpaces
-                .OrderByDescending(s => favoriteSet.Contains(s.Value))
-                .ThenBy(s => s.Display, StringComparer.OrdinalIgnoreCase)
-                .Select(s =>
-                    favoriteSet.Contains(s.Value)
-                        ? new NameValue(s.Value, $"★ {s.Display}")
-                        : s)
-                .ToList();
-
-        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(ordered).ToList();
-        ConfluenceSpaceCombo.Items.Filter = null;
-        ConfluenceSpaceCombo.SelectedIndex = 0;
-
-        if (favoriteKeys.Count == 1)
+        if (result == null)
         {
-            SelectComboItemByValue(ConfluenceSpaceCombo, favoriteKeys[0]);
+            return;
         }
 
-        UpdateFavoriteToggleVisual();
+        _selectedConfluenceSpaceKeys = result;
+
+        _ = UpdateConfluenceSpaceSelectionAsync();
+    }
+
+    // Reflects the current space selection on the button and, since Group/
+    // Page only make sense scoped to exactly one space, cascades into them:
+    // enabled and (re)loaded for a single space, cleared and disabled
+    // otherwise.
+    private async Task
+    UpdateConfluenceSpaceSelectionAsync()
+    {
+        ConfluenceSpaceButton.Content = DescribeSelectedConfluenceSpaces();
+
+        PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
+        PopulateCombo(ConfluencePageCombo, new List<NameValue>());
+
+        var singleSpace = _selectedConfluenceSpaceKeys.Count == 1;
+
+        ConfluenceGroupSearchBox.IsEnabled = singleSpace;
+        ConfluenceGroupCombo.IsEnabled = singleSpace;
+        ConfluencePageSearchBox.IsEnabled = singleSpace;
+        ConfluencePageCombo.IsEnabled = singleSpace;
+
+        if (!singleSpace || !_settings.IsComplete)
+        {
+            return;
+        }
+
+        var groups = await _atlassianService.GetConfluenceSpaceGroups(_settings, _selectedConfluenceSpaceKeys[0]);
+
+        PopulateCombo(ConfluenceGroupCombo, groups);
+    }
+
+    private string
+    DescribeSelectedConfluenceSpaces()
+    {
+        if (_selectedConfluenceSpaceKeys.Count == 0)
+        {
+            return "(Any)";
+        }
+
+        if (_selectedConfluenceSpaceKeys.Count == 1)
+        {
+            var key = _selectedConfluenceSpaceKeys[0];
+
+            var match =
+                _allConfluenceSpaces.FirstOrDefault(s =>
+                    string.Equals(s.Value, key, StringComparison.OrdinalIgnoreCase));
+
+            return match.Display ?? key;
+        }
+
+        return $"{_selectedConfluenceSpaceKeys.Count} spaces";
     }
 
     private static void
@@ -270,75 +322,6 @@ public partial class AtlassianSearchView
     GetComboSelectionValue(
         ComboBox combo) =>
         combo.SelectedValue as string ?? "";
-
-    private void
-    FavoriteSpaceToggle_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
-
-        if (string.IsNullOrWhiteSpace(spaceKey))
-        {
-            FavoriteSpaceToggle.IsChecked = false;
-
-            return;
-        }
-
-        var favorites = _settings.FavoriteConfluenceSpaceKeys;
-
-        if (favorites.Any(k => string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase)))
-        {
-            favorites.RemoveAll(k => string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase));
-        }
-        else
-        {
-            favorites.Add(spaceKey);
-        }
-
-        _settingsService.Save(_settings);
-
-        // Re-sorts/re-marks the list immediately instead of waiting for the
-        // next full reload, keeping the space you just starred selected.
-        PopulateConfluenceSpaceCombo();
-        SelectComboItemByValue(ConfluenceSpaceCombo, spaceKey);
-    }
-
-    private void
-    UpdateFavoriteToggleVisual()
-    {
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
-
-        var isFavorite =
-            !string.IsNullOrWhiteSpace(spaceKey)
-            && _settings.FavoriteConfluenceSpaceKeys.Any(k =>
-                string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase));
-
-        FavoriteSpaceToggle.IsChecked = isFavorite;
-        FavoriteSpaceToggleGlyph.Text = isFavorite ? "★" : "☆";
-    }
-
-    private async void
-    ConfluenceSpaceCombo_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        UpdateFavoriteToggleVisual();
-
-        PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
-        PopulateCombo(ConfluencePageCombo, new List<NameValue>());
-
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
-
-        if (string.IsNullOrWhiteSpace(spaceKey) || !_settings.IsComplete)
-        {
-            return;
-        }
-
-        var groups = await _atlassianService.GetConfluenceSpaceGroups(_settings, spaceKey);
-
-        PopulateCombo(ConfluenceGroupCombo, groups);
-    }
 
     private async void
     ConfluenceGroupCombo_SelectionChanged(
@@ -488,7 +471,7 @@ public partial class AtlassianSearchView
                 await _atlassianService.SearchConfluence(
                     _settings,
                     query,
-                    GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox),
+                    _selectedConfluenceSpaceKeys,
                     string.IsNullOrWhiteSpace(pageId) ? groupId : pageId);
 
             return (results, null);
