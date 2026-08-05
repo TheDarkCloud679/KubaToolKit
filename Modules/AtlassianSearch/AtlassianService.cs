@@ -518,9 +518,16 @@ public class AtlassianService
         // query planner doesn't handle the way a flat AND chain does. Kept
         // simple; the client-side sort below still surfaces title matches
         // first among whatever comes back.
+        //
+        // The trailing "*" turns this into a prefix/wildcard match instead
+        // of CQL's default fuzzy (edit-distance-limited) match -- without
+        // it, a short fragment like "err" simply doesn't match a longer
+        // word like "erreur" (that's an edit distance of 3, past Lucene's
+        // usual fuzzy cutoff of 2), even though it obviously should as a
+        // prefix.
         var cql =
             hasQuery
-                ? $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)"
+                ? $"text ~ \"{EscapeForQuery(query)}*\" and type in (page, blogpost)"
                 : "type in (page, blogpost)";
 
         if (spaceKeys.Count == 1)
@@ -641,7 +648,10 @@ public class AtlassianService
         string? status,
         CancellationToken cancellationToken = default)
     {
-        var jql = $"text ~ \"{EscapeForQuery(query)}\"";
+        // Same reasoning as Confluence's search above: without the trailing
+        // "*", JQL's fuzzy "~" match won't catch a short fragment against a
+        // longer word once they're more than ~2 edits apart.
+        var jql = $"text ~ \"{EscapeForQuery(query)}*\"";
 
         if (!string.IsNullOrWhiteSpace(project))
         {
