@@ -1,5 +1,5 @@
 <UserControl
-    x:Class="KubaToolKit.Modules.KnowledgeSearch.KnowledgeSearchView"
+    x:Class="KubaToolKit.Modules.AtlassianSearch.AtlassianSearchView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
@@ -22,7 +22,7 @@
 
             <TextBlock
                 Grid.Column="0"
-                Text="Knowledge Search"
+                Text="Atlassian Search"
                 FontWeight="Bold"
                 FontSize="14"
                 Foreground="{StaticResource TextPrimaryBrush}"
@@ -105,10 +105,19 @@
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="Space" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="ConfluenceSpaceTextBox" Width="100" Margin="0,0,14,0" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="ConfluenceSpaceCombo"
+                            Width="140"
+                            Margin="0,0,14,0"
+                            IsEditable="True"
+                            ToolTip="Pick from the list, or type a space key"/>
 
                         <TextBlock Text="Label" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="ConfluenceLabelTextBox" Width="120" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="ConfluenceLabelCombo"
+                            Width="140"
+                            IsEditable="True"
+                            ToolTip="Pick from the list, or type a label"/>
                     </StackPanel>
 
                     <DataGrid
@@ -200,19 +209,41 @@
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="Project" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="JiraProjectTextBox" Width="70" Margin="0,0,14,0" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="JiraProjectCombo"
+                            Width="140"
+                            Margin="0,0,14,0"
+                            IsEditable="True"
+                            ToolTip="Pick from the list, or type a project key"/>
 
                         <TextBlock Text="Reporter" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="JiraReporterTextBox" Width="110" Margin="0,0,14,0" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="JiraReporterCombo"
+                            Width="140"
+                            Margin="0,0,14,0"
+                            IsEditable="True"
+                            ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
 
                         <TextBlock Text="Assignee" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="JiraAssigneeTextBox" Width="110" Margin="0,0,14,0" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="JiraAssigneeCombo"
+                            Width="140"
+                            Margin="0,0,14,0"
+                            IsEditable="True"
+                            ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
 
                         <TextBlock Text="Priority" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="JiraPriorityTextBox" Width="80" Margin="0,0,14,0" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="JiraPriorityCombo"
+                            Width="110"
+                            Margin="0,0,14,0"
+                            IsEditable="True"/>
 
                         <TextBlock Text="Status" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <TextBox x:Name="JiraStatusTextBox" Width="100" VerticalContentAlignment="Center"/>
+                        <ComboBox
+                            x:Name="JiraStatusCombo"
+                            Width="130"
+                            IsEditable="True"/>
                     </StackPanel>
 
                     <DataGrid

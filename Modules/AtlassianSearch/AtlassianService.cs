@@ -1,11 +1,11 @@
-using KubaToolKit.Modules.KnowledgeSearch.Models;
+using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Shared.Services;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
-namespace KubaToolKit.Modules.KnowledgeSearch;
+namespace KubaToolKit.Modules.AtlassianSearch;
 
 /// Read-only search against Atlassian Cloud (Jira + Confluence share the
 /// same site/credentials, per how this instance is set up). Built against
@@ -71,6 +71,252 @@ public class AtlassianService
             Logger.Error("AtlassianService: connection test failed.", ex);
 
             return (false, ex.Message);
+        }
+    }
+
+    // Filter dropdown options. Each is best-effort: if a call fails (a
+    // permission restriction, an endpoint not available on some site
+    // configuration...) it comes back empty rather than throwing, so a
+    // dropdown just falls back to "type your own" instead of blocking
+    // search entirely.
+    public async Task<List<NameValue>>
+    GetConfluenceSpaces(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        return await GetNameValueList(
+            settings,
+            $"{baseUrl}/wiki/rest/api/space?limit=200&type=global",
+            "results",
+            el => TryGetString(el, "key"),
+            el => TryGetString(el, "name") ?? TryGetString(el, "key"),
+            cancellationToken);
+    }
+
+    // No reliable site-wide "list every label" endpoint exists in the
+    // classic Confluence REST API -- this uses the newer v2 endpoint on a
+    // best-effort basis. If it 404s (older site, different API version),
+    // the Label field just falls back to free text.
+    public async Task<List<NameValue>>
+    GetConfluenceLabels(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        return await GetNameValueList(
+            settings,
+            $"{baseUrl}/wiki/api/v2/labels?limit=100",
+            "results",
+            el => TryGetString(el, "name"),
+            el => TryGetString(el, "name"),
+            cancellationToken,
+            swallowErrors: true);
+    }
+
+    public async Task<List<NameValue>>
+    GetJiraProjects(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        return await GetNameValueList(
+            settings,
+            $"{baseUrl}/rest/api/3/project/search?maxResults=200",
+            "values",
+            el => TryGetString(el, "key"),
+            el => TryGetString(el, "name") ?? TryGetString(el, "key"),
+            cancellationToken);
+    }
+
+    public async Task<List<NameValue>>
+    GetJiraPriorities(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        return await GetNameValueListFromArray(
+            settings,
+            $"{baseUrl}/rest/api/3/priority",
+            el => TryGetString(el, "name"),
+            cancellationToken);
+    }
+
+    public async Task<List<NameValue>>
+    GetJiraStatuses(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        return await GetNameValueListFromArray(
+            settings,
+            $"{baseUrl}/rest/api/3/status",
+            el => TryGetString(el, "name"),
+            cancellationToken);
+    }
+
+    // Jira Cloud has no "list everyone" dropdown source that's both
+    // complete and privacy-compliant -- this seeds the list with the first
+    // page of the org's users, which covers most teams; anyone not in that
+    // page can still be typed directly (the field stays editable).
+    public async Task<List<NameValue>>
+    GetJiraUsers(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var users =
+            await GetJsonArray(
+                settings,
+                $"{baseUrl}/rest/api/3/users/search?maxResults=200",
+                cancellationToken);
+
+        return users
+            .Where(el =>
+                (TryGetString(el, "accountType") ?? "atlassian") == "atlassian"
+                && !string.IsNullOrWhiteSpace(TryGetString(el, "displayName")))
+            .Select(el => TryGetString(el, "displayName")!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Select(name => new NameValue(name, name))
+            .ToList();
+    }
+
+    private async Task<List<JsonElement>>
+    GetJsonArray(
+        AtlassianSettings settings,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        var root = doc.RootElement;
+
+        var arrayElement =
+            root.ValueKind == JsonValueKind.Array
+                ? root
+                : root.TryGetProperty("values", out var valuesEl) ? valuesEl
+                : root.TryGetProperty("results", out var resultsEl) ? resultsEl
+                : default;
+
+        if (arrayElement.ValueKind != JsonValueKind.Array)
+        {
+            return new List<JsonElement>();
+        }
+
+        // Cloned: the JsonDocument (and the elements it owns) is disposed
+        // when this method returns, so callers need their own copies.
+        return arrayElement.EnumerateArray().Select(el => el.Clone()).ToList();
+    }
+
+    private async Task<List<NameValue>>
+    GetNameValueListFromArray(
+        AtlassianSettings settings,
+        string url,
+        Func<JsonElement, string?> getName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var items = await GetJsonArray(settings, url, cancellationToken);
+
+            return items
+                .Select(getName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new NameValue(name!, name!))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load options from {url}.", ex);
+
+            return new List<NameValue>();
+        }
+    }
+
+    private async Task<List<NameValue>>
+    GetNameValueList(
+        AtlassianSettings settings,
+        string url,
+        string arrayProperty,
+        Func<JsonElement, string?> getValue,
+        Func<JsonElement, string?> getDisplay,
+        CancellationToken cancellationToken,
+        bool swallowErrors = false)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+            }
+
+            using var doc = JsonDocument.Parse(body);
+
+            if (!doc.RootElement.TryGetProperty(arrayProperty, out var arrayEl)
+                || arrayEl.ValueKind != JsonValueKind.Array)
+            {
+                return new List<NameValue>();
+            }
+
+            var results = new List<NameValue>();
+
+            foreach (var item in arrayEl.EnumerateArray())
+            {
+                var value = getValue(item);
+                var display = getDisplay(item);
+
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                results.Add(new NameValue(value, string.IsNullOrWhiteSpace(display) ? value : display));
+            }
+
+            return results
+                .OrderBy(r => r.Display, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            if (!swallowErrors)
+            {
+                Logger.Error($"AtlassianService: failed to load options from {url}.", ex);
+            }
+
+            return new List<NameValue>();
         }
     }
 

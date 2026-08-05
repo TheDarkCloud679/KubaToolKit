@@ -1,9 +1,9 @@
-using KubaToolKit.Modules.KnowledgeSearch.Models;
+using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Shared.Services;
 using System.IO;
 using System.Text.Json;
 
-namespace KubaToolKit.Modules.KnowledgeSearch;
+namespace KubaToolKit.Modules.AtlassianSearch;
 
 public class AtlassianSettingsService
 {

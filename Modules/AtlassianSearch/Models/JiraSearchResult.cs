@@ -1,4 +1,4 @@
-namespace KubaToolKit.Modules.KnowledgeSearch.Models;
+namespace KubaToolKit.Modules.AtlassianSearch.Models;
 
 public class JiraSearchResult
 {

@@ -1,4 +1,4 @@
-using KubaToolKit.Modules.KnowledgeSearch.Models;
+using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -8,9 +8,9 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
-namespace KubaToolKit.Modules.KnowledgeSearch;
+namespace KubaToolKit.Modules.AtlassianSearch;
 
-public partial class KnowledgeSearchView
+public partial class AtlassianSearchView
     : UserControl
 {
     private readonly AtlassianService _atlassianService = new();
@@ -26,7 +26,7 @@ public partial class KnowledgeSearchView
     private DataGridColumn? _jiraSortColumn;
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
 
-    public KnowledgeSearchView()
+    public AtlassianSearchView()
     {
         InitializeComponent();
 
@@ -36,7 +36,66 @@ public partial class KnowledgeSearchView
         _settings = _settingsService.Load();
 
         UpdateStatusForMissingSettings();
+
+        if (_settings.IsComplete)
+        {
+            _ = LoadFilterOptionsAsync();
+        }
     }
+
+    // Populates every filter dropdown, each independently -- one endpoint
+    // being unavailable (a permission restriction, a site not having the
+    // newer Confluence label API...) shouldn't stop the others from
+    // loading, and any dropdown left empty still accepts typed text since
+    // it's editable.
+    private async Task
+    LoadFilterOptionsAsync()
+    {
+        var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
+        var labelsTask = _atlassianService.GetConfluenceLabels(_settings);
+        var projectsTask = _atlassianService.GetJiraProjects(_settings);
+        var prioritiesTask = _atlassianService.GetJiraPriorities(_settings);
+        var statusesTask = _atlassianService.GetJiraStatuses(_settings);
+        var usersTask = _atlassianService.GetJiraUsers(_settings);
+
+        await Task.WhenAll(spacesTask, labelsTask, projectsTask, prioritiesTask, statusesTask, usersTask);
+
+        PopulateCombo(ConfluenceSpaceCombo, spacesTask.Result);
+        PopulateCombo(ConfluenceLabelCombo, labelsTask.Result);
+        PopulateCombo(JiraProjectCombo, projectsTask.Result);
+        PopulateCombo(JiraPriorityCombo, prioritiesTask.Result);
+        PopulateCombo(JiraStatusCombo, statusesTask.Result);
+        PopulateCombo(JiraReporterCombo, usersTask.Result);
+        PopulateCombo(JiraAssigneeCombo, usersTask.Result);
+    }
+
+    private static void
+    PopulateCombo(
+        ComboBox combo,
+        List<NameValue> options)
+    {
+        combo.Items.Clear();
+
+        combo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
+
+        foreach (var option in options)
+        {
+            combo.Items.Add(new ComboBoxItem { Content = option.Display, Tag = option.Value });
+        }
+
+        combo.SelectedIndex = 0;
+    }
+
+    // The dropdown is editable, so a filter value can come from either
+    // picking an item (its Tag holds the raw key/name to filter on) or
+    // typing free text that matches nothing in the list (SelectedItem is
+    // then null, and combo.Text holds exactly what was typed).
+    private static string
+    GetComboFilterValue(
+        ComboBox combo) =>
+        combo.SelectedItem is ComboBoxItem { Tag: string tag }
+            ? tag
+            : (combo.Text ?? "").Trim();
 
     private void
     UpdateStatusForMissingSettings()
@@ -64,6 +123,8 @@ public partial class KnowledgeSearchView
         _settingsService.Save(_settings);
 
         StatusText.Text = "";
+
+        _ = LoadFilterOptionsAsync();
     }
 
     private void
@@ -97,12 +158,12 @@ public partial class KnowledgeSearchView
         {
             MessageBox.Show(
                 "Set up the Jira/Confluence connection first (Settings).",
-                "Knowledge Search");
+                "Atlassian Search");
 
             return;
         }
 
-        Logger.Debug($"KnowledgeSearchView: searching for '{query}'.");
+        Logger.Debug($"AtlassianSearchView: searching for '{query}'.");
 
         try
         {
@@ -143,7 +204,7 @@ public partial class KnowledgeSearchView
                     : $"{confluenceResults.Count} Confluence page(s), {jiraResults.Count} Jira issue(s).";
 
             Logger.Info(
-                $"KnowledgeSearchView: search done, {confluenceResults.Count} Confluence, {jiraResults.Count} Jira.");
+                $"AtlassianSearchView: search done, {confluenceResults.Count} Confluence, {jiraResults.Count} Jira.");
         }
         finally
         {
@@ -162,14 +223,14 @@ public partial class KnowledgeSearchView
                 await _atlassianService.SearchConfluence(
                     _settings,
                     query,
-                    ConfluenceSpaceTextBox.Text.Trim(),
-                    ConfluenceLabelTextBox.Text.Trim());
+                    GetComboFilterValue(ConfluenceSpaceCombo),
+                    GetComboFilterValue(ConfluenceLabelCombo));
 
             return (results, null);
         }
         catch (Exception ex)
         {
-            Logger.Error("KnowledgeSearchView: Confluence search failed.", ex);
+            Logger.Error("AtlassianSearchView: Confluence search failed.", ex);
 
             return (new List<ConfluenceSearchResult>(), $"Confluence: {ex.Message}");
         }
@@ -185,17 +246,17 @@ public partial class KnowledgeSearchView
                 await _atlassianService.SearchJira(
                     _settings,
                     query,
-                    JiraProjectTextBox.Text.Trim(),
-                    JiraReporterTextBox.Text.Trim(),
-                    JiraAssigneeTextBox.Text.Trim(),
-                    JiraPriorityTextBox.Text.Trim(),
-                    JiraStatusTextBox.Text.Trim());
+                    GetComboFilterValue(JiraProjectCombo),
+                    GetComboFilterValue(JiraReporterCombo),
+                    GetComboFilterValue(JiraAssigneeCombo),
+                    GetComboFilterValue(JiraPriorityCombo),
+                    GetComboFilterValue(JiraStatusCombo));
 
             return (results, null);
         }
         catch (Exception ex)
         {
-            Logger.Error("KnowledgeSearchView: Jira search failed.", ex);
+            Logger.Error("AtlassianSearchView: Jira search failed.", ex);
 
             return (new List<JiraSearchResult>(), $"Jira: {ex.Message}");
         }
@@ -216,9 +277,9 @@ public partial class KnowledgeSearchView
         }
         catch (Exception ex)
         {
-            Logger.Error($"KnowledgeSearchView: failed to open '{url}'.", ex);
+            Logger.Error($"AtlassianSearchView: failed to open '{url}'.", ex);
 
-            MessageBox.Show(ex.ToString(), "Knowledge Search");
+            MessageBox.Show(ex.ToString(), "Atlassian Search");
         }
     }
 

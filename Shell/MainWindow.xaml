@@ -161,8 +161,8 @@
                             Margin="0,0,20,0"/>
 
                         <RadioButton
-                            x:Name="KnowledgeSearchModeRadio"
-                            Content="Knowledge Search"
+                            x:Name="AtlassianSearchModeRadio"
+                            Content="Atlassian Search"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
                             VerticalAlignment="Center"

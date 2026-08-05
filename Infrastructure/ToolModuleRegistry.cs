@@ -14,6 +14,6 @@ public static class ToolModuleRegistry
             new Modules.Sqs.SqsModule(),
             new Modules.StepFunctions.StepFunctionsModule(),
             new Modules.ApiClient.ApiClientModule(),
-            new Modules.KnowledgeSearch.KnowledgeSearchModule(),
+            new Modules.AtlassianSearch.AtlassianSearchModule(),
         };
 }

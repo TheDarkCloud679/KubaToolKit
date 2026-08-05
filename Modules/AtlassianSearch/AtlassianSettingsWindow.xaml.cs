@@ -1,8 +1,8 @@
-using KubaToolKit.Modules.KnowledgeSearch.Models;
+using KubaToolKit.Modules.AtlassianSearch.Models;
 using System.Windows;
 using System.Windows.Media;
 
-namespace KubaToolKit.Modules.KnowledgeSearch;
+namespace KubaToolKit.Modules.AtlassianSearch;
 
 public partial class AtlassianSettingsWindow
     : Window
