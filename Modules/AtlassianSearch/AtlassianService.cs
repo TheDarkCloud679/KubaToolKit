@@ -654,8 +654,10 @@ public class AtlassianService
 
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
+        // /rest/api/3/search was removed by Atlassian (HTTP 410) in favor of
+        // this endpoint -- same query params, just a different path.
         var url =
-            $"{baseUrl}/rest/api/3/search"
+            $"{baseUrl}/rest/api/3/search/jql"
             + $"?jql={Uri.EscapeDataString(jql)}"
             + "&maxResults=25"
             + "&fields=summary,reporter,assignee,priority,status,project,updated";
