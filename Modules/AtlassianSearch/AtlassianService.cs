@@ -321,6 +321,35 @@ public class AtlassianService
             cancellationToken);
     }
 
+    // Same endpoint as GetJiraPriorities, but keeping the API's own
+    // ordering instead of alphabetizing it -- that order is the site's
+    // actual configured urgency rank (highest first), which the priority
+    // color gradient needs and the alphabetized dropdown list can't give.
+    public async Task<List<string>>
+    GetJiraPriorityRankOrder(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        try
+        {
+            var items = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/priority", cancellationToken);
+
+            return items
+                .Select(el => TryGetString(el, "name"))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load priority order from {baseUrl}.", ex);
+
+            return new List<string>();
+        }
+    }
+
     public async Task<List<NameValue>>
     GetJiraStatuses(
         AtlassianSettings settings,
