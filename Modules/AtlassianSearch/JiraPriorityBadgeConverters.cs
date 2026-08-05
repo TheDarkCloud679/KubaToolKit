@@ -4,43 +4,34 @@ using System.Windows.Media;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
-// Priority names and their urgency order are per-site (an admin can
-// rename, add, or reorder them), so the gradient position comes from
-// whatever the site's own /rest/api/3/priority order says rather than a
-// hardcoded name list -- index 0 is that endpoint's own "most urgent"
-// convention. Set once after the priorities are fetched; a badge for a
-// name outside the known order (stale settings, race on first load)
-// just falls back to neutral gray.
+// This site's priorities are named P0-P5ish -- red is reserved for the
+// genuinely urgent tier (P0/P1/P2), everything else is blue. Missing
+// priority (not every issue/request type carries one) is its own
+// neutral gray rather than either color, so "no priority" doesn't read
+// as "low priority".
 internal static class JiraPriorityColors
 {
-    public static List<string> Order { get; set; } = new();
-
     private static readonly Color HighColor = Color.FromRgb(0xE0, 0x43, 0x43);
     private static readonly Color LowColor = Color.FromRgb(0x2F, 0x6F, 0xED);
     private static readonly Color NeutralColor = Color.FromRgb(0x68, 0x70, 0x7E);
+
+    private static readonly string[] HighUrgencyPrefixes = { "P0", "P1", "P2" };
 
     public static Color
     Get(
         string? priority)
     {
-        if (string.IsNullOrWhiteSpace(priority) || Order.Count == 0)
+        if (string.IsNullOrWhiteSpace(priority) || string.Equals(priority, "No priority", StringComparison.OrdinalIgnoreCase))
         {
             return NeutralColor;
         }
 
-        var index = Order.FindIndex(p => string.Equals(p, priority, StringComparison.OrdinalIgnoreCase));
+        var trimmed = priority.Trim();
 
-        if (index < 0)
-        {
-            return NeutralColor;
-        }
+        var isHighUrgency =
+            HighUrgencyPrefixes.Any(prefix => trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
-        var fraction = Order.Count <= 1 ? 0.0 : (double)index / (Order.Count - 1);
-
-        return Color.FromRgb(
-            (byte)(HighColor.R + (LowColor.R - HighColor.R) * fraction),
-            (byte)(HighColor.G + (LowColor.G - HighColor.G) * fraction),
-            (byte)(HighColor.B + (LowColor.B - HighColor.B) * fraction));
+        return isHighUrgency ? HighColor : LowColor;
     }
 }
 

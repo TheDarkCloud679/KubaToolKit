@@ -164,17 +164,14 @@ public partial class AtlassianSearchView
         var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
         var projectsTask = _atlassianService.GetJiraProjects(_settings);
         var prioritiesTask = _atlassianService.GetJiraPriorities(_settings);
-        var priorityRankOrderTask = _atlassianService.GetJiraPriorityRankOrder(_settings);
         var statusesTask = _atlassianService.GetJiraStatuses(_settings);
         var statusCategoriesTask = _atlassianService.GetJiraStatusCategories(_settings);
         var serviceDesksTask = _atlassianService.GetJiraServiceDesksByProjectKey(_settings);
         var usersTask = _atlassianService.GetJiraUsers(_settings);
 
         await Task.WhenAll(
-            spacesTask, projectsTask, prioritiesTask, priorityRankOrderTask,
+            spacesTask, projectsTask, prioritiesTask,
             statusesTask, statusCategoriesTask, serviceDesksTask, usersTask);
-
-        JiraPriorityColors.Order = priorityRankOrderTask.Result;
         JiraStatusColors.CategoryByStatus = statusCategoriesTask.Result;
         _jiraServiceDesksByProjectKey = serviceDesksTask.Result;
 

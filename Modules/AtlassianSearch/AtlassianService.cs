@@ -321,35 +321,6 @@ public class AtlassianService
             cancellationToken);
     }
 
-    // Same endpoint as GetJiraPriorities, but keeping the API's own
-    // ordering instead of alphabetizing it -- that order is the site's
-    // actual configured urgency rank (highest first), which the priority
-    // color gradient needs and the alphabetized dropdown list can't give.
-    public async Task<List<string>>
-    GetJiraPriorityRankOrder(
-        AtlassianSettings settings,
-        CancellationToken cancellationToken = default)
-    {
-        var baseUrl = settings.BaseUrl.TrimEnd('/');
-
-        try
-        {
-            var items = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/priority", cancellationToken);
-
-            return items
-                .Select(el => TryGetString(el, "name"))
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Select(name => name!)
-                .ToList();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"AtlassianService: failed to load priority order from {baseUrl}.", ex);
-
-            return new List<string>();
-        }
-    }
-
     public async Task<List<NameValue>>
     GetJiraStatuses(
         AtlassianSettings settings,
@@ -845,7 +816,10 @@ public class AtlassianService
                     Project = TryGetString(issue, "fields", "project", "key") ?? "",
                     Reporter = TryGetString(issue, "fields", "reporter", "displayName") ?? "",
                     Assignee = TryGetString(issue, "fields", "assignee", "displayName") ?? "Unassigned",
-                    Priority = TryGetString(issue, "fields", "priority", "name") ?? "",
+                    // Not every issue/request type carries a priority --
+                    // defaulted the same way Assignee is, rather than left
+                    // blank, so the badge always renders something.
+                    Priority = TryGetString(issue, "fields", "priority", "name") ?? "No priority",
                     Status = TryGetString(issue, "fields", "status", "name") ?? "",
                     UpdatedDisplay = TryGetString(issue, "fields", "updated") ?? "",
                     Url = string.IsNullOrWhiteSpace(key) ? "" : $"{baseUrl}/browse/{key}"
