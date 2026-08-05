@@ -31,12 +31,22 @@ public partial class AtlassianSearchView
     // a fresh network round-trip.
     private List<NameValue> _allConfluenceSpaces = new();
 
+    // Set right when a search box's first keystroke opens its dropdown;
+    // consumed (and cleared) the moment keyboard focus actually lands
+    // somewhere else, so it's redirected straight back. Reacting to the
+    // real focus change instead of guessing which dispatcher priority the
+    // popup's own focus grab runs at -- two attempts at the latter both
+    // missed it.
+    private TextBox? _pendingFocusReturnBox;
+
     public AtlassianSearchView()
     {
         InitializeComponent();
 
         ConfluenceGrid.ItemsSource = _confluenceResults;
         JiraGrid.ItemsSource = _jiraResults;
+
+        AddHandler(Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(AtlassianSearchView_PreviewGotKeyboardFocus), true);
 
         // Each dropdown is non-editable (its displayed value is always
         // exactly SelectedItem -- the one WPF behavior in this whole area
@@ -65,10 +75,34 @@ public partial class AtlassianSearchView
     private const string DefaultJiraProjectName = "Customer Service";
     private static readonly NameValue AnyOption = new("", "(Any)");
 
+    private void
+    AtlassianSearchView_PreviewGotKeyboardFocus(
+        object sender,
+        KeyboardFocusChangedEventArgs e)
+    {
+        if (_pendingFocusReturnBox == null || ReferenceEquals(e.NewFocus, _pendingFocusReturnBox))
+        {
+            return;
+        }
+
+        var box = _pendingFocusReturnBox;
+        _pendingFocusReturnBox = null;
+
+        var caretIndex = box.Text.Length;
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Send,
+            new Action(() =>
+            {
+                box.Focus();
+                box.CaretIndex = caretIndex;
+            }));
+    }
+
     // Typing narrows which items the dropdown shows (the lists can be
     // long); picking one clears the search box, since at that point the
     // resolved value is what the combo itself is showing.
-    private static void
+    private void
     SetupSearchableCombo(
         TextBox searchBox,
         ComboBox combo)
@@ -84,29 +118,27 @@ public partial class AtlassianSearchView
                         obj is NameValue nv
                         && (nv.Value.Length == 0 || nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase));
 
+            var wasOpen = combo.IsDropDownOpen;
+
             combo.IsDropDownOpen = true;
 
-            // Opening the dropdown moves keyboard focus onto its popup,
-            // which would stop further typing from reaching the search box
-            // -- pull focus straight back so it keeps behaving like a
-            // normal search field while the list updates underneath it.
-            // The popup's own focus grab isn't necessarily synchronous, so
-            // this both retries immediately and again once every other
-            // pending dispatcher operation (including whatever priority
-            // that grab runs at) has drained.
-            var caret = searchBox.CaretIndex;
-
-            void RestoreSearchFocus()
+            // Only the closed -> open transition steals focus; flag it so
+            // the class handler above redirects focus back the moment it
+            // notices the steal, whenever that actually happens.
+            if (!wasOpen)
             {
-                searchBox.Focus();
-                searchBox.CaretIndex = caret;
+                _pendingFocusReturnBox = searchBox;
+
+                Dispatcher.BeginInvoke(
+                    DispatcherPriority.ApplicationIdle,
+                    new Action(() =>
+                    {
+                        if (ReferenceEquals(_pendingFocusReturnBox, searchBox))
+                        {
+                            _pendingFocusReturnBox = null;
+                        }
+                    }));
             }
-
-            RestoreSearchFocus();
-
-            searchBox.Dispatcher.BeginInvoke(
-                DispatcherPriority.ApplicationIdle,
-                new Action(RestoreSearchFocus));
         };
 
         combo.SelectionChanged += (_, __) => searchBox.Clear();
