@@ -511,7 +511,16 @@ public class AtlassianService
     {
         var hasQuery = !string.IsNullOrWhiteSpace(query);
 
-        var cql = hasQuery ? $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)" : "type in (page, blogpost)";
+        // "text ~" alone ranks by Confluence's own relevance scoring, which
+        // can bury (or drop from the result window entirely) a page whose
+        // title is an obvious match if the term also appears often in other
+        // pages' bodies -- OR'ing in an explicit title match, then sorting
+        // title matches first below, makes sure an obvious match always
+        // surfaces regardless of how the body-relevance score ranks it.
+        var cql =
+            hasQuery
+                ? $"(title ~ \"{EscapeForQuery(query)}\" or text ~ \"{EscapeForQuery(query)}\") and type in (page, blogpost)"
+                : "type in (page, blogpost)";
 
         if (spaceKeys.Count == 1)
         {
@@ -545,7 +554,7 @@ public class AtlassianService
         var url =
             $"{baseUrl}/wiki/rest/api/search"
             + $"?cql={Uri.EscapeDataString(cql)}"
-            + $"&limit={(hasQuery ? 25 : 10)}"
+            + $"&limit={(hasQuery ? 50 : 10)}"
             + "&excerpt=highlight";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -601,15 +610,23 @@ public class AtlassianService
             results.Add(
                 new ConfluenceSearchResult
                 {
-                    Title = title,
+                    // Confluence's search API returns title/excerpt as
+                    // HTML-entity-escaped text (e.g. "d&#39;obtenir").
+                    Title = System.Net.WebUtility.HtmlDecode(title),
                     Space = space,
-                    Excerpt = StripMarkup(excerpt),
+                    Excerpt = System.Net.WebUtility.HtmlDecode(StripMarkup(excerpt)),
                     Url = string.IsNullOrWhiteSpace(relativeUrl) ? "" : $"{baseUrl}/wiki{relativeUrl}",
                     LastModifiedDisplay = lastModified
                 });
         }
 
-        return results;
+        // Stable sort (ties keep Confluence's own relevance order) so an
+        // obvious title match always leads, instead of wherever the body-
+        // relevance score happened to place it.
+        return
+            hasQuery
+                ? results.OrderByDescending(r => r.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList()
+                : results;
     }
 
     public async Task<List<JiraSearchResult>>
