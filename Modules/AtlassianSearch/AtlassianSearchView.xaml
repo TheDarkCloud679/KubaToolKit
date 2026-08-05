@@ -118,14 +118,16 @@
                             x:Name="ConfluenceGroupCombo"
                             Width="160"
                             Margin="0,0,14,0"
-                            ToolTip="Top-level page of the space"
+                            IsEditable="True"
+                            ToolTip="Top-level page of the space -- type to search, then pick one"
                             SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
 
                         <TextBlock Text="Page" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
                         <ComboBox
                             x:Name="ConfluencePageCombo"
                             Width="160"
-                            ToolTip="Page inside the selected group"/>
+                            IsEditable="True"
+                            ToolTip="Page inside the selected group -- type to search, then pick one"/>
                     </StackPanel>
 
                     <DataGrid

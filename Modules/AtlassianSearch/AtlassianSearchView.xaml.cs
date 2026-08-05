@@ -26,12 +26,26 @@ public partial class AtlassianSearchView
     private DataGridColumn? _jiraSortColumn;
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
 
+    // The full (unfiltered) option list behind each dropdown, so typing a
+    // search term can narrow what's shown without losing the rest.
+    private readonly Dictionary<ComboBox, List<NameValue>> _comboMasterOptions = new();
+    private bool _suppressComboFilter;
+
     public AtlassianSearchView()
     {
         InitializeComponent();
 
         ConfluenceGrid.ItemsSource = _confluenceResults;
         JiraGrid.ItemsSource = _jiraResults;
+
+        foreach (var combo in new[]
+                 {
+                     ConfluenceSpaceCombo, ConfluenceGroupCombo, ConfluencePageCombo,
+                     JiraProjectCombo, JiraReporterCombo, JiraAssigneeCombo, JiraPriorityCombo, JiraStatusCombo
+                 })
+        {
+            combo.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(FilterableCombo_TextChanged), true);
+        }
 
         _settings = _settingsService.Load();
 
@@ -44,6 +58,7 @@ public partial class AtlassianSearchView
     }
 
     private const string DefaultConfluenceSpaceName = "Service Client";
+    private const string DefaultJiraProjectName = "Customer Service";
 
     // Populates every filter dropdown, each independently -- one endpoint
     // being unavailable (a permission restriction, a site configuration
@@ -67,18 +82,40 @@ public partial class AtlassianSearchView
         PopulateCombo(JiraReporterCombo, usersTask.Result);
         PopulateCombo(JiraAssigneeCombo, usersTask.Result);
 
-        var defaultSpace =
-            spacesTask.Result.FirstOrDefault(s =>
-                string.Equals(s.Display, DefaultConfluenceSpaceName, StringComparison.OrdinalIgnoreCase));
-
-        if (defaultSpace.Value != null)
-        {
-            SelectComboItemByTag(ConfluenceSpaceCombo, defaultSpace.Value);
-        }
+        SelectComboOptionByDisplayName(ConfluenceSpaceCombo, spacesTask.Result, DefaultConfluenceSpaceName);
+        SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
 
     private static void
+    SelectComboOptionByDisplayName(
+        ComboBox combo,
+        List<NameValue> options,
+        string displayName)
+    {
+        var match =
+            options.FirstOrDefault(o =>
+                string.Equals(o.Display, displayName, StringComparison.OrdinalIgnoreCase));
+
+        if (match.Value != null)
+        {
+            SelectComboItemByTag(combo, match.Value);
+        }
+    }
+
+    private void
     PopulateCombo(
+        ComboBox combo,
+        List<NameValue> options)
+    {
+        _comboMasterOptions[combo] = options;
+
+        RebuildComboItems(combo, options);
+
+        combo.SelectedIndex = 0;
+    }
+
+    private static void
+    RebuildComboItems(
         ComboBox combo,
         List<NameValue> options)
     {
@@ -90,8 +127,58 @@ public partial class AtlassianSearchView
         {
             combo.Items.Add(new ComboBoxItem { Content = option.Display, Tag = option.Value });
         }
+    }
 
-        combo.SelectedIndex = 0;
+    // Every dropdown is a live search box: typing narrows the list to
+    // matching entries (the lists can be long) without needing a separate
+    // search field. Selecting an item also raises TextChanged (Text syncs
+    // to the selection), which is detected and skipped below -- otherwise
+    // rebuilding Items right after a pick would immediately wipe out the
+    // selection that was just made.
+    private void
+    FilterableCombo_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_suppressComboFilter || sender is not ComboBox combo)
+        {
+            return;
+        }
+
+        var text = combo.Text ?? "";
+
+        if (combo.SelectedItem is ComboBoxItem { Content: string selectedContent }
+            && string.Equals(selectedContent, text, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!_comboMasterOptions.TryGetValue(combo, out var allOptions))
+        {
+            return;
+        }
+
+        var filtered =
+            string.IsNullOrWhiteSpace(text)
+                ? allOptions
+                : allOptions
+                    .Where(o => o.Display.Contains(text, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+        _suppressComboFilter = true;
+
+        RebuildComboItems(combo, filtered);
+
+        combo.Text = text;
+
+        if (e.OriginalSource is TextBox textBox)
+        {
+            textBox.CaretIndex = text.Length;
+        }
+
+        combo.IsDropDownOpen = true;
+
+        _suppressComboFilter = false;
     }
 
     private static void
@@ -123,8 +210,9 @@ public partial class AtlassianSearchView
             ? tag
             : (combo.Text ?? "").Trim();
 
-    // Group/Page aren't editable (their value is an opaque content Id, not
-    // something you could usefully type), so only a real selection counts.
+    // Group/Page aren't free-typable (their value is an opaque content Id,
+    // not something you could usefully type), so only a real selection
+    // counts even though they're searchable the same way as the others.
     private static string
     GetComboSelectionValue(
         ComboBox combo) =>
@@ -135,13 +223,8 @@ public partial class AtlassianSearchView
         object sender,
         SelectionChangedEventArgs e)
     {
-        ConfluenceGroupCombo.Items.Clear();
-        ConfluenceGroupCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
-        ConfluenceGroupCombo.SelectedIndex = 0;
-
-        ConfluencePageCombo.Items.Clear();
-        ConfluencePageCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
-        ConfluencePageCombo.SelectedIndex = 0;
+        PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
+        PopulateCombo(ConfluencePageCombo, new List<NameValue>());
 
         var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
 
@@ -160,9 +243,7 @@ public partial class AtlassianSearchView
         object sender,
         SelectionChangedEventArgs e)
     {
-        ConfluencePageCombo.Items.Clear();
-        ConfluencePageCombo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
-        ConfluencePageCombo.SelectedIndex = 0;
+        PopulateCombo(ConfluencePageCombo, new List<NameValue>());
 
         var groupId = GetComboSelectionValue(ConfluenceGroupCombo);
 

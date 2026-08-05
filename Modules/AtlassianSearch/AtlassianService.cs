@@ -85,14 +85,53 @@ public class AtlassianService
         CancellationToken cancellationToken = default)
     {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
+        var results = new List<NameValue>();
 
-        return await GetNameValueList(
-            settings,
-            $"{baseUrl}/wiki/rest/api/space?limit=200&type=global",
-            "results",
-            el => TryGetString(el, "key"),
-            el => TryGetString(el, "name") ?? TryGetString(el, "key"),
-            cancellationToken);
+        try
+        {
+            const int PageSize = 100;
+            var start = 0;
+
+            // A site can easily have more spaces than fit on one page --
+            // without paging through all of them, a space further down the
+            // (unspecified) ordering would never show up in the dropdown
+            // at all, default or not.
+            while (true)
+            {
+                var items =
+                    await GetJsonArray(
+                        settings,
+                        $"{baseUrl}/wiki/rest/api/space?start={start}&limit={PageSize}&type=global",
+                        cancellationToken);
+
+                foreach (var item in items)
+                {
+                    var key = TryGetString(item, "key");
+
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        continue;
+                    }
+
+                    results.Add(new NameValue(key, TryGetString(item, "name") ?? key));
+                }
+
+                if (items.Count < PageSize)
+                {
+                    break;
+                }
+
+                start += PageSize;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to load Confluence spaces.", ex);
+        }
+
+        return results
+            .OrderBy(r => r.Display, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     // "Groups" = the space's top-level pages (what shows as the root
@@ -186,14 +225,86 @@ public class AtlassianService
         CancellationToken cancellationToken = default)
     {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
+        var results = new List<NameValue>();
 
-        return await GetNameValueList(
-            settings,
-            $"{baseUrl}/rest/api/3/project/search?maxResults=200",
-            "values",
-            el => TryGetString(el, "key"),
-            el => TryGetString(el, "name") ?? TryGetString(el, "key"),
-            cancellationToken);
+        try
+        {
+            const int PageSize = 100;
+            var startAt = 0;
+
+            // Same reasoning as Confluence spaces: an org can have more
+            // projects than fit on one page, so this pages through all of
+            // them instead of silently truncating.
+            while (true)
+            {
+                using var request =
+                    new HttpRequestMessage(
+                        HttpMethod.Get,
+                        $"{baseUrl}/rest/api/3/project/search?startAt={startAt}&maxResults={PageSize}");
+
+                request.Headers.Authorization = BuildAuthHeader(settings);
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                using var response = await Client.SendAsync(request, cancellationToken);
+
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+                }
+
+                using var doc = JsonDocument.Parse(body);
+
+                if (!doc.RootElement.TryGetProperty("values", out var valuesEl)
+                    || valuesEl.ValueKind != JsonValueKind.Array)
+                {
+                    break;
+                }
+
+                var pageCount = 0;
+
+                foreach (var item in valuesEl.EnumerateArray())
+                {
+                    pageCount++;
+
+                    var key = TryGetString(item, "key");
+
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        continue;
+                    }
+
+                    results.Add(new NameValue(key, TryGetString(item, "name") ?? key));
+                }
+
+                // Default to stopping unless the response explicitly says
+                // there's more -- an unrecognized/missing field is safer
+                // treated as "last page" than looped on indefinitely.
+                var isLast = true;
+
+                if (doc.RootElement.TryGetProperty("isLast", out var isLastEl)
+                    && isLastEl.ValueKind == JsonValueKind.False)
+                {
+                    isLast = false;
+                }
+
+                if (isLast || pageCount < PageSize)
+                {
+                    break;
+                }
+
+                startAt += PageSize;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to load Jira projects.", ex);
+        }
+
+        return results
+            .OrderBy(r => r.Display, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public async Task<List<NameValue>>
