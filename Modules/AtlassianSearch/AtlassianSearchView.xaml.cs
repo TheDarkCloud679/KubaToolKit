@@ -32,6 +32,13 @@ public partial class AtlassianSearchView
     private List<NameValue> _allConfluenceSpaces = new();
     private List<string> _selectedConfluenceSpaceKeys = new();
 
+    // Queues are a Jira Service Management concept scoped to one service
+    // desk project, keyed by a service desk Id that's a different value
+    // from the project key shown in the Project dropdown -- resolved here
+    // once so Queue's cascade doesn't need a network round-trip per project.
+    private Dictionary<string, string> _jiraServiceDesksByProjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private string? _selectedJiraServiceDeskId;
+
     // Set right when a search box's first keystroke opens its dropdown;
     // consumed (and cleared) the moment keyboard focus actually lands
     // somewhere else, so it's redirected straight back. Reacting to the
@@ -59,6 +66,7 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(ConfluencePageSearchBox, ConfluencePageCombo);
         SetupSearchableCombo(ConfluenceArticleSearchBox, ConfluenceArticleCombo);
         SetupSearchableCombo(JiraProjectSearchBox, JiraProjectCombo);
+        SetupSearchableCombo(JiraQueueSearchBox, JiraQueueCombo);
         SetupSearchableCombo(JiraReporterSearchBox, JiraReporterCombo);
         SetupSearchableCombo(JiraAssigneeSearchBox, JiraAssigneeCombo);
         SetupSearchableCombo(JiraPrioritySearchBox, JiraPriorityCombo);
@@ -159,14 +167,16 @@ public partial class AtlassianSearchView
         var priorityRankOrderTask = _atlassianService.GetJiraPriorityRankOrder(_settings);
         var statusesTask = _atlassianService.GetJiraStatuses(_settings);
         var statusCategoriesTask = _atlassianService.GetJiraStatusCategories(_settings);
+        var serviceDesksTask = _atlassianService.GetJiraServiceDesksByProjectKey(_settings);
         var usersTask = _atlassianService.GetJiraUsers(_settings);
 
         await Task.WhenAll(
             spacesTask, projectsTask, prioritiesTask, priorityRankOrderTask,
-            statusesTask, statusCategoriesTask, usersTask);
+            statusesTask, statusCategoriesTask, serviceDesksTask, usersTask);
 
         JiraPriorityColors.Order = priorityRankOrderTask.Result;
         JiraStatusColors.CategoryByStatus = statusCategoriesTask.Result;
+        _jiraServiceDesksByProjectKey = serviceDesksTask.Result;
 
         _allConfluenceSpaces = spacesTask.Result;
 
@@ -376,6 +386,71 @@ public partial class AtlassianSearchView
         PopulateCombo(ConfluenceArticleCombo, articles);
     }
 
+    // Queues only exist for Service Management projects, keyed by a
+    // service desk Id rather than the project key shown here -- a plain
+    // Jira project (no service desk) just leaves Queue empty, no error.
+    private async void
+    JiraProjectCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        PopulateCombo(JiraQueueCombo, new List<NameValue>());
+
+        _selectedJiraServiceDeskId = null;
+
+        var projectKey = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox);
+
+        if (string.IsNullOrWhiteSpace(projectKey)
+            || !_jiraServiceDesksByProjectKey.TryGetValue(projectKey, out var serviceDeskId))
+        {
+            return;
+        }
+
+        _selectedJiraServiceDeskId = serviceDeskId;
+
+        var queues = await _atlassianService.GetJiraQueues(_settings, serviceDeskId);
+
+        PopulateCombo(JiraQueueCombo, queues);
+    }
+
+    // A queue's issue list comes from its own fixed, admin-defined
+    // criteria -- Reporter/Assignee/Priority/Status can't narrow it any
+    // further (the API for browsing a queue takes no such filters), so
+    // they're disabled while one is selected rather than silently ignored.
+    private void
+    JiraQueueCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var queueSelected = !string.IsNullOrWhiteSpace(GetComboSelectionValue(JiraQueueCombo));
+
+        JiraReporterSearchBox.IsEnabled = !queueSelected;
+        JiraReporterCombo.IsEnabled = !queueSelected;
+        JiraAssigneeSearchBox.IsEnabled = !queueSelected;
+        JiraAssigneeCombo.IsEnabled = !queueSelected;
+        JiraPrioritySearchBox.IsEnabled = !queueSelected;
+        JiraPriorityCombo.IsEnabled = !queueSelected;
+        JiraStatusSearchBox.IsEnabled = !queueSelected;
+        JiraStatusCombo.IsEnabled = !queueSelected;
+    }
+
+    // Both results sections start collapsed and stay that way until
+    // expanded by hand -- a collapsed section's row still needs to shrink
+    // to just its header height (Auto) rather than keep its "*" share of
+    // the window, otherwise it'd just be a mostly-empty card instead of
+    // actually reclaiming the space for whatever is expanded.
+    private void
+    ResultsExpander_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ConfluenceRow.Height =
+            ConfluenceResultsExpander.IsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+
+        JiraRow.Height =
+            JiraResultsExpander.IsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+    }
+
     private void
     UpdateStatusForMissingSettings()
     {
@@ -423,6 +498,12 @@ public partial class AtlassianSearchView
         RoutedEventArgs e) =>
         await RunSearchAsync();
 
+    private async void
+    RefreshButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await RunSearchAsync();
+
     private async Task
     RunSearchAsync()
     {
@@ -452,10 +533,14 @@ public partial class AtlassianSearchView
 
             var confluenceTask = SearchConfluenceSafe(query);
 
-            // Jira has no "recent items" equivalent -- an empty JQL text
-            // clause is invalid, so it's skipped rather than erroring.
+            // A selected queue has its own fixed criteria and needs no
+            // query text to return something meaningful; plain JQL search
+            // does (an empty "text ~" clause is invalid), so that's the
+            // only case still skipped when the query box is empty.
+            var queueSelected = !string.IsNullOrWhiteSpace(GetComboSelectionValue(JiraQueueCombo));
+
             var jiraTask =
-                hasQuery
+                hasQuery || queueSelected
                     ? SearchJiraSafe(query)
                     : Task.FromResult<(List<JiraSearchResult> Results, string? Error)>((new(), null));
 
@@ -550,6 +635,25 @@ public partial class AtlassianSearchView
     {
         try
         {
+            var queueId = GetComboSelectionValue(JiraQueueCombo);
+
+            if (!string.IsNullOrWhiteSpace(queueId) && !string.IsNullOrWhiteSpace(_selectedJiraServiceDeskId))
+            {
+                var queueResults = await _atlassianService.GetQueueIssues(_settings, _selectedJiraServiceDeskId, queueId);
+
+                // The queue endpoint takes no text filter of its own, so
+                // a typed query narrows the queue's results client-side
+                // instead of being dropped on the floor.
+                var filtered =
+                    string.IsNullOrWhiteSpace(query)
+                        ? queueResults
+                        : queueResults
+                            .Where(r => r.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+
+                return (filtered, null);
+            }
+
             var results =
                 await _atlassianService.SearchJira(
                     _settings,

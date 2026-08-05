@@ -814,13 +814,24 @@ public class AtlassianService
 
         using var doc = JsonDocument.Parse(body);
 
-        var results = new List<JiraSearchResult>();
-
         if (!doc.RootElement.TryGetProperty("issues", out var issuesEl)
             || issuesEl.ValueKind != JsonValueKind.Array)
         {
-            return results;
+            return new List<JiraSearchResult>();
         }
+
+        return ParseJiraIssues(issuesEl, baseUrl);
+    }
+
+    // Shared between plain JQL search and queue browsing below -- both
+    // return the same "issues"-shaped array (just under different
+    // property names at the top level), each item as {key, fields:{...}}.
+    private static List<JiraSearchResult>
+    ParseJiraIssues(
+        JsonElement issuesEl,
+        string baseUrl)
+    {
+        var results = new List<JiraSearchResult>();
 
         foreach (var issue in issuesEl.EnumerateArray())
         {
@@ -842,6 +853,202 @@ public class AtlassianService
         }
 
         return results;
+    }
+
+    // Jira Service Management-specific: a "queue" is a saved, admin-defined
+    // view scoped to one service desk project (e.g. "L1 Incidents") --
+    // separate API surface (/rest/servicedeskapi) from plain Jira search,
+    // since queues aren't expressed as JQL the REST API exposes.
+    public async Task<Dictionary<string, string>>
+    GetJiraServiceDesksByProjectKey(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var byProjectKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var start = 0;
+
+            while (true)
+            {
+                var url = $"{baseUrl}/rest/servicedeskapi/servicedesk?start={start}&limit=50";
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+                request.Headers.Authorization = BuildAuthHeader(settings);
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                using var response = await Client.SendAsync(request, cancellationToken);
+
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+                }
+
+                using var doc = JsonDocument.Parse(body);
+
+                if (!doc.RootElement.TryGetProperty("values", out var valuesEl)
+                    || valuesEl.ValueKind != JsonValueKind.Array)
+                {
+                    break;
+                }
+
+                var count = 0;
+
+                foreach (var el in valuesEl.EnumerateArray())
+                {
+                    count++;
+
+                    var id = TryGetString(el, "id");
+                    var projectKey = TryGetString(el, "projectKey");
+
+                    if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(projectKey))
+                    {
+                        byProjectKey[projectKey!] = id!;
+                    }
+                }
+
+                var isLast =
+                    doc.RootElement.TryGetProperty("isLastPage", out var lastEl)
+                    && lastEl.ValueKind == JsonValueKind.True;
+
+                if (isLast || count == 0)
+                {
+                    break;
+                }
+
+                start += 50;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to load service desks.", ex);
+        }
+
+        return byProjectKey;
+    }
+
+    public async Task<List<NameValue>>
+    GetJiraQueues(
+        AtlassianSettings settings,
+        string serviceDeskId,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var results = new List<NameValue>();
+
+        try
+        {
+            var start = 0;
+
+            while (true)
+            {
+                var url =
+                    $"{baseUrl}/rest/servicedeskapi/servicedesk/{Uri.EscapeDataString(serviceDeskId)}/queue"
+                    + $"?start={start}&limit=50";
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+                request.Headers.Authorization = BuildAuthHeader(settings);
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                using var response = await Client.SendAsync(request, cancellationToken);
+
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+                }
+
+                using var doc = JsonDocument.Parse(body);
+
+                if (!doc.RootElement.TryGetProperty("values", out var valuesEl)
+                    || valuesEl.ValueKind != JsonValueKind.Array)
+                {
+                    break;
+                }
+
+                var count = 0;
+
+                foreach (var el in valuesEl.EnumerateArray())
+                {
+                    count++;
+
+                    var id = TryGetString(el, "id");
+                    var name = TryGetString(el, "name");
+
+                    if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(name))
+                    {
+                        results.Add(new NameValue(id!, name!));
+                    }
+                }
+
+                var isLast =
+                    doc.RootElement.TryGetProperty("isLastPage", out var lastEl)
+                    && lastEl.ValueKind == JsonValueKind.True;
+
+                if (isLast || count == 0)
+                {
+                    break;
+                }
+
+                start += 50;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load queues for service desk {serviceDeskId}.", ex);
+        }
+
+        return results
+            .OrderBy(q => q.Display, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public async Task<List<JiraSearchResult>>
+    GetQueueIssues(
+        AtlassianSettings settings,
+        string serviceDeskId,
+        string queueId,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url =
+            $"{baseUrl}/rest/servicedeskapi/servicedesk/{Uri.EscapeDataString(serviceDeskId)}"
+            + $"/queue/{Uri.EscapeDataString(queueId)}/issue"
+            + "?limit=50&fields=summary,reporter,assignee,priority,status,project,updated";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to load queue: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        if (!doc.RootElement.TryGetProperty("values", out var valuesEl)
+            || valuesEl.ValueKind != JsonValueKind.Array)
+        {
+            return new List<JiraSearchResult>();
+        }
+
+        return ParseJiraIssues(valuesEl, baseUrl);
     }
 
     private static string?

@@ -26,6 +26,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -62,8 +63,17 @@
                 Click="SearchButton_Click"/>
 
             <Button
-                x:Name="SettingsButton"
+                x:Name="RefreshButton"
                 Grid.Column="4"
+                Width="34"
+                Margin="8,0,0,0"
+                Content="&#8635;"
+                ToolTip="Re-run the current search/queue with the same filters"
+                Click="RefreshButton_Click"/>
+
+            <Button
+                x:Name="SettingsButton"
+                Grid.Column="5"
                 Width="90"
                 Margin="8,0,0,0"
                 Content="Settings"
@@ -81,9 +91,9 @@
         <!-- Results -->
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>
-                <RowDefinition x:Name="ConfluenceRow" Height="*"/>
+                <RowDefinition x:Name="ConfluenceRow" Height="Auto"/>
                 <RowDefinition Height="6"/>
-                <RowDefinition x:Name="JiraRow" Height="*"/>
+                <RowDefinition x:Name="JiraRow" Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Confluence -->
@@ -99,19 +109,10 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock
-                        Grid.Row="0"
-                        Text="Confluence pages"
-                        FontWeight="SemiBold"
-                        FontSize="13"
-                        Margin="0,0,0,8"
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
                         <StackPanel Width="140" Margin="0,0,14,0">
                             <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
@@ -160,58 +161,65 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <DataGrid
-                        x:Name="ConfluenceGrid"
-                        Grid.Row="2"
-                        AutoGenerateColumns="False"
-                        IsReadOnly="True"
-                        CanUserAddRows="False"
-                        CanUserDeleteRows="False"
-                        CanUserSortColumns="False"
-                        HeadersVisibility="Column"
-                        HorizontalScrollBarVisibility="Disabled"
-                        VirtualizingPanel.ScrollUnit="Pixel"
-                        RowHeight="44"
-                        MouseDoubleClick="ConfluenceGrid_MouseDoubleClick">
+                    <Expander
+                        x:Name="ConfluenceResultsExpander"
+                        Grid.Row="1"
+                        Header="Confluence pages"
+                        IsExpanded="False"
+                        Expanded="ResultsExpander_Changed"
+                        Collapsed="ResultsExpander_Changed">
+                        <DataGrid
+                            x:Name="ConfluenceGrid"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserSortColumns="False"
+                            HeadersVisibility="Column"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VirtualizingPanel.ScrollUnit="Pixel"
+                            RowHeight="44"
+                            MouseDoubleClick="ConfluenceGrid_MouseDoubleClick">
 
-                        <DataGrid.Columns>
-                            <DataGridTextColumn
-                                Header="Title"
-                                Binding="{Binding Title}"
-                                SortMemberPath="Title"
-                                Width="*"/>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Header="Title"
+                                    Binding="{Binding Title}"
+                                    SortMemberPath="Title"
+                                    Width="*"/>
 
-                            <DataGridTextColumn
-                                Header="Space"
-                                Binding="{Binding Space}"
-                                SortMemberPath="Space"
-                                Width="Auto"/>
+                                <DataGridTextColumn
+                                    Header="Space"
+                                    Binding="{Binding Space}"
+                                    SortMemberPath="Space"
+                                    Width="Auto"/>
 
-                            <DataGridTextColumn
-                                Header="Excerpt"
-                                Binding="{Binding Excerpt}"
-                                SortMemberPath="Excerpt"
-                                Width="2*">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                        <Setter Property="ToolTip" Value="{Binding Excerpt}"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Header="Excerpt"
+                                    Binding="{Binding Excerpt}"
+                                    SortMemberPath="Excerpt"
+                                    Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="ToolTip" Value="{Binding Excerpt}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
 
-                            <DataGridTemplateColumn Header="" Width="80">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button
-                                            Content="View"
-                                            Width="70"
-                                            Click="OpenConfluenceResult_Click"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                <DataGridTemplateColumn Header="" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button
+                                                Content="View"
+                                                Width="70"
+                                                Click="OpenConfluenceResult_Click"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Expander>
                 </Grid>
             </Border>
 
@@ -235,19 +243,10 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock
-                        Grid.Row="0"
-                        Text="Jira issues"
-                        FontWeight="SemiBold"
-                        FontSize="13"
-                        Margin="0,0,0,8"
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
                         <StackPanel Width="140" Margin="0,0,14,0">
                             <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
@@ -256,7 +255,22 @@
                                 x:Name="JiraProjectCombo"
                                 Margin="0,2,0,0"
                                 DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                                SelectedValuePath="Value"
+                                SelectionChanged="JiraProjectCombo_SelectionChanged"/>
+                        </StackPanel>
+
+                        <StackPanel Width="160" Margin="0,0,14,0">
+                            <TextBlock Text="Queue" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox
+                                x:Name="JiraQueueSearchBox"
+                                ToolTip="Type to search this project's Service Management queues"/>
+                            <ComboBox
+                                x:Name="JiraQueueCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="A saved Service Management queue (e.g. 'L1 Incidents') -- overrides Reporter/Assignee/Priority/Status below, which don't apply to a queue's own fixed criteria"
+                                SelectionChanged="JiraQueueCombo_SelectionChanged"/>
                         </StackPanel>
 
                         <StackPanel Width="140" Margin="0,0,14,0">
@@ -304,89 +318,96 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <DataGrid
-                        x:Name="JiraGrid"
-                        Grid.Row="2"
-                        AutoGenerateColumns="False"
-                        IsReadOnly="True"
-                        CanUserAddRows="False"
-                        CanUserDeleteRows="False"
-                        CanUserSortColumns="False"
-                        HeadersVisibility="Column"
-                        HorizontalScrollBarVisibility="Disabled"
-                        VirtualizingPanel.ScrollUnit="Pixel"
-                        RowHeight="40"
-                        MouseDoubleClick="JiraGrid_MouseDoubleClick">
+                    <Expander
+                        x:Name="JiraResultsExpander"
+                        Grid.Row="1"
+                        Header="Jira issues"
+                        IsExpanded="False"
+                        Expanded="ResultsExpander_Changed"
+                        Collapsed="ResultsExpander_Changed">
+                        <DataGrid
+                            x:Name="JiraGrid"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserSortColumns="False"
+                            HeadersVisibility="Column"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VirtualizingPanel.ScrollUnit="Pixel"
+                            RowHeight="40"
+                            MouseDoubleClick="JiraGrid_MouseDoubleClick">
 
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
 
-                            <DataGridTextColumn
-                                Header="Summary"
-                                Binding="{Binding Summary}"
-                                SortMemberPath="Summary"
-                                Width="2*">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                        <Setter Property="ToolTip" Value="{Binding Summary}"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Header="Summary"
+                                    Binding="{Binding Summary}"
+                                    SortMemberPath="Summary"
+                                    Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="ToolTip" Value="{Binding Summary}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
 
-                            <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Border
-                                            Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
-                                            CornerRadius="3"
-                                            Padding="6,1"
-                                            Margin="0,0,6,0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center">
-                                            <TextBlock
-                                                Text="{Binding Priority}"
-                                                FontSize="11"
-                                                FontWeight="Bold"
-                                                Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="Auto">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Border
-                                            Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
-                                            CornerRadius="3"
-                                            Padding="6,1"
-                                            Margin="0,0,6,0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center">
-                                            <TextBlock
-                                                Text="{Binding Status}"
-                                                FontSize="11"
-                                                FontWeight="Bold"
-                                                Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Reporter" Binding="{Binding Reporter}" SortMemberPath="Reporter" Width="*"/>
-                            <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
+                                <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
+                                                CornerRadius="3"
+                                                Padding="6,1"
+                                                Margin="0,0,6,0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    Text="{Binding Priority}"
+                                                    FontSize="11"
+                                                    FontWeight="Bold"
+                                                    Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border
+                                                Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                                CornerRadius="3"
+                                                Padding="6,1"
+                                                Margin="0,0,6,0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    Text="{Binding Status}"
+                                                    FontSize="11"
+                                                    FontWeight="Bold"
+                                                    Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Reporter" Binding="{Binding Reporter}" SortMemberPath="Reporter" Width="*"/>
+                                <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
 
-                            <DataGridTemplateColumn Header="" Width="80">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button
-                                            Content="Open"
-                                            Width="70"
-                                            Click="OpenJiraResult_Click"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                <DataGridTemplateColumn Header="" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button
+                                                Content="Open"
+                                                Width="70"
+                                                Click="OpenJiraResult_Click"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Expander>
                 </Grid>
             </Border>
         </Grid>
