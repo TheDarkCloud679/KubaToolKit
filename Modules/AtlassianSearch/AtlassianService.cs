@@ -509,7 +509,9 @@ public class AtlassianService
         string? ancestorId,
         CancellationToken cancellationToken = default)
     {
-        var cql = $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)";
+        var hasQuery = !string.IsNullOrWhiteSpace(query);
+
+        var cql = hasQuery ? $"text ~ \"{EscapeForQuery(query)}\" and type in (page, blogpost)" : "type in (page, blogpost)";
 
         if (spaceKeys.Count == 1)
         {
@@ -530,12 +532,20 @@ public class AtlassianService
             cql += $" and ancestor = {EscapeForQuery(ancestorId)}";
         }
 
+        // With no search text, there's nothing to rank by relevance --
+        // fall back to the most recently added pages instead of an
+        // unordered dump of the whole space.
+        if (!hasQuery)
+        {
+            cql += " order by created desc";
+        }
+
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
         var url =
             $"{baseUrl}/wiki/rest/api/search"
             + $"?cql={Uri.EscapeDataString(cql)}"
-            + "&limit=25"
+            + $"&limit={(hasQuery ? 25 : 10)}"
             + "&excerpt=highlight";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);

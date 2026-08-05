@@ -394,11 +394,6 @@ public partial class AtlassianSearchView
     {
         var query = QueryTextBox.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return;
-        }
-
         if (!_settings.IsComplete)
         {
             MessageBox.Show(
@@ -408,7 +403,12 @@ public partial class AtlassianSearchView
             return;
         }
 
-        Logger.Debug($"AtlassianSearchView: searching for '{query}'.");
+        var hasQuery = !string.IsNullOrWhiteSpace(query);
+
+        Logger.Debug(
+            hasQuery
+                ? $"AtlassianSearchView: searching for '{query}'."
+                : "AtlassianSearchView: no search text -- showing the most recent Confluence pages instead.");
 
         try
         {
@@ -417,7 +417,13 @@ public partial class AtlassianSearchView
             StatusText.Text = "";
 
             var confluenceTask = SearchConfluenceSafe(query);
-            var jiraTask = SearchJiraSafe(query);
+
+            // Jira has no "recent items" equivalent -- an empty JQL text
+            // clause is invalid, so it's skipped rather than erroring.
+            var jiraTask =
+                hasQuery
+                    ? SearchJiraSafe(query)
+                    : Task.FromResult<(List<JiraSearchResult> Results, string? Error)>((new(), null));
 
             await Task.WhenAll(confluenceTask, jiraTask);
 
@@ -446,7 +452,9 @@ public partial class AtlassianSearchView
             StatusText.Text =
                 errors.Count > 0
                     ? string.Join(" ", errors)
-                    : $"{confluenceResults.Count} Confluence page(s), {jiraResults.Count} Jira issue(s).";
+                    : hasQuery
+                        ? $"{confluenceResults.Count} Confluence page(s), {jiraResults.Count} Jira issue(s)."
+                        : $"{confluenceResults.Count} most recent Confluence page(s).";
 
             Logger.Info(
                 $"AtlassianSearchView: search done, {confluenceResults.Count} Confluence, {jiraResults.Count} Jira.");
