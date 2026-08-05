@@ -128,7 +128,7 @@
                                 SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
                         </StackPanel>
 
-                        <StackPanel Width="160">
+                        <StackPanel Width="160" Margin="0,0,14,0">
                             <TextBlock Text="Page" FontSize="11" Margin="0,0,0,2"/>
                             <TextBox x:Name="ConfluencePageSearchBox" ToolTip="Type to search pages"/>
                             <ComboBox
@@ -136,7 +136,19 @@
                                 Margin="0,2,0,0"
                                 DisplayMemberPath="Display"
                                 SelectedValuePath="Value"
-                                ToolTip="Page inside the selected group"/>
+                                ToolTip="Page inside the selected group"
+                                SelectionChanged="ConfluencePageCombo_SelectionChanged"/>
+                        </StackPanel>
+
+                        <StackPanel Width="160">
+                            <TextBlock Text="Article" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="ConfluenceArticleSearchBox" ToolTip="Type to search articles"/>
+                            <ComboBox
+                                x:Name="ConfluenceArticleCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="Article inside the selected page"/>
                         </StackPanel>
                     </StackPanel>
 

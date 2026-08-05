@@ -57,6 +57,7 @@ public partial class AtlassianSearchView
         // separate popup window instead (see ConfluenceSpaceButton_Click).
         SetupSearchableCombo(ConfluenceGroupSearchBox, ConfluenceGroupCombo);
         SetupSearchableCombo(ConfluencePageSearchBox, ConfluencePageCombo);
+        SetupSearchableCombo(ConfluenceArticleSearchBox, ConfluenceArticleCombo);
         SetupSearchableCombo(JiraProjectSearchBox, JiraProjectCombo);
         SetupSearchableCombo(JiraReporterSearchBox, JiraReporterCombo);
         SetupSearchableCombo(JiraAssigneeSearchBox, JiraAssigneeCombo);
@@ -205,9 +206,9 @@ public partial class AtlassianSearchView
     }
 
     // Reflects the current space selection on the button and, since Group/
-    // Page only make sense scoped to exactly one space, cascades into them:
-    // enabled and (re)loaded for a single space, cleared and disabled
-    // otherwise.
+    // Page/Article only make sense scoped to exactly one space, cascades
+    // into them: enabled and (re)loaded for a single space, cleared and
+    // disabled otherwise.
     private async Task
     UpdateConfluenceSpaceSelectionAsync()
     {
@@ -215,6 +216,7 @@ public partial class AtlassianSearchView
 
         PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
         PopulateCombo(ConfluencePageCombo, new List<NameValue>());
+        PopulateCombo(ConfluenceArticleCombo, new List<NameValue>());
 
         var singleSpace = _selectedConfluenceSpaceKeys.Count == 1;
 
@@ -222,6 +224,8 @@ public partial class AtlassianSearchView
         ConfluenceGroupCombo.IsEnabled = singleSpace;
         ConfluencePageSearchBox.IsEnabled = singleSpace;
         ConfluencePageCombo.IsEnabled = singleSpace;
+        ConfluenceArticleSearchBox.IsEnabled = singleSpace;
+        ConfluenceArticleCombo.IsEnabled = singleSpace;
 
         if (!singleSpace || !_settings.IsComplete)
         {
@@ -329,6 +333,7 @@ public partial class AtlassianSearchView
         SelectionChangedEventArgs e)
     {
         PopulateCombo(ConfluencePageCombo, new List<NameValue>());
+        PopulateCombo(ConfluenceArticleCombo, new List<NameValue>());
 
         var groupId = GetComboSelectionValue(ConfluenceGroupCombo);
 
@@ -340,6 +345,28 @@ public partial class AtlassianSearchView
         var pages = await _atlassianService.GetConfluenceChildPages(_settings, groupId);
 
         PopulateCombo(ConfluencePageCombo, pages);
+    }
+
+    // Confluence's KB pages are commonly three levels deep in practice
+    // (e.g. "Articles de depannage" > "BackOffice" > the actual article),
+    // not two -- Page's children are loaded the same way Group's are.
+    private async void
+    ConfluencePageCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        PopulateCombo(ConfluenceArticleCombo, new List<NameValue>());
+
+        var pageId = GetComboSelectionValue(ConfluencePageCombo);
+
+        if (string.IsNullOrWhiteSpace(pageId))
+        {
+            return;
+        }
+
+        var articles = await _atlassianService.GetConfluenceChildPages(_settings, pageId);
+
+        PopulateCombo(ConfluenceArticleCombo, articles);
     }
 
     private void
@@ -472,15 +499,21 @@ public partial class AtlassianSearchView
     {
         try
         {
+            var articleId = GetComboSelectionValue(ConfluenceArticleCombo);
             var pageId = GetComboSelectionValue(ConfluencePageCombo);
             var groupId = GetComboSelectionValue(ConfluenceGroupCombo);
+
+            var ancestorId =
+                !string.IsNullOrWhiteSpace(articleId) ? articleId
+                : !string.IsNullOrWhiteSpace(pageId) ? pageId
+                : groupId;
 
             var results =
                 await _atlassianService.SearchConfluence(
                     _settings,
                     query,
                     _selectedConfluenceSpaceKeys,
-                    string.IsNullOrWhiteSpace(pageId) ? groupId : pageId);
+                    ancestorId);
 
             return (results, null);
         }
