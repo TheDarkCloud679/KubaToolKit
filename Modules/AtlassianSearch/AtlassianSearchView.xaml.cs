@@ -44,6 +44,12 @@ public partial class AtlassianSearchView
                  })
         {
             combo.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(FilterableCombo_TextChanged), true);
+
+            // Editable ComboBoxes don't reliably sync their visible text to
+            // a newly picked item on their own once ItemsSource holds data
+            // objects instead of plain strings -- set it explicitly instead
+            // of counting on WPF to do it.
+            combo.SelectionChanged += FilterableCombo_SelectionChanged;
         }
 
         _settings = _settingsService.Load();
@@ -102,20 +108,22 @@ public partial class AtlassianSearchView
                 .ToList();
 
         ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(_allConfluenceSpaces).ToList();
-
-        var favoriteValues = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
-
-        ConfluenceSpaceCombo.Items.Filter =
-            favorites.Count > 0
-                ? obj => obj is NameValue nv && (nv.Value.Length == 0 || favoriteValues.Contains(nv.Value))
-                : null;
-
         ConfluenceSpaceCombo.SelectedIndex = 0;
 
         if (favorites.Count == 1)
         {
             SelectComboItemByValue(ConfluenceSpaceCombo, favorites[0].Value);
         }
+
+        // Applied last: selecting an item above resets the Filter (see
+        // FilterableCombo_SelectionChanged), so setting the favorites
+        // narrowing has to come after or it would immediately get wiped.
+        var favoriteValues = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
+
+        ConfluenceSpaceCombo.Items.Filter =
+            favorites.Count > 0
+                ? obj => obj is NameValue nv && (nv.Value.Length == 0 || favoriteValues.Contains(nv.Value))
+                : null;
 
         UpdateFavoriteToggleVisual();
     }
@@ -193,10 +201,35 @@ public partial class AtlassianSearchView
             if (string.Equals(item.Value, value, StringComparison.OrdinalIgnoreCase))
             {
                 combo.SelectedItem = item;
+                combo.Text = item.Display;
 
                 return;
             }
         }
+    }
+
+    // Forces the visible text to match whatever got selected -- picking an
+    // item from the dropdown (by click or Enter) doesn't reliably update
+    // Text on its own for an editable ComboBox bound to data objects.
+    // Also drops any active search filter, so reopening the dropdown after
+    // a pick shows the full list again instead of staying narrowed to
+    // whatever was typed to find it.
+    private void
+    FilterableCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (sender is not ComboBox combo)
+        {
+            return;
+        }
+
+        if (combo.SelectedItem is NameValue selected)
+        {
+            combo.Text = selected.Display;
+        }
+
+        combo.Items.Filter = null;
     }
 
     // The Space/Project/Priority/Status/Reporter/Assignee dropdowns stay
