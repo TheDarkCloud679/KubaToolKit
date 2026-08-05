@@ -471,6 +471,18 @@ public partial class AtlassianSearchView
                 _jiraResults.Add(result);
             }
 
+            // Repopulating can toggle the vertical scrollbar on/off, which
+            // changes the columns' available width -- without this, the
+            // last (button) column stays sized for the pre-population
+            // layout and ends up clipped behind the now-visible scrollbar.
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(ConfluenceGrid)),
+                DispatcherPriority.Loaded);
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(JiraGrid)),
+                DispatcherPriority.Loaded);
+
             var errors =
                 new[] { confluenceError, jiraError }
                     .Where(e => e != null)
