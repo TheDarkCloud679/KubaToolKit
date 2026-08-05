@@ -17,14 +17,38 @@ internal static class JiraStatusColors
     private static readonly Color DoneColor = Color.FromRgb(0x2E, 0xA0, 0x4A);
     private static readonly Color InProgressColor = Color.FromRgb(0x2F, 0x6F, 0xED);
     private static readonly Color ToDoColor = Color.FromRgb(0x8A, 0x91, 0x9E);
+    private static readonly Color LightGrayColor = Color.FromRgb(0xB8, 0xBD, 0xC7);
     private static readonly Color NeutralColor = Color.FromRgb(0x68, 0x70, 0x7E);
+
+    // Jira's own category ("new"/"indeterminate"/"done") lumps almost
+    // every non-final status into a single "in progress" bucket -- this
+    // instance's workflow (per the shared "Incident life cycle" diagram)
+    // wants a finer split than that for two specific statuses, so those
+    // are called out by name and checked before falling back to category.
+    private static readonly Dictionary<string, Color> NameOverrides =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Résolu"] = DoneColor,
+            ["Clôturé"] = DoneColor,
+            ["Consigné"] = ToDoColor,
+            ["Assigné"] = LightGrayColor
+        };
 
     public static Color
     Get(
         string? status)
     {
-        if (string.IsNullOrWhiteSpace(status)
-            || !CategoryByStatus.TryGetValue(status, out var categoryKey))
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return NeutralColor;
+        }
+
+        if (NameOverrides.TryGetValue(status, out var overrideColor))
+        {
+            return overrideColor;
+        }
+
+        if (!CategoryByStatus.TryGetValue(status, out var categoryKey))
         {
             return NeutralColor;
         }
