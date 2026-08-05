@@ -103,46 +103,60 @@
                         Margin="0,0,0,8"
                         Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Space" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="ConfluenceSpaceCombo"
-                            Width="140"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Pick from the list, or type a space key"
-                            SelectionChanged="ConfluenceSpaceCombo_SelectionChanged"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
-                        <ToggleButton
-                            x:Name="FavoriteSpaceToggle"
-                            Width="26"
-                            Margin="2,0,14,0"
-                            Padding="0"
-                            ToolTip="Favorite this space -- when you have favorites, the Space list starts narrowed to just those"
-                            Click="FavoriteSpaceToggle_Click">
-                            <TextBlock x:Name="FavoriteSpaceToggleGlyph" Text="☆" FontSize="14"/>
-                        </ToggleButton>
+                        <StackPanel Width="140" Margin="0,0,14,0">
+                            <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="ConfluenceSpaceSearchBox"
+                                    Grid.Column="0"
+                                    ToolTip="Type to search spaces"/>
+                                <ToggleButton
+                                    x:Name="FavoriteSpaceToggle"
+                                    Grid.Column="1"
+                                    Width="24"
+                                    Margin="4,0,0,0"
+                                    Padding="0"
+                                    ToolTip="Favorite this space -- when you have favorites, the Space list starts narrowed to just those"
+                                    Click="FavoriteSpaceToggle_Click">
+                                    <TextBlock x:Name="FavoriteSpaceToggleGlyph" Text="☆" FontSize="12"/>
+                                </ToggleButton>
+                            </Grid>
+                            <ComboBox
+                                x:Name="ConfluenceSpaceCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                SelectionChanged="ConfluenceSpaceCombo_SelectionChanged"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Group" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="ConfluenceGroupCombo"
-                            Width="160"
-                            Margin="0,0,14,0"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Top-level page of the space -- type to search, then pick one"
-                            SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
+                        <StackPanel Width="160" Margin="0,0,14,0">
+                            <TextBlock Text="Group" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="ConfluenceGroupSearchBox" ToolTip="Type to search top-level pages"/>
+                            <ComboBox
+                                x:Name="ConfluenceGroupCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="Top-level page of the space"
+                                SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Page" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="ConfluencePageCombo"
-                            Width="160"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Page inside the selected group -- type to search, then pick one"/>
+                        <StackPanel Width="160">
+                            <TextBlock Text="Page" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="ConfluencePageSearchBox" ToolTip="Type to search pages"/>
+                            <ComboBox
+                                x:Name="ConfluencePageCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="Page inside the selected group"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <DataGrid
@@ -232,53 +246,61 @@
                         Margin="0,0,0,8"
                         Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Project" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="JiraProjectCombo"
-                            Width="140"
-                            Margin="0,0,14,0"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Pick from the list, or type a project key"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
-                        <TextBlock Text="Reporter" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="JiraReporterCombo"
-                            Width="140"
-                            Margin="0,0,14,0"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
+                        <StackPanel Width="140" Margin="0,0,14,0">
+                            <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="JiraProjectSearchBox" ToolTip="Type to search projects"/>
+                            <ComboBox
+                                x:Name="JiraProjectCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Assignee" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="JiraAssigneeCombo"
-                            Width="140"
-                            Margin="0,0,14,0"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"
-                            ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
+                        <StackPanel Width="140" Margin="0,0,14,0">
+                            <TextBlock Text="Reporter" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox
+                                x:Name="JiraReporterSearchBox"
+                                ToolTip="Type to search, or type a name and leave it unpicked -- not every user may be listed"/>
+                            <ComboBox
+                                x:Name="JiraReporterCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Priority" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="JiraPriorityCombo"
-                            Width="110"
-                            Margin="0,0,14,0"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"/>
+                        <StackPanel Width="140" Margin="0,0,14,0">
+                            <TextBlock Text="Assignee" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox
+                                x:Name="JiraAssigneeSearchBox"
+                                ToolTip="Type to search, or type a name and leave it unpicked -- not every user may be listed"/>
+                            <ComboBox
+                                x:Name="JiraAssigneeCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Status" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox
-                            x:Name="JiraStatusCombo"
-                            Width="130"
-                            IsEditable="True"
-                            DisplayMemberPath="Display"
-                            SelectedValuePath="Value"/>
+                        <StackPanel Width="110" Margin="0,0,14,0">
+                            <TextBlock Text="Priority" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="JiraPrioritySearchBox" ToolTip="Type to search"/>
+                            <ComboBox
+                                x:Name="JiraPriorityCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"/>
+                        </StackPanel>
+
+                        <StackPanel Width="130">
+                            <TextBlock Text="Status" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBox x:Name="JiraStatusSearchBox" ToolTip="Type to search"/>
+                            <ComboBox
+                                x:Name="JiraStatusCombo"
+                                Margin="0,2,0,0"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <DataGrid

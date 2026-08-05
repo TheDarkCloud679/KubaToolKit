@@ -37,20 +37,19 @@ public partial class AtlassianSearchView
         ConfluenceGrid.ItemsSource = _confluenceResults;
         JiraGrid.ItemsSource = _jiraResults;
 
-        foreach (var combo in new[]
-                 {
-                     ConfluenceSpaceCombo, ConfluenceGroupCombo, ConfluencePageCombo,
-                     JiraProjectCombo, JiraReporterCombo, JiraAssigneeCombo, JiraPriorityCombo, JiraStatusCombo
-                 })
-        {
-            combo.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(FilterableCombo_TextChanged), true);
-
-            // Editable ComboBoxes don't reliably sync their visible text to
-            // a newly picked item on their own once ItemsSource holds data
-            // objects instead of plain strings -- set it explicitly instead
-            // of counting on WPF to do it.
-            combo.SelectionChanged += FilterableCombo_SelectionChanged;
-        }
+        // Each dropdown is non-editable (its displayed value is always
+        // exactly SelectedItem -- the one WPF behavior in this whole area
+        // that's completely unambiguous) paired with its own search box
+        // that only ever narrows which items are visible, never touching
+        // the dropdown's selection.
+        SetupSearchableCombo(ConfluenceSpaceSearchBox, ConfluenceSpaceCombo);
+        SetupSearchableCombo(ConfluenceGroupSearchBox, ConfluenceGroupCombo);
+        SetupSearchableCombo(ConfluencePageSearchBox, ConfluencePageCombo);
+        SetupSearchableCombo(JiraProjectSearchBox, JiraProjectCombo);
+        SetupSearchableCombo(JiraReporterSearchBox, JiraReporterCombo);
+        SetupSearchableCombo(JiraAssigneeSearchBox, JiraAssigneeCombo);
+        SetupSearchableCombo(JiraPrioritySearchBox, JiraPriorityCombo);
+        SetupSearchableCombo(JiraStatusSearchBox, JiraStatusCombo);
 
         _settings = _settingsService.Load();
 
@@ -64,6 +63,31 @@ public partial class AtlassianSearchView
 
     private const string DefaultJiraProjectName = "Customer Service";
     private static readonly NameValue AnyOption = new("", "(Any)");
+
+    // Typing narrows which items the dropdown shows (the lists can be
+    // long); picking one clears the search box, since at that point the
+    // resolved value is what the combo itself is showing.
+    private static void
+    SetupSearchableCombo(
+        TextBox searchBox,
+        ComboBox combo)
+    {
+        searchBox.TextChanged += (_, __) =>
+        {
+            var text = searchBox.Text.Trim();
+
+            combo.Items.Filter =
+                string.IsNullOrEmpty(text)
+                    ? null
+                    : obj =>
+                        obj is NameValue nv
+                        && (nv.Value.Length == 0 || nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+            combo.IsDropDownOpen = true;
+        };
+
+        combo.SelectionChanged += (_, __) => searchBox.Clear();
+    }
 
     // Populates every filter dropdown, each independently -- one endpoint
     // being unavailable (a permission restriction, a site configuration
@@ -115,9 +139,10 @@ public partial class AtlassianSearchView
             SelectComboItemByValue(ConfluenceSpaceCombo, favorites[0].Value);
         }
 
-        // Applied last: selecting an item above resets the Filter (see
-        // FilterableCombo_SelectionChanged), so setting the favorites
-        // narrowing has to come after or it would immediately get wiped.
+        // Applied last: selecting an item above clears the search box (see
+        // SetupSearchableCombo), which resets the Filter -- so setting the
+        // favorites narrowing has to come after or it would immediately be
+        // wiped out.
         var favoriteValues = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
 
         ConfluenceSpaceCombo.Items.Filter =
@@ -154,38 +179,6 @@ public partial class AtlassianSearchView
         combo.SelectedIndex = 0;
     }
 
-    // Every dropdown is a live search box: typing narrows the list to
-    // matching entries (the lists can be long) without needing a separate
-    // search field. This only ever touches the collection VIEW's Filter,
-    // never ItemsSource/SelectedItem -- swapping ItemsSource on every
-    // keystroke was the earlier (broken) approach, and it reset the
-    // Selector's selection state on every rebuild, which is why picking an
-    // item from the list stopped sticking.
-    private void
-    FilterableCombo_TextChanged(
-        object sender,
-        TextChangedEventArgs e)
-    {
-        if (sender is not ComboBox combo)
-        {
-            return;
-        }
-
-        var text = (combo.Text ?? "").Trim();
-
-        combo.Items.Filter =
-            string.IsNullOrEmpty(text)
-                ? null
-                : obj =>
-                    obj is NameValue nv
-                    && (nv.Value.Length == 0 || nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase));
-
-        if (!combo.IsDropDownOpen)
-        {
-            combo.IsDropDownOpen = true;
-        }
-    }
-
     private static void
     SelectComboItemByValue(
         ComboBox combo,
@@ -201,48 +194,24 @@ public partial class AtlassianSearchView
             if (string.Equals(item.Value, value, StringComparison.OrdinalIgnoreCase))
             {
                 combo.SelectedItem = item;
-                combo.Text = item.Display;
 
                 return;
             }
         }
     }
 
-    // Forces the visible text to match whatever got selected -- picking an
-    // item from the dropdown (by click or Enter) doesn't reliably update
-    // Text on its own for an editable ComboBox bound to data objects.
-    // Also drops any active search filter, so reopening the dropdown after
-    // a pick shows the full list again instead of staying narrowed to
-    // whatever was typed to find it.
-    private void
-    FilterableCombo_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        if (sender is not ComboBox combo)
-        {
-            return;
-        }
-
-        if (combo.SelectedItem is NameValue selected)
-        {
-            combo.Text = selected.Display;
-        }
-
-        combo.Items.Filter = null;
-    }
-
-    // The Space/Project/Priority/Status/Reporter/Assignee dropdowns stay
-    // editable, so a filter value can come from either picking an item
-    // (SelectedValue holds the raw key/name to filter on) or typing free
-    // text that matches nothing in the list (SelectedValue is then null,
-    // and combo.Text holds exactly what was typed).
+    // The Space/Project/Priority/Status/Reporter/Assignee dropdowns pair
+    // with their own search box, so a filter value can come from either
+    // picking an item (SelectedValue holds the raw key/name to filter on)
+    // or leaving nothing picked and typing free text into the search box
+    // instead (SelectedValue is then "", the placeholder "(Any)" entry).
     private static string
     GetComboFilterValue(
-        ComboBox combo) =>
-        combo.SelectedValue is string val
+        ComboBox combo,
+        TextBox searchBox) =>
+        combo.SelectedValue is string val && val.Length > 0
             ? val
-            : (combo.Text ?? "").Trim();
+            : searchBox.Text.Trim();
 
     // Group/Page aren't free-typable (their value is an opaque content Id,
     // not something you could usefully type), so only a real selection
@@ -257,7 +226,7 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
 
         if (string.IsNullOrWhiteSpace(spaceKey))
         {
@@ -285,7 +254,7 @@ public partial class AtlassianSearchView
     private void
     UpdateFavoriteToggleVisual()
     {
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
 
         var isFavorite =
             !string.IsNullOrWhiteSpace(spaceKey)
@@ -306,7 +275,7 @@ public partial class AtlassianSearchView
         PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
         PopulateCombo(ConfluencePageCombo, new List<NameValue>());
 
-        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox);
 
         if (string.IsNullOrWhiteSpace(spaceKey) || !_settings.IsComplete)
         {
@@ -466,7 +435,7 @@ public partial class AtlassianSearchView
                 await _atlassianService.SearchConfluence(
                     _settings,
                     query,
-                    GetComboFilterValue(ConfluenceSpaceCombo),
+                    GetComboFilterValue(ConfluenceSpaceCombo, ConfluenceSpaceSearchBox),
                     string.IsNullOrWhiteSpace(pageId) ? groupId : pageId);
 
             return (results, null);
@@ -489,11 +458,11 @@ public partial class AtlassianSearchView
                 await _atlassianService.SearchJira(
                     _settings,
                     query,
-                    GetComboFilterValue(JiraProjectCombo),
-                    GetComboFilterValue(JiraReporterCombo),
-                    GetComboFilterValue(JiraAssigneeCombo),
-                    GetComboFilterValue(JiraPriorityCombo),
-                    GetComboFilterValue(JiraStatusCombo));
+                    GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
+                    GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
+                    GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
+                    GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
+                    GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox));
 
             return (results, null);
         }
