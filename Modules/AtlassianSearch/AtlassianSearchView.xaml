@@ -161,7 +161,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
-                        HorizontalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="44"
                         MouseDoubleClick="ConfluenceGrid_MouseDoubleClick">
@@ -305,7 +305,7 @@
                         CanUserDeleteRows="False"
                         CanUserSortColumns="False"
                         HeadersVisibility="Column"
-                        HorizontalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         RowHeight="40"
                         MouseDoubleClick="JiraGrid_MouseDoubleClick">
