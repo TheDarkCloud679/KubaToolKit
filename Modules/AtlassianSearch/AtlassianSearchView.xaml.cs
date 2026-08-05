@@ -90,15 +90,23 @@ public partial class AtlassianSearchView
             // which would stop further typing from reaching the search box
             // -- pull focus straight back so it keeps behaving like a
             // normal search field while the list updates underneath it.
+            // The popup's own focus grab isn't necessarily synchronous, so
+            // this both retries immediately and again once every other
+            // pending dispatcher operation (including whatever priority
+            // that grab runs at) has drained.
             var caret = searchBox.CaretIndex;
 
+            void RestoreSearchFocus()
+            {
+                searchBox.Focus();
+                searchBox.CaretIndex = caret;
+            }
+
+            RestoreSearchFocus();
+
             searchBox.Dispatcher.BeginInvoke(
-                DispatcherPriority.Input,
-                new Action(() =>
-                {
-                    searchBox.Focus();
-                    searchBox.CaretIndex = caret;
-                }));
+                DispatcherPriority.ApplicationIdle,
+                new Action(RestoreSearchFocus));
         };
 
         combo.SelectionChanged += (_, __) => searchBox.Clear();
