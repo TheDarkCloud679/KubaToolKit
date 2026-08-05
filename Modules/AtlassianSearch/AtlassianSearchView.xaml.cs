@@ -26,13 +26,6 @@ public partial class AtlassianSearchView
     private DataGridColumn? _jiraSortColumn;
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
 
-    // The full (unfiltered) option list behind each dropdown, so typing a
-    // search term can narrow what's shown without losing the rest -- a
-    // combo's displayed ItemsSource can start narrower (Confluence spaces,
-    // when favorites are set) than what's searchable.
-    private readonly Dictionary<ComboBox, List<NameValue>> _comboMasterOptions = new();
-    private bool _suppressComboFilter;
-
     // Cached so re-narrowing to favorites after a star toggle doesn't need
     // a fresh network round-trip.
     private List<NameValue> _allConfluenceSpaces = new();
@@ -95,9 +88,9 @@ public partial class AtlassianSearchView
     }
 
     // Starts the Space dropdown narrowed to favorited spaces (still
-    // searchable to reach the rest, via the full list kept in
-    // _comboMasterOptions) instead of every space on the site. With no
-    // favorites, or exactly one, it behaves as before.
+    // searchable to reach the rest of the site, since typing replaces this
+    // filter with a text-matching one) instead of every space on the site.
+    // With no favorites, or exactly one, it behaves as before.
     private void
     PopulateConfluenceSpaceCombo()
     {
@@ -108,11 +101,15 @@ public partial class AtlassianSearchView
                 .Where(s => favoriteKeys.Any(k => string.Equals(k, s.Value, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-        _comboMasterOptions[ConfluenceSpaceCombo] = _allConfluenceSpaces;
+        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(_allConfluenceSpaces).ToList();
 
-        var initial = favorites.Count > 0 ? favorites : _allConfluenceSpaces;
+        var favoriteValues = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
 
-        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(initial).ToList();
+        ConfluenceSpaceCombo.Items.Filter =
+            favorites.Count > 0
+                ? obj => obj is NameValue nv && (nv.Value.Length == 0 || favoriteValues.Contains(nv.Value))
+                : null;
+
         ConfluenceSpaceCombo.SelectedIndex = 0;
 
         if (favorites.Count == 1)
@@ -139,67 +136,46 @@ public partial class AtlassianSearchView
         }
     }
 
-    private void
+    private static void
     PopulateCombo(
         ComboBox combo,
         List<NameValue> options)
     {
-        _comboMasterOptions[combo] = options;
-
         combo.ItemsSource = new List<NameValue> { AnyOption }.Concat(options).ToList();
+        combo.Items.Filter = null;
         combo.SelectedIndex = 0;
     }
 
     // Every dropdown is a live search box: typing narrows the list to
     // matching entries (the lists can be long) without needing a separate
-    // search field. Selecting an item also raises TextChanged (Text syncs
-    // to the selection), which is detected and skipped below -- otherwise
-    // rebuilding ItemsSource right after a pick would immediately wipe out
-    // the selection that was just made.
+    // search field. This only ever touches the collection VIEW's Filter,
+    // never ItemsSource/SelectedItem -- swapping ItemsSource on every
+    // keystroke was the earlier (broken) approach, and it reset the
+    // Selector's selection state on every rebuild, which is why picking an
+    // item from the list stopped sticking.
     private void
     FilterableCombo_TextChanged(
         object sender,
         TextChangedEventArgs e)
     {
-        if (_suppressComboFilter || sender is not ComboBox combo)
+        if (sender is not ComboBox combo)
         {
             return;
         }
 
-        var text = combo.Text ?? "";
+        var text = (combo.Text ?? "").Trim();
 
-        if (combo.SelectedItem is NameValue selected
-            && string.Equals(selected.Display, text, StringComparison.OrdinalIgnoreCase))
+        combo.Items.Filter =
+            string.IsNullOrEmpty(text)
+                ? null
+                : obj =>
+                    obj is NameValue nv
+                    && (nv.Value.Length == 0 || nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+        if (!combo.IsDropDownOpen)
         {
-            return;
+            combo.IsDropDownOpen = true;
         }
-
-        if (!_comboMasterOptions.TryGetValue(combo, out var allOptions))
-        {
-            return;
-        }
-
-        var filtered =
-            string.IsNullOrWhiteSpace(text)
-                ? allOptions
-                : allOptions
-                    .Where(o => o.Display.Contains(text, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-        _suppressComboFilter = true;
-
-        combo.ItemsSource = new List<NameValue> { AnyOption }.Concat(filtered).ToList();
-        combo.SelectedItem = null;
-        combo.Text = text;
-
-        if (e.OriginalSource is TextBox textBox)
-        {
-            textBox.CaretIndex = text.Length;
-        }
-
-        combo.IsDropDownOpen = true;
-
-        _suppressComboFilter = false;
     }
 
     private static void
