@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -84,6 +85,20 @@ public partial class AtlassianSearchView
                         && (nv.Value.Length == 0 || nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase));
 
             combo.IsDropDownOpen = true;
+
+            // Opening the dropdown moves keyboard focus onto its popup,
+            // which would stop further typing from reaching the search box
+            // -- pull focus straight back so it keeps behaving like a
+            // normal search field while the list updates underneath it.
+            var caret = searchBox.CaretIndex;
+
+            searchBox.Dispatcher.BeginInvoke(
+                DispatcherPriority.Input,
+                new Action(() =>
+                {
+                    searchBox.Focus();
+                    searchBox.CaretIndex = caret;
+                }));
         };
 
         combo.SelectionChanged += (_, __) => searchBox.Clear();
@@ -117,38 +132,33 @@ public partial class AtlassianSearchView
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
 
-    // Starts the Space dropdown narrowed to favorited spaces (still
-    // searchable to reach the rest of the site, since typing replaces this
-    // filter with a text-matching one) instead of every space on the site.
-    // With no favorites, or exactly one, it behaves as before.
+    // Favorited spaces sort to the top of the (still complete) list, marked
+    // with a star, instead of hiding the rest of the site.
     private void
     PopulateConfluenceSpaceCombo()
     {
         var favoriteKeys = _settings.FavoriteConfluenceSpaceKeys;
 
-        var favorites =
+        var favoriteSet = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
+
+        var ordered =
             _allConfluenceSpaces
-                .Where(s => favoriteKeys.Any(k => string.Equals(k, s.Value, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(s => favoriteSet.Contains(s.Value))
+                .ThenBy(s => s.Display, StringComparer.OrdinalIgnoreCase)
+                .Select(s =>
+                    favoriteSet.Contains(s.Value)
+                        ? new NameValue(s.Value, $"★ {s.Display}")
+                        : s)
                 .ToList();
 
-        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(_allConfluenceSpaces).ToList();
+        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(ordered).ToList();
+        ConfluenceSpaceCombo.Items.Filter = null;
         ConfluenceSpaceCombo.SelectedIndex = 0;
 
-        if (favorites.Count == 1)
+        if (favoriteKeys.Count == 1)
         {
-            SelectComboItemByValue(ConfluenceSpaceCombo, favorites[0].Value);
+            SelectComboItemByValue(ConfluenceSpaceCombo, favoriteKeys[0]);
         }
-
-        // Applied last: selecting an item above clears the search box (see
-        // SetupSearchableCombo), which resets the Filter -- so setting the
-        // favorites narrowing has to come after or it would immediately be
-        // wiped out.
-        var favoriteValues = new HashSet<string>(favoriteKeys, StringComparer.OrdinalIgnoreCase);
-
-        ConfluenceSpaceCombo.Items.Filter =
-            favorites.Count > 0
-                ? obj => obj is NameValue nv && (nv.Value.Length == 0 || favoriteValues.Contains(nv.Value))
-                : null;
 
         UpdateFavoriteToggleVisual();
     }
@@ -248,7 +258,10 @@ public partial class AtlassianSearchView
 
         _settingsService.Save(_settings);
 
-        UpdateFavoriteToggleVisual();
+        // Re-sorts/re-marks the list immediately instead of waiting for the
+        // next full reload, keeping the space you just starred selected.
+        PopulateConfluenceSpaceCombo();
+        SelectComboItemByValue(ConfluenceSpaceCombo, spaceKey);
     }
 
     private void
