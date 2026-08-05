@@ -10,4 +10,9 @@ public class AtlassianSettings
         !string.IsNullOrWhiteSpace(BaseUrl)
         && !string.IsNullOrWhiteSpace(Email)
         && !string.IsNullOrWhiteSpace(ApiToken);
+
+    // Confluence space keys starred from the search view -- when set, the
+    // Space dropdown starts narrowed to just these instead of every space
+    // on the site (typing still searches everything).
+    public List<string> FavoriteConfluenceSpaceKeys { get; set; } = new();
 }

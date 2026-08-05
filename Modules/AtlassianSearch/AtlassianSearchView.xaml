@@ -108,10 +108,21 @@
                         <ComboBox
                             x:Name="ConfluenceSpaceCombo"
                             Width="140"
-                            Margin="0,0,14,0"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Pick from the list, or type a space key"
                             SelectionChanged="ConfluenceSpaceCombo_SelectionChanged"/>
+
+                        <ToggleButton
+                            x:Name="FavoriteSpaceToggle"
+                            Width="26"
+                            Margin="2,0,14,0"
+                            Padding="0"
+                            ToolTip="Favorite this space -- when you have favorites, the Space list starts narrowed to just those"
+                            Click="FavoriteSpaceToggle_Click">
+                            <TextBlock x:Name="FavoriteSpaceToggleGlyph" Text="☆" FontSize="14"/>
+                        </ToggleButton>
 
                         <TextBlock Text="Group" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
                         <ComboBox
@@ -119,6 +130,8 @@
                             Width="160"
                             Margin="0,0,14,0"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Top-level page of the space -- type to search, then pick one"
                             SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
 
@@ -127,6 +140,8 @@
                             x:Name="ConfluencePageCombo"
                             Width="160"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Page inside the selected group -- type to search, then pick one"/>
                     </StackPanel>
 
@@ -224,6 +239,8 @@
                             Width="140"
                             Margin="0,0,14,0"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Pick from the list, or type a project key"/>
 
                         <TextBlock Text="Reporter" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
@@ -232,6 +249,8 @@
                             Width="140"
                             Margin="0,0,14,0"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
 
                         <TextBlock Text="Assignee" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
@@ -240,6 +259,8 @@
                             Width="140"
                             Margin="0,0,14,0"
                             IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"
                             ToolTip="Pick from the list, or type a name (not every user may be listed)"/>
 
                         <TextBlock Text="Priority" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
@@ -247,13 +268,17 @@
                             x:Name="JiraPriorityCombo"
                             Width="110"
                             Margin="0,0,14,0"
-                            IsEditable="True"/>
+                            IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"/>
 
                         <TextBlock Text="Status" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
                         <ComboBox
                             x:Name="JiraStatusCombo"
                             Width="130"
-                            IsEditable="True"/>
+                            IsEditable="True"
+                            DisplayMemberPath="Display"
+                            SelectedValuePath="Value"/>
                     </StackPanel>
 
                     <DataGrid

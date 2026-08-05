@@ -27,9 +27,15 @@ public partial class AtlassianSearchView
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
 
     // The full (unfiltered) option list behind each dropdown, so typing a
-    // search term can narrow what's shown without losing the rest.
+    // search term can narrow what's shown without losing the rest -- a
+    // combo's displayed ItemsSource can start narrower (Confluence spaces,
+    // when favorites are set) than what's searchable.
     private readonly Dictionary<ComboBox, List<NameValue>> _comboMasterOptions = new();
     private bool _suppressComboFilter;
+
+    // Cached so re-narrowing to favorites after a star toggle doesn't need
+    // a fresh network round-trip.
+    private List<NameValue> _allConfluenceSpaces = new();
 
     public AtlassianSearchView()
     {
@@ -57,8 +63,8 @@ public partial class AtlassianSearchView
         }
     }
 
-    private const string DefaultConfluenceSpaceName = "Service Client";
     private const string DefaultJiraProjectName = "Customer Service";
+    private static readonly NameValue AnyOption = new("", "(Any)");
 
     // Populates every filter dropdown, each independently -- one endpoint
     // being unavailable (a permission restriction, a site configuration
@@ -75,15 +81,46 @@ public partial class AtlassianSearchView
 
         await Task.WhenAll(spacesTask, projectsTask, prioritiesTask, statusesTask, usersTask);
 
-        PopulateCombo(ConfluenceSpaceCombo, spacesTask.Result);
+        _allConfluenceSpaces = spacesTask.Result;
+
+        PopulateConfluenceSpaceCombo();
+
         PopulateCombo(JiraProjectCombo, projectsTask.Result);
         PopulateCombo(JiraPriorityCombo, prioritiesTask.Result);
         PopulateCombo(JiraStatusCombo, statusesTask.Result);
         PopulateCombo(JiraReporterCombo, usersTask.Result);
         PopulateCombo(JiraAssigneeCombo, usersTask.Result);
 
-        SelectComboOptionByDisplayName(ConfluenceSpaceCombo, spacesTask.Result, DefaultConfluenceSpaceName);
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
+    }
+
+    // Starts the Space dropdown narrowed to favorited spaces (still
+    // searchable to reach the rest, via the full list kept in
+    // _comboMasterOptions) instead of every space on the site. With no
+    // favorites, or exactly one, it behaves as before.
+    private void
+    PopulateConfluenceSpaceCombo()
+    {
+        var favoriteKeys = _settings.FavoriteConfluenceSpaceKeys;
+
+        var favorites =
+            _allConfluenceSpaces
+                .Where(s => favoriteKeys.Any(k => string.Equals(k, s.Value, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+        _comboMasterOptions[ConfluenceSpaceCombo] = _allConfluenceSpaces;
+
+        var initial = favorites.Count > 0 ? favorites : _allConfluenceSpaces;
+
+        ConfluenceSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(initial).ToList();
+        ConfluenceSpaceCombo.SelectedIndex = 0;
+
+        if (favorites.Count == 1)
+        {
+            SelectComboItemByValue(ConfluenceSpaceCombo, favorites[0].Value);
+        }
+
+        UpdateFavoriteToggleVisual();
     }
 
     private static void
@@ -98,7 +135,7 @@ public partial class AtlassianSearchView
 
         if (match.Value != null)
         {
-            SelectComboItemByTag(combo, match.Value);
+            SelectComboItemByValue(combo, match.Value);
         }
     }
 
@@ -109,32 +146,16 @@ public partial class AtlassianSearchView
     {
         _comboMasterOptions[combo] = options;
 
-        RebuildComboItems(combo, options);
-
+        combo.ItemsSource = new List<NameValue> { AnyOption }.Concat(options).ToList();
         combo.SelectedIndex = 0;
-    }
-
-    private static void
-    RebuildComboItems(
-        ComboBox combo,
-        List<NameValue> options)
-    {
-        combo.Items.Clear();
-
-        combo.Items.Add(new ComboBoxItem { Content = "(Any)", Tag = "" });
-
-        foreach (var option in options)
-        {
-            combo.Items.Add(new ComboBoxItem { Content = option.Display, Tag = option.Value });
-        }
     }
 
     // Every dropdown is a live search box: typing narrows the list to
     // matching entries (the lists can be long) without needing a separate
     // search field. Selecting an item also raises TextChanged (Text syncs
     // to the selection), which is detected and skipped below -- otherwise
-    // rebuilding Items right after a pick would immediately wipe out the
-    // selection that was just made.
+    // rebuilding ItemsSource right after a pick would immediately wipe out
+    // the selection that was just made.
     private void
     FilterableCombo_TextChanged(
         object sender,
@@ -147,8 +168,8 @@ public partial class AtlassianSearchView
 
         var text = combo.Text ?? "";
 
-        if (combo.SelectedItem is ComboBoxItem { Content: string selectedContent }
-            && string.Equals(selectedContent, text, StringComparison.OrdinalIgnoreCase))
+        if (combo.SelectedItem is NameValue selected
+            && string.Equals(selected.Display, text, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -167,8 +188,8 @@ public partial class AtlassianSearchView
 
         _suppressComboFilter = true;
 
-        RebuildComboItems(combo, filtered);
-
+        combo.ItemsSource = new List<NameValue> { AnyOption }.Concat(filtered).ToList();
+        combo.SelectedItem = null;
         combo.Text = text;
 
         if (e.OriginalSource is TextBox textBox)
@@ -182,14 +203,18 @@ public partial class AtlassianSearchView
     }
 
     private static void
-    SelectComboItemByTag(
+    SelectComboItemByValue(
         ComboBox combo,
-        string tag)
+        string value)
     {
-        foreach (var obj in combo.Items)
+        if (combo.ItemsSource is not IEnumerable<NameValue> items)
         {
-            if (obj is ComboBoxItem { Tag: string itemTag } item
-                && string.Equals(itemTag, tag, StringComparison.OrdinalIgnoreCase))
+            return;
+        }
+
+        foreach (var item in items)
+        {
+            if (string.Equals(item.Value, value, StringComparison.OrdinalIgnoreCase))
             {
                 combo.SelectedItem = item;
 
@@ -200,14 +225,14 @@ public partial class AtlassianSearchView
 
     // The Space/Project/Priority/Status/Reporter/Assignee dropdowns stay
     // editable, so a filter value can come from either picking an item
-    // (its Tag holds the raw key/name to filter on) or typing free text
-    // that matches nothing in the list (SelectedItem is then null, and
-    // combo.Text holds exactly what was typed).
+    // (SelectedValue holds the raw key/name to filter on) or typing free
+    // text that matches nothing in the list (SelectedValue is then null,
+    // and combo.Text holds exactly what was typed).
     private static string
     GetComboFilterValue(
         ComboBox combo) =>
-        combo.SelectedItem is ComboBoxItem { Tag: string tag }
-            ? tag
+        combo.SelectedValue is string val
+            ? val
             : (combo.Text ?? "").Trim();
 
     // Group/Page aren't free-typable (their value is an opaque content Id,
@@ -216,13 +241,59 @@ public partial class AtlassianSearchView
     private static string
     GetComboSelectionValue(
         ComboBox combo) =>
-        combo.SelectedItem is ComboBoxItem { Tag: string tag } ? tag : "";
+        combo.SelectedValue as string ?? "";
+
+    private void
+    FavoriteSpaceToggle_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+
+        if (string.IsNullOrWhiteSpace(spaceKey))
+        {
+            FavoriteSpaceToggle.IsChecked = false;
+
+            return;
+        }
+
+        var favorites = _settings.FavoriteConfluenceSpaceKeys;
+
+        if (favorites.Any(k => string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            favorites.RemoveAll(k => string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            favorites.Add(spaceKey);
+        }
+
+        _settingsService.Save(_settings);
+
+        UpdateFavoriteToggleVisual();
+    }
+
+    private void
+    UpdateFavoriteToggleVisual()
+    {
+        var spaceKey = GetComboFilterValue(ConfluenceSpaceCombo);
+
+        var isFavorite =
+            !string.IsNullOrWhiteSpace(spaceKey)
+            && _settings.FavoriteConfluenceSpaceKeys.Any(k =>
+                string.Equals(k, spaceKey, StringComparison.OrdinalIgnoreCase));
+
+        FavoriteSpaceToggle.IsChecked = isFavorite;
+        FavoriteSpaceToggleGlyph.Text = isFavorite ? "★" : "☆";
+    }
 
     private async void
     ConfluenceSpaceCombo_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
+        UpdateFavoriteToggleVisual();
+
         PopulateCombo(ConfluenceGroupCombo, new List<NameValue>());
         PopulateCombo(ConfluencePageCombo, new List<NameValue>());
 
