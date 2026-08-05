@@ -435,17 +435,6 @@ public partial class AtlassianSearchView
     }
 
     private void
-    JiraUnassignedCheckBox_Changed(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var isUnassigned = JiraUnassignedCheckBox.IsChecked == true;
-
-        JiraAssigneeSearchBox.IsEnabled = !isUnassigned;
-        JiraAssigneeCombo.IsEnabled = !isUnassigned;
-    }
-
-    private void
     PopulateJiraSavedFilterCombo()
     {
         var options =
@@ -490,35 +479,9 @@ public partial class AtlassianSearchView
 
         SelectComboItemByValue(JiraProjectCombo, filter.Project);
         SelectComboItemByValue(JiraReporterCombo, filter.Reporter);
-
-        JiraUnassignedCheckBox.IsChecked = filter.AssigneeIsUnassigned;
-
-        if (!filter.AssigneeIsUnassigned)
-        {
-            SelectComboItemByValue(JiraAssigneeCombo, filter.Assignee);
-        }
-
-        SelectPriorityOperator(JiraPriorityOperatorCombo, filter.PriorityOperator);
+        SelectComboItemByValue(JiraAssigneeCombo, filter.Assignee);
         SelectComboItemByValue(JiraPriorityCombo, filter.Priority);
         SelectComboItemByValue(JiraStatusCombo, filter.Status);
-    }
-
-    private static void
-    SelectPriorityOperator(
-        ComboBox combo,
-        string op)
-    {
-        foreach (ComboBoxItem item in combo.Items)
-        {
-            if (string.Equals(item.Content as string, op, StringComparison.Ordinal))
-            {
-                combo.SelectedItem = item;
-
-                return;
-            }
-        }
-
-        combo.SelectedIndex = 0;
     }
 
     private void
@@ -530,14 +493,12 @@ public partial class AtlassianSearchView
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
                 "Save Jira filter",
-                "Name for this saved list (e.g. 'Unassigned > P2'):");
+                "Name for this saved list:");
 
         if (string.IsNullOrWhiteSpace(name))
         {
             return;
         }
-
-        var priorityOperator = (JiraPriorityOperatorCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "=";
 
         var filter =
             new SavedJiraFilter
@@ -546,10 +507,8 @@ public partial class AtlassianSearchView
                 Query = QueryTextBox.Text.Trim(),
                 Project = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
                 Reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
-                AssigneeIsUnassigned = JiraUnassignedCheckBox.IsChecked == true,
                 Assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
                 Priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
-                PriorityOperator = priorityOperator,
                 Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox)
             };
 
@@ -692,7 +651,6 @@ public partial class AtlassianSearchView
                 || queueSelected
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox))
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox))
-                || JiraUnassignedCheckBox.IsChecked == true
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox))
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox))
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox));
@@ -812,8 +770,6 @@ public partial class AtlassianSearchView
                 return (filtered, null);
             }
 
-            var priorityOperator = (JiraPriorityOperatorCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "=";
-
             var results =
                 await _atlassianService.SearchJira(
                     _settings,
@@ -821,9 +777,7 @@ public partial class AtlassianSearchView
                     GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
                     GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
                     GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
-                    JiraUnassignedCheckBox.IsChecked == true,
                     GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
-                    priorityOperator,
                     GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox));
 
             return (results, null);

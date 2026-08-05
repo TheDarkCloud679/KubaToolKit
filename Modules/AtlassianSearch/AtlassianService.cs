@@ -723,18 +723,16 @@ public class AtlassianService
         string? project,
         string? reporter,
         string? assignee,
-        bool assigneeIsUnassigned,
         string? priority,
-        string priorityOperator,
         string? status,
         CancellationToken cancellationToken = default)
     {
-        // A saved filter (e.g. "Unassigned > P2") may carry no search text
-        // at all -- built as a list of conditions instead of an always-
-        // present "text ~" prefix, so a text-less filter still produces
-        // valid JQL instead of an empty/invalid "text ~ *" clause. The
-        // caller only invokes this once at least one of query/project/
-        // reporter/assignee/priority/status is actually set.
+        // A saved filter may carry no search text at all -- built as a
+        // list of conditions instead of an always-present "text ~"
+        // prefix, so a text-less filter still produces valid JQL instead
+        // of an empty/invalid "text ~ *" clause. The caller only invokes
+        // this once at least one of query/project/reporter/assignee/
+        // priority/status is actually set.
         var conditions = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -755,26 +753,14 @@ public class AtlassianService
             conditions.Add($"reporter = \"{EscapeForQuery(reporter)}\"");
         }
 
-        if (assigneeIsUnassigned)
-        {
-            conditions.Add("assignee is EMPTY");
-        }
-        else if (!string.IsNullOrWhiteSpace(assignee))
+        if (!string.IsNullOrWhiteSpace(assignee))
         {
             conditions.Add($"assignee = \"{EscapeForQuery(assignee)}\"");
         }
 
         if (!string.IsNullOrWhiteSpace(priority))
         {
-            // Restricted to a known-safe set rather than trusted as-is --
-            // this ends up directly in the JQL string, unquoted.
-            var op = priorityOperator switch
-            {
-                ">" or ">=" or "<" or "<=" => priorityOperator,
-                _ => "="
-            };
-
-            conditions.Add($"priority {op} \"{EscapeForQuery(priority)}\"");
+            conditions.Add($"priority = \"{EscapeForQuery(priority)}\"");
         }
 
         if (!string.IsNullOrWhiteSpace(status))
