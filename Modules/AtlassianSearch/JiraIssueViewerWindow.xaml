@@ -151,24 +151,31 @@
                         Click="ApplyStatusButton_Click"/>
                 </Grid>
 
-                <ItemsControl x:Name="RequiredFieldsItemsControl" Margin="0,4,0,0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,4,0,0">
-                                <TextBlock Text="{Binding Name}" FontSize="11" Margin="0,0,0,2"/>
-                                <ComboBox
-                                    ItemsSource="{Binding AllowedValues}"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"
-                                    SelectedValue="{Binding EnteredValue, Mode=TwoWay}"
-                                    Visibility="{Binding HasAllowedValues, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                <TextBox
-                                    Text="{Binding EnteredValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Visibility="{Binding HasAllowedValues, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- A capped, independently-scrolling height here, rather
+                     than letting this grow freely, keeps however many
+                     required fields a transition (or its editmeta/error-text
+                     fallbacks) turns up from squeezing the rows below out of
+                     this fixed-height window. -->
+                <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                    <ItemsControl x:Name="RequiredFieldsItemsControl">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding Name}" FontSize="11" Margin="0,0,0,2"/>
+                                    <ComboBox
+                                        ItemsSource="{Binding AllowedValues}"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"
+                                        SelectedValue="{Binding EnteredValue, Mode=TwoWay}"
+                                        Visibility="{Binding HasAllowedValues, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBox
+                                        Text="{Binding EnteredValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Visibility="{Binding HasAllowedValues, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </StackPanel>
         </Grid>
 
