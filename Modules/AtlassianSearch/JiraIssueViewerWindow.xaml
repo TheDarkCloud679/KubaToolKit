@@ -133,6 +133,14 @@
                         Margin="6,0,0,0"
                         Click="ApplyStatusButton_Click"/>
                 </Grid>
+
+                <StackPanel x:Name="ResolutionPanel" Margin="0,6,0,0" Visibility="Collapsed">
+                    <TextBlock Text="Resolution" FontSize="11" Margin="0,0,0,2"/>
+                    <ComboBox
+                        x:Name="ResolutionCombo"
+                        DisplayMemberPath="Display"
+                        SelectedValuePath="Value"/>
+                </StackPanel>
             </StackPanel>
         </Grid>
 

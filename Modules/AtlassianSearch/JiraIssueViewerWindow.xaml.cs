@@ -153,15 +153,38 @@ public partial class JiraIssueViewerWindow
         }
     }
 
+    // Lets whoever opened this window (the search grid, the popout) know
+    // an issue it's displaying changed, so it can refresh instead of
+    // showing stale Assignee/Status until the next manual search.
+    public event Action? IssueChanged;
+
     private void
     StatusCombo_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (StatusCombo.SelectedItem is JiraTransition { RequiresComment: true } transition)
+        if (StatusCombo.SelectedItem is not JiraTransition transition)
         {
-            StatusMessageText.Text =
-                $"'{transition.Name}' requires a comment -- write it below, then click Apply.";
+            return;
+        }
+
+        ResolutionPanel.Visibility = transition.RequiresResolution ? Visibility.Visible : Visibility.Collapsed;
+        ResolutionCombo.ItemsSource = transition.ResolutionOptions;
+        ResolutionCombo.SelectedIndex = transition.ResolutionOptions.Count > 0 ? 0 : -1;
+
+        var requirements =
+            new[]
+            {
+                transition.RequiresComment ? "a comment" : null,
+                transition.RequiresResolution ? "a resolution" : null
+            }
+            .Where(r => r != null);
+
+        var requirementText = string.Join(" and ", requirements);
+
+        if (!string.IsNullOrEmpty(requirementText))
+        {
+            StatusMessageText.Text = $"'{transition.Name}' requires {requirementText} -- fill it in below, then click Apply.";
         }
     }
 
@@ -176,10 +199,18 @@ public partial class JiraIssueViewerWindow
         }
 
         var commentText = NewCommentTextBox.Text.Trim();
+        var resolutionId = ResolutionCombo.SelectedValue as string;
 
         if (transition.RequiresComment && string.IsNullOrWhiteSpace(commentText))
         {
             StatusMessageText.Text = $"'{transition.Name}' requires a comment -- write it below first.";
+
+            return;
+        }
+
+        if (transition.RequiresResolution && string.IsNullOrWhiteSpace(resolutionId))
+        {
+            StatusMessageText.Text = $"'{transition.Name}' requires a resolution -- pick one above first.";
 
             return;
         }
@@ -193,6 +224,7 @@ public partial class JiraIssueViewerWindow
                 _issueKey,
                 transition.Id,
                 transition.RequiresComment ? commentText : null,
+                transition.RequiresResolution ? resolutionId : null,
                 _assignableUsers);
 
             StatusMessageText.Text = "Status changed.";
@@ -215,6 +247,8 @@ public partial class JiraIssueViewerWindow
 
             StatusCombo.ItemsSource = _transitions;
             StatusCombo.SelectedIndex = _transitions.Count > 0 ? 0 : -1;
+
+            IssueChanged?.Invoke();
         }
         catch (Exception ex)
         {
@@ -242,6 +276,8 @@ public partial class JiraIssueViewerWindow
 
             StatusMessageText.Text = "Assignee changed.";
             CurrentAssigneeText.Text = $"Currently: {(AssigneeCombo.SelectedItem is NameValue nv ? nv.Display : UnassignedName)}";
+
+            IssueChanged?.Invoke();
         }
         catch (Exception ex)
         {

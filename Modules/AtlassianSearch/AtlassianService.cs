@@ -1278,13 +1278,48 @@ public class AtlassianService
                 continue;
             }
 
-            var requiresComment =
-                transition.TryGetProperty("fields", out var fieldsEl)
-                && fieldsEl.TryGetProperty("comment", out var commentFieldEl)
-                && commentFieldEl.TryGetProperty("required", out var requiredEl)
-                && requiredEl.ValueKind == JsonValueKind.True;
+            var hasFields = transition.TryGetProperty("fields", out var fieldsEl);
 
-            results.Add(new JiraTransition { Id = id!, Name = name!, RequiresComment = requiresComment });
+            var requiresComment =
+                hasFields
+                && fieldsEl.TryGetProperty("comment", out var commentFieldEl)
+                && commentFieldEl.TryGetProperty("required", out var commentRequiredEl)
+                && commentRequiredEl.ValueKind == JsonValueKind.True;
+
+            var requiresResolution = false;
+            var resolutionOptions = new List<NameValue>();
+
+            if (hasFields && fieldsEl.TryGetProperty("resolution", out var resolutionFieldEl))
+            {
+                requiresResolution =
+                    resolutionFieldEl.TryGetProperty("required", out var resolutionRequiredEl)
+                    && resolutionRequiredEl.ValueKind == JsonValueKind.True;
+
+                if (resolutionFieldEl.TryGetProperty("allowedValues", out var allowedValuesEl)
+                    && allowedValuesEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var option in allowedValuesEl.EnumerateArray())
+                    {
+                        var optionId = TryGetString(option, "id");
+                        var optionName = TryGetString(option, "name");
+
+                        if (!string.IsNullOrWhiteSpace(optionId) && !string.IsNullOrWhiteSpace(optionName))
+                        {
+                            resolutionOptions.Add(new NameValue(optionId!, optionName!));
+                        }
+                    }
+                }
+            }
+
+            results.Add(
+                new JiraTransition
+                {
+                    Id = id!,
+                    Name = name!,
+                    RequiresComment = requiresComment,
+                    RequiresResolution = requiresResolution,
+                    ResolutionOptions = resolutionOptions
+                });
         }
 
         return results;
@@ -1296,6 +1331,7 @@ public class AtlassianService
         string key,
         string transitionId,
         string? commentText,
+        string? resolutionId,
         List<NameValue> mentionCandidates,
         CancellationToken cancellationToken = default)
     {
@@ -1303,20 +1339,24 @@ public class AtlassianService
 
         var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions";
 
-        object payload =
-            string.IsNullOrWhiteSpace(commentText)
-                ? new { transition = new { id = transitionId } }
-                : new
+        var payload = new Dictionary<string, object> { ["transition"] = new { id = transitionId } };
+
+        if (!string.IsNullOrWhiteSpace(commentText))
+        {
+            payload["update"] =
+                new
                 {
-                    transition = new { id = transitionId },
-                    update = new
+                    comment = new object[]
                     {
-                        comment = new object[]
-                        {
-                            new { add = new { body = BuildAdfDocument(commentText, mentionCandidates) } }
-                        }
+                        new { add = new { body = BuildAdfDocument(commentText, mentionCandidates) } }
                     }
                 };
+        }
+
+        if (!string.IsNullOrWhiteSpace(resolutionId))
+        {
+            payload["fields"] = new { resolution = new { id = resolutionId } };
+        }
 
         var json = JsonSerializer.Serialize(payload);
 
