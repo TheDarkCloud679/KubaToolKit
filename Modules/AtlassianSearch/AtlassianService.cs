@@ -1340,50 +1340,12 @@ public class AtlassianService
                         continue;
                     }
 
-                    var isRequired =
-                        fieldProp.Value.TryGetProperty("required", out var requiredEl)
-                        && requiredEl.ValueKind == JsonValueKind.True;
+                    var field = ParseRequiredField(fieldProp);
 
-                    if (!isRequired)
+                    if (field != null)
                     {
-                        continue;
+                        requiredFields.Add(field);
                     }
-
-                    var fieldName = TryGetString(fieldProp.Value, "name") ?? fieldProp.Name;
-
-                    var isMultiple =
-                        fieldProp.Value.TryGetProperty("schema", out var schemaEl)
-                        && string.Equals(TryGetString(schemaEl, "type"), "array", StringComparison.OrdinalIgnoreCase);
-
-                    var allowedValues = new List<NameValue>();
-
-                    if (fieldProp.Value.TryGetProperty("allowedValues", out var allowedValuesEl)
-                        && allowedValuesEl.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var option in allowedValuesEl.EnumerateArray())
-                        {
-                            var optionId = TryGetString(option, "id");
-
-                            // Resolution-like fields use "name"; plain
-                            // custom select-list options use "value"
-                            // instead -- checked in that order.
-                            var optionName = TryGetString(option, "name") ?? TryGetString(option, "value");
-
-                            if (!string.IsNullOrWhiteSpace(optionId) && !string.IsNullOrWhiteSpace(optionName))
-                            {
-                                allowedValues.Add(new NameValue(optionId!, optionName!));
-                            }
-                        }
-                    }
-
-                    requiredFields.Add(
-                        new JiraRequiredField
-                        {
-                            FieldId = fieldProp.Name,
-                            Name = fieldName,
-                            AllowsMultiple = isMultiple,
-                            AllowedValues = allowedValues
-                        });
                 }
             }
 
@@ -1397,7 +1359,155 @@ public class AtlassianService
                 });
         }
 
+        // Not every required field is on the transition's own screen --
+        // some are enforced by a workflow validator instead (e.g. a
+        // "field is required" validator with no screen attached), which
+        // this endpoint has no way to expose: it only reports back a
+        // generic message like "Le champ Catégories est requis" once the
+        // transition is actually attempted, with no field id at all.
+        // Field-configuration-level required custom fields, though, show
+        // up consistently in editmeta (independent of any screen), so
+        // that's used as a best-effort second source and merged in below.
+        var editMetaRequiredFields = await GetJiraEditMetaRequiredCustomFields(settings, key, cancellationToken);
+
+        if (editMetaRequiredFields.Count > 0)
+        {
+            foreach (var transition in results)
+            {
+                var missing =
+                    editMetaRequiredFields
+                        .Where(f => !transition.RequiredFields.Any(existing => existing.FieldId == f.FieldId))
+                        .ToList();
+
+                if (missing.Count > 0)
+                {
+                    transition.RequiredFields = transition.RequiredFields.Concat(missing).ToList();
+                }
+            }
+        }
+
         return results;
+    }
+
+    // Field-configuration-level required fields (as opposed to fields
+    // required on a specific transition's screen) -- these are what
+    // workflow "field is required" validators without their own screen
+    // actually check, and editmeta is the only endpoint that reports them.
+    // Scoped to customfield_* only: standard fields (summary, priority,
+    // etc.) are excluded since they're effectively always already set on
+    // an existing issue, and re-forcing them here would block Apply on a
+    // value that isn't actually missing.
+    private async Task<List<JiraRequiredField>>
+    GetJiraEditMetaRequiredCustomFields(
+        AtlassianSettings settings,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+            var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/editmeta";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new List<JiraRequiredField>();
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            using var doc = JsonDocument.Parse(body);
+
+            if (!doc.RootElement.TryGetProperty("fields", out var fieldsEl) || fieldsEl.ValueKind != JsonValueKind.Object)
+            {
+                return new List<JiraRequiredField>();
+            }
+
+            var results = new List<JiraRequiredField>();
+
+            foreach (var fieldProp in fieldsEl.EnumerateObject())
+            {
+                if (!fieldProp.Name.StartsWith("customfield_", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var field = ParseRequiredField(fieldProp);
+
+                if (field != null)
+                {
+                    results.Add(field);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to load editmeta required fields.", ex);
+
+            return new List<JiraRequiredField>();
+        }
+    }
+
+    // Shared by GetJiraTransitions (transition-screen fields) and
+    // GetJiraEditMetaRequiredCustomFields (field-configuration-level
+    // fields) -- both report fields in the same {required, name, schema,
+    // allowedValues} shape.
+    private static JiraRequiredField?
+    ParseRequiredField(
+        JsonProperty fieldProp)
+    {
+        var isRequired =
+            fieldProp.Value.TryGetProperty("required", out var requiredEl)
+            && requiredEl.ValueKind == JsonValueKind.True;
+
+        if (!isRequired)
+        {
+            return null;
+        }
+
+        var fieldName = TryGetString(fieldProp.Value, "name") ?? fieldProp.Name;
+
+        var isMultiple =
+            fieldProp.Value.TryGetProperty("schema", out var schemaEl)
+            && string.Equals(TryGetString(schemaEl, "type"), "array", StringComparison.OrdinalIgnoreCase);
+
+        var allowedValues = new List<NameValue>();
+
+        if (fieldProp.Value.TryGetProperty("allowedValues", out var allowedValuesEl)
+            && allowedValuesEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var option in allowedValuesEl.EnumerateArray())
+            {
+                var optionId = TryGetString(option, "id");
+
+                // Resolution-like fields use "name"; plain custom
+                // select-list options use "value" instead -- checked in
+                // that order.
+                var optionName = TryGetString(option, "name") ?? TryGetString(option, "value");
+
+                if (!string.IsNullOrWhiteSpace(optionId) && !string.IsNullOrWhiteSpace(optionName))
+                {
+                    allowedValues.Add(new NameValue(optionId!, optionName!));
+                }
+            }
+        }
+
+        return new JiraRequiredField
+        {
+            FieldId = fieldProp.Name,
+            Name = fieldName,
+            AllowsMultiple = isMultiple,
+            AllowedValues = allowedValues
+        };
     }
 
     public async Task
