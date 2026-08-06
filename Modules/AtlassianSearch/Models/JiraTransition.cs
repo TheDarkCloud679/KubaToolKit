@@ -5,11 +5,10 @@ public class JiraTransition
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
 
-    // Some workflows require a comment and/or a resolution on specific
-    // transitions (e.g. "Resolved" needing a note and a resolution type)
-    // -- the transition screen's own field requirements say so, not
-    // anything guessable from the name.
+    // Comment is common enough (and structurally different -- it goes
+    // through "update.comment", not a plain field write) to get its own
+    // flag; anything else the transition's screen requires (Resolution,
+    // or an instance-specific custom field) is discovered generically.
     public bool RequiresComment { get; set; }
-    public bool RequiresResolution { get; set; }
-    public List<NameValue> ResolutionOptions { get; set; } = new();
+    public List<JiraRequiredField> RequiredFields { get; set; } = new();
 }

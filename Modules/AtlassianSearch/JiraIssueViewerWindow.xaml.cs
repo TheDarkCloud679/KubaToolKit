@@ -74,7 +74,17 @@ public partial class JiraIssueViewerWindow
                     : obj => obj is NameValue nv && nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase);
         };
 
-        Loaded += async (_, __) => await LoadAsync();
+        Loaded += async (_, __) =>
+        {
+            // Actions from this window (status/assignee changes, comments)
+            // happen as whichever account owns the configured API token --
+            // shown once up front so that's never ambiguous mid-edit.
+            var currentUser = await _atlassianService.GetCurrentJiraUserDisplayName(_settings);
+
+            ConnectedAsText.Text = string.IsNullOrWhiteSpace(currentUser) ? "" : $"Connected as {currentUser}";
+
+            await LoadAsync();
+        };
     }
 
     private async Task
@@ -153,10 +163,11 @@ public partial class JiraIssueViewerWindow
         }
     }
 
-    // Lets whoever opened this window (the search grid, the popout) know
-    // an issue it's displaying changed, so it can refresh instead of
-    // showing stale Assignee/Status until the next manual search.
-    public event Action? IssueChanged;
+    private async void
+    RefreshButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await LoadAsync();
 
     private void
     StatusCombo_SelectionChanged(
@@ -168,23 +179,18 @@ public partial class JiraIssueViewerWindow
             return;
         }
 
-        ResolutionPanel.Visibility = transition.RequiresResolution ? Visibility.Visible : Visibility.Collapsed;
-        ResolutionCombo.ItemsSource = transition.ResolutionOptions;
-        ResolutionCombo.SelectedIndex = transition.ResolutionOptions.Count > 0 ? 0 : -1;
+        RequiredFieldsItemsControl.ItemsSource = transition.RequiredFields;
 
         var requirements =
-            new[]
-            {
-                transition.RequiresComment ? "a comment" : null,
-                transition.RequiresResolution ? "a resolution" : null
-            }
-            .Where(r => r != null);
+            new[] { transition.RequiresComment ? "a comment" : null }
+                .Concat(transition.RequiredFields.Select(f => f.Name))
+                .Where(r => r != null)
+                .ToList();
 
-        var requirementText = string.Join(" and ", requirements);
-
-        if (!string.IsNullOrEmpty(requirementText))
+        if (requirements.Count > 0)
         {
-            StatusMessageText.Text = $"'{transition.Name}' requires {requirementText} -- fill it in below, then click Apply.";
+            StatusMessageText.Text =
+                $"'{transition.Name}' requires {string.Join(" and ", requirements)} -- fill it in below, then click Apply.";
         }
     }
 
@@ -199,7 +205,6 @@ public partial class JiraIssueViewerWindow
         }
 
         var commentText = NewCommentTextBox.Text.Trim();
-        var resolutionId = ResolutionCombo.SelectedValue as string;
 
         if (transition.RequiresComment && string.IsNullOrWhiteSpace(commentText))
         {
@@ -208,9 +213,11 @@ public partial class JiraIssueViewerWindow
             return;
         }
 
-        if (transition.RequiresResolution && string.IsNullOrWhiteSpace(resolutionId))
+        var missingField = transition.RequiredFields.FirstOrDefault(f => string.IsNullOrWhiteSpace(f.EnteredValue));
+
+        if (missingField != null)
         {
-            StatusMessageText.Text = $"'{transition.Name}' requires a resolution -- pick one above first.";
+            StatusMessageText.Text = $"'{transition.Name}' requires '{missingField.Name}' -- fill it in above first.";
 
             return;
         }
@@ -224,7 +231,7 @@ public partial class JiraIssueViewerWindow
                 _issueKey,
                 transition.Id,
                 transition.RequiresComment ? commentText : null,
-                transition.RequiresResolution ? resolutionId : null,
+                transition.RequiredFields,
                 _assignableUsers);
 
             StatusMessageText.Text = "Status changed.";
@@ -247,8 +254,6 @@ public partial class JiraIssueViewerWindow
 
             StatusCombo.ItemsSource = _transitions;
             StatusCombo.SelectedIndex = _transitions.Count > 0 ? 0 : -1;
-
-            IssueChanged?.Invoke();
         }
         catch (Exception ex)
         {
@@ -276,8 +281,6 @@ public partial class JiraIssueViewerWindow
 
             StatusMessageText.Text = "Assignee changed.";
             CurrentAssigneeText.Text = $"Currently: {(AssigneeCombo.SelectedItem is NameValue nv ? nv.Display : UnassignedName)}";
-
-            IssueChanged?.Invoke();
         }
         catch (Exception ex)
         {

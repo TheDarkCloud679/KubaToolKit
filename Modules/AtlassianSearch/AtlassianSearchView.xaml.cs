@@ -1086,8 +1086,6 @@ public partial class AtlassianSearchView
         var window =
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
-        window.IssueChanged += () => _ = RunSearchAsync();
-
         window.Show();
     }
 }

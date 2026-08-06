@@ -14,6 +14,7 @@
         <local:JiraStatusBadgeBackgroundConverter x:Key="JiraStatusBadgeBackgroundConverter"/>
         <local:JiraStatusBadgeForegroundConverter x:Key="JiraStatusBadgeForegroundConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <local:CommentVisibilityBackgroundConverter x:Key="CommentVisibilityBackgroundConverter"/>
         <local:CommentVisibilityForegroundConverter x:Key="CommentVisibilityForegroundConverter"/>
         <local:CommentVisibilityTextConverter x:Key="CommentVisibilityTextConverter"/>
@@ -72,13 +73,29 @@
                 <TextBlock x:Name="SummaryText" FontWeight="Bold" FontSize="17" TextWrapping="Wrap" Margin="0,4,0,0"/>
             </StackPanel>
 
-            <Button
-                x:Name="OpenInBrowserButton"
-                Grid.Column="1"
-                Content="Open in browser"
-                Width="130"
-                VerticalAlignment="Top"
-                Click="OpenInBrowserButton_Click"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button
+                        x:Name="RefreshButton"
+                        Content="Refresh"
+                        Width="70"
+                        Click="RefreshButton_Click"/>
+
+                    <Button
+                        x:Name="OpenInBrowserButton"
+                        Content="Open in browser"
+                        Width="130"
+                        Margin="8,0,0,0"
+                        Click="OpenInBrowserButton_Click"/>
+                </StackPanel>
+
+                <TextBlock
+                    x:Name="ConnectedAsText"
+                    FontSize="11"
+                    Margin="0,6,0,0"
+                    HorizontalAlignment="Right"
+                    Foreground="{StaticResource TextSecondaryBrush}"/>
+            </StackPanel>
         </Grid>
 
         <!-- Assignee / Status editing -->
@@ -134,13 +151,24 @@
                         Click="ApplyStatusButton_Click"/>
                 </Grid>
 
-                <StackPanel x:Name="ResolutionPanel" Margin="0,6,0,0" Visibility="Collapsed">
-                    <TextBlock Text="Resolution" FontSize="11" Margin="0,0,0,2"/>
-                    <ComboBox
-                        x:Name="ResolutionCombo"
-                        DisplayMemberPath="Display"
-                        SelectedValuePath="Value"/>
-                </StackPanel>
+                <ItemsControl x:Name="RequiredFieldsItemsControl" Margin="0,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Name}" FontSize="11" Margin="0,0,0,2"/>
+                                <ComboBox
+                                    ItemsSource="{Binding AllowedValues}"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding EnteredValue, Mode=TwoWay}"
+                                    Visibility="{Binding HasAllowedValues, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <TextBox
+                                    Text="{Binding EnteredValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Visibility="{Binding HasAllowedValues, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Grid>
 

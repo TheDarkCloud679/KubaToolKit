@@ -75,6 +75,46 @@ public class AtlassianService
         }
     }
 
+    // Actions taken from the issue viewer (status/assignee changes,
+    // comments) happen as whichever account owns the configured API
+    // token -- shown there so that's never ambiguous. Best-effort: blank
+    // on failure rather than throwing, same reasoning as the dropdown
+    // option fetches below.
+    public async Task<string>
+    GetCurrentJiraUserDisplayName(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/rest/api/3/myself");
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return "";
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            using var doc = JsonDocument.Parse(body);
+
+            return TryGetString(doc.RootElement, "displayName") ?? "";
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to load current user.", ex);
+
+            return "";
+        }
+    }
+
     // Filter dropdown options. Each is best-effort: if a call fails (a
     // permission restriction, an endpoint not available on some site
     // configuration...) it comes back empty rather than throwing, so a
@@ -1286,28 +1326,64 @@ public class AtlassianService
                 && commentFieldEl.TryGetProperty("required", out var commentRequiredEl)
                 && commentRequiredEl.ValueKind == JsonValueKind.True;
 
-            var requiresResolution = false;
-            var resolutionOptions = new List<NameValue>();
+            var requiredFields = new List<JiraRequiredField>();
 
-            if (hasFields && fieldsEl.TryGetProperty("resolution", out var resolutionFieldEl))
+            if (hasFields)
             {
-                requiresResolution =
-                    resolutionFieldEl.TryGetProperty("required", out var resolutionRequiredEl)
-                    && resolutionRequiredEl.ValueKind == JsonValueKind.True;
-
-                if (resolutionFieldEl.TryGetProperty("allowedValues", out var allowedValuesEl)
-                    && allowedValuesEl.ValueKind == JsonValueKind.Array)
+                foreach (var fieldProp in fieldsEl.EnumerateObject())
                 {
-                    foreach (var option in allowedValuesEl.EnumerateArray())
+                    // Comment goes through "update.comment" below, not a
+                    // plain field write, so it's excluded here even
+                    // though it shows up in this same schema.
+                    if (string.Equals(fieldProp.Name, "comment", StringComparison.OrdinalIgnoreCase))
                     {
-                        var optionId = TryGetString(option, "id");
-                        var optionName = TryGetString(option, "name");
+                        continue;
+                    }
 
-                        if (!string.IsNullOrWhiteSpace(optionId) && !string.IsNullOrWhiteSpace(optionName))
+                    var isRequired =
+                        fieldProp.Value.TryGetProperty("required", out var requiredEl)
+                        && requiredEl.ValueKind == JsonValueKind.True;
+
+                    if (!isRequired)
+                    {
+                        continue;
+                    }
+
+                    var fieldName = TryGetString(fieldProp.Value, "name") ?? fieldProp.Name;
+
+                    var isMultiple =
+                        fieldProp.Value.TryGetProperty("schema", out var schemaEl)
+                        && string.Equals(TryGetString(schemaEl, "type"), "array", StringComparison.OrdinalIgnoreCase);
+
+                    var allowedValues = new List<NameValue>();
+
+                    if (fieldProp.Value.TryGetProperty("allowedValues", out var allowedValuesEl)
+                        && allowedValuesEl.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var option in allowedValuesEl.EnumerateArray())
                         {
-                            resolutionOptions.Add(new NameValue(optionId!, optionName!));
+                            var optionId = TryGetString(option, "id");
+
+                            // Resolution-like fields use "name"; plain
+                            // custom select-list options use "value"
+                            // instead -- checked in that order.
+                            var optionName = TryGetString(option, "name") ?? TryGetString(option, "value");
+
+                            if (!string.IsNullOrWhiteSpace(optionId) && !string.IsNullOrWhiteSpace(optionName))
+                            {
+                                allowedValues.Add(new NameValue(optionId!, optionName!));
+                            }
                         }
                     }
+
+                    requiredFields.Add(
+                        new JiraRequiredField
+                        {
+                            FieldId = fieldProp.Name,
+                            Name = fieldName,
+                            AllowsMultiple = isMultiple,
+                            AllowedValues = allowedValues
+                        });
                 }
             }
 
@@ -1317,8 +1393,7 @@ public class AtlassianService
                     Id = id!,
                     Name = name!,
                     RequiresComment = requiresComment,
-                    RequiresResolution = requiresResolution,
-                    ResolutionOptions = resolutionOptions
+                    RequiredFields = requiredFields
                 });
         }
 
@@ -1331,7 +1406,7 @@ public class AtlassianService
         string key,
         string transitionId,
         string? commentText,
-        string? resolutionId,
+        List<JiraRequiredField> requiredFieldValues,
         List<NameValue> mentionCandidates,
         CancellationToken cancellationToken = default)
     {
@@ -1353,9 +1428,33 @@ public class AtlassianService
                 };
         }
 
-        if (!string.IsNullOrWhiteSpace(resolutionId))
+        var fieldsWithValues =
+            requiredFieldValues.Where(f => !string.IsNullOrWhiteSpace(f.EnteredValue)).ToList();
+
+        if (fieldsWithValues.Count > 0)
         {
-            payload["fields"] = new { resolution = new { id = resolutionId } };
+            var fieldsPayload = new Dictionary<string, object>();
+
+            foreach (var field in fieldsWithValues)
+            {
+                if (!field.HasAllowedValues)
+                {
+                    // A required field with no allowedValues is most
+                    // likely a plain text/textarea custom field -- sent
+                    // as-is. If it's actually some other field type,
+                    // Jira's own 400 response (surfaced below) says so.
+                    fieldsPayload[field.FieldId] = field.EnteredValue;
+
+                    continue;
+                }
+
+                fieldsPayload[field.FieldId] =
+                    field.AllowsMultiple
+                        ? new object[] { new { id = field.EnteredValue } }
+                        : new { id = field.EnteredValue };
+            }
+
+            payload["fields"] = fieldsPayload;
         }
 
         var json = JsonSerializer.Serialize(payload);
