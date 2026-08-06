@@ -1,5 +1,6 @@
 using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Shared.Services;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -739,12 +740,98 @@ public class AtlassianService
 
         using var doc = JsonDocument.Parse(body);
 
+        var html = TryGetString(doc.RootElement, "body", "view", "value") ?? "";
+
         return new ConfluencePageContent
         {
             Title = TryGetString(doc.RootElement, "title") ?? "",
-            Html = TryGetString(doc.RootElement, "body", "view", "value") ?? ""
+            Html = await InlineImages(settings, html, cancellationToken)
         };
     }
+
+    // The WPF WebBrowser control used to display this HTML can't attach
+    // our API token to its own image/attachment requests, so those would
+    // otherwise just show up broken -- fetched here with the same auth as
+    // everything else and swapped in as data: URIs instead. Best-effort:
+    // a failed or oversized image is left as its original (broken) src
+    // rather than failing the whole page load.
+    private async Task<string>
+    InlineImages(
+        AtlassianSettings settings,
+        string html,
+        CancellationToken cancellationToken)
+    {
+        const int maxImages = 40;
+        const long maxImageBytes = 5 * 1024 * 1024;
+
+        var baseUri = new Uri($"{settings.BaseUrl.TrimEnd('/')}/wiki/");
+
+        var sources =
+            System.Text.RegularExpressions.Regex.Matches(html, "src=\"([^\"]+)\"")
+                .Select(m => m.Groups[1].Value)
+                .Where(src => !src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                .Distinct()
+                .Take(maxImages)
+                .ToList();
+
+        foreach (var src in sources)
+        {
+            try
+            {
+                if (!Uri.TryCreate(baseUri, src, out var absoluteUri))
+                {
+                    continue;
+                }
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, absoluteUri);
+
+                request.Headers.Authorization = BuildAuthHeader(settings);
+
+                using var response = await Client.SendAsync(request, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    continue;
+                }
+
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+
+                if (bytes.LongLength == 0 || bytes.LongLength > maxImageBytes)
+                {
+                    continue;
+                }
+
+                var contentType =
+                    response.Content.Headers.ContentType?.MediaType
+                    ?? GuessImageMediaType(absoluteUri.AbsolutePath)
+                    ?? "application/octet-stream";
+
+                var dataUri = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+
+                html = html.Replace($"src=\"{src}\"", $"src=\"{dataUri}\"");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"AtlassianService: failed to inline image '{src}'.", ex);
+            }
+        }
+
+        return html;
+    }
+
+    private static string?
+    GuessImageMediaType(
+        string path) =>
+        Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            _ => null
+        };
 
     public async Task<List<JiraSearchResult>>
     SearchJira(
