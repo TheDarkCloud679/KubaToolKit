@@ -52,6 +52,36 @@ public static class DataGridSortHelper
         column.SortDirection = currentDirection;
     }
 
+    // Re-applies an already-chosen sort (e.g. after a data refresh
+    // repopulates the collection) without the toggle-on-repeat-click
+    // behavior SortByColumn has -- a refresh isn't a click on the header.
+    public static void
+    ReapplySort<T>(
+        ObservableCollection<T> items,
+        DataGridColumn? column,
+        ListSortDirection direction)
+    {
+        if (column?.SortMemberPath is not { } propertyName
+            || typeof(T).GetProperty(propertyName) is not { } property)
+        {
+            return;
+        }
+
+        var ordered =
+            direction == ListSortDirection.Ascending
+                ? items.OrderBy(x => property.GetValue(x))
+                : items.OrderByDescending(x => property.GetValue(x));
+
+        var sorted = ordered.ToList();
+
+        items.Clear();
+
+        foreach (var item in sorted)
+        {
+            items.Add(item);
+        }
+    }
+
     public static T?
     FindAncestor<T>(
         DependencyObject? current)

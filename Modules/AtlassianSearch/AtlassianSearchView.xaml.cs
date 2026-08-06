@@ -542,22 +542,8 @@ public partial class AtlassianSearchView
             return;
         }
 
-        var filter =
-            new SavedJiraFilter
-            {
-                Name = name,
-                Query = QueryTextBox.Text.Trim(),
-                Project = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
-                ProjectOperator = GetOperatorValue(JiraProjectOperatorCombo),
-                Reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
-                ReporterOperator = GetOperatorValue(JiraReporterOperatorCombo),
-                Assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
-                AssigneeOperator = GetOperatorValue(JiraAssigneeOperatorCombo),
-                Priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
-                PriorityOperator = GetOperatorValue(JiraPriorityOperatorCombo),
-                Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox),
-                StatusOperator = GetOperatorValue(JiraStatusOperatorCombo)
-            };
+        var filter = BuildJiraFilterSnapshot();
+        filter.Name = name;
 
         _settings.SavedJiraFilters.RemoveAll(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
         _settings.SavedJiraFilters.Add(filter);
@@ -585,6 +571,49 @@ public partial class AtlassianSearchView
         _settingsService.Save(_settings);
 
         PopulateJiraSavedFilterCombo();
+    }
+
+    private SavedJiraFilter
+    BuildJiraFilterSnapshot() =>
+        new()
+        {
+            Query = QueryTextBox.Text.Trim(),
+            Project = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
+            ProjectOperator = GetOperatorValue(JiraProjectOperatorCombo),
+            Reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
+            ReporterOperator = GetOperatorValue(JiraReporterOperatorCombo),
+            Assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
+            AssigneeOperator = GetOperatorValue(JiraAssigneeOperatorCombo),
+            Priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
+            PriorityOperator = GetOperatorValue(JiraPriorityOperatorCombo),
+            Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox),
+            StatusOperator = GetOperatorValue(JiraStatusOperatorCombo)
+        };
+
+    // The popout only ever runs a plain JQL search (see BuildJiraFilterSnapshot)
+    // -- a selected Queue's own fixed criteria isn't something SavedJiraFilter
+    // can express, so it's intentionally left out of what gets popped out.
+    private void
+    PopoutJiraButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_settings.IsComplete)
+        {
+            MessageBox.Show(
+                "Set up the Jira/Confluence connection first (Settings).",
+                "Atlassian Search");
+
+            return;
+        }
+
+        var window =
+            new JiraPopoutWindow(_atlassianService, _settings, BuildJiraFilterSnapshot(), _settings.SavedJiraFilters)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+        window.Show();
     }
 
     // Both results sections start collapsed and stay that way until

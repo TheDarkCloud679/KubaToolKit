@@ -11,4 +11,10 @@ public class JiraSearchResult
     public string Status { get; set; } = "";
     public string UpdatedDisplay { get; set; } = "";
     public string Url { get; set; } = "";
+
+    // Popout-window-only: flagged when a refresh finds this issue wasn't
+    // present in the previous fetch. Not INotifyPropertyChanged -- the
+    // popout calls DataGrid.Items.Refresh() after mutating it, which is
+    // enough to re-evaluate a RowStyle trigger bound to it.
+    public bool IsUnread { get; set; }
 }

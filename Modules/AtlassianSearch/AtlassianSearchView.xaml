@@ -27,6 +27,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
@@ -73,8 +74,18 @@
                 Click="RefreshButton_Click"/>
 
             <Button
-                x:Name="SettingsButton"
+                x:Name="PopoutJiraButton"
                 Grid.Column="5"
+                Width="34"
+                Margin="8,0,0,0"
+                Content="🗗"
+                FontSize="14"
+                ToolTip="Pop out Jira into its own auto-refreshing window"
+                Click="PopoutJiraButton_Click"/>
+
+            <Button
+                x:Name="SettingsButton"
+                Grid.Column="6"
                 Width="90"
                 Margin="8,0,0,0"
                 Content="Settings"
