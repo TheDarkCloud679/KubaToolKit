@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -1469,11 +1470,17 @@ public class AtlassianService
             fieldProp.Value.TryGetProperty("required", out var requiredEl)
             && requiredEl.ValueKind == JsonValueKind.True;
 
-        if (!isRequired)
-        {
-            return null;
-        }
+        return isRequired ? BuildFieldMeta(fieldProp) : null;
+    }
 
+    // Same shape as ParseRequiredField but without the required check --
+    // used when a field's requiredness is already known some other way
+    // (e.g. a transition just failed complaining about it by name) and
+    // only its id/options are still needed.
+    private static JiraRequiredField
+    BuildFieldMeta(
+        JsonProperty fieldProp)
+    {
         var fieldName = TryGetString(fieldProp.Value, "name") ?? fieldProp.Name;
 
         var isMultiple =
@@ -1508,6 +1515,141 @@ public class AtlassianService
             AllowsMultiple = isMultiple,
             AllowedValues = allowedValues
         };
+    }
+
+    // Reactive fallback for required fields that neither the transition's
+    // own screen nor editmeta's "required" flags reveal ahead of time --
+    // some workflow validators enforce a field without marking it required
+    // anywhere queryable, and only complain (by field name, no id) once a
+    // transition is actually attempted. Looks the name(s) up against
+    // editmeta -- which lists every editable field, required or not -- to
+    // recover the field id/options so the UI can ask for it and retry.
+    public async Task<List<JiraRequiredField>>
+    GetJiraFieldsByName(
+        AtlassianSettings settings,
+        string key,
+        List<string> fieldNames,
+        CancellationToken cancellationToken = default)
+    {
+        if (fieldNames.Count == 0)
+        {
+            return new List<JiraRequiredField>();
+        }
+
+        try
+        {
+            var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+            var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/editmeta";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new List<JiraRequiredField>();
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            using var doc = JsonDocument.Parse(body);
+
+            if (!doc.RootElement.TryGetProperty("fields", out var fieldsEl) || fieldsEl.ValueKind != JsonValueKind.Object)
+            {
+                return new List<JiraRequiredField>();
+            }
+
+            var results = new List<JiraRequiredField>();
+
+            foreach (var fieldProp in fieldsEl.EnumerateObject())
+            {
+                var name = (TryGetString(fieldProp.Value, "name") ?? fieldProp.Name).Trim();
+
+                if (!fieldNames.Any(n => string.Equals(n.Trim(), name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                results.Add(BuildFieldMeta(fieldProp));
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: failed to look up fields by name.", ex);
+
+            return new List<JiraRequiredField>();
+        }
+    }
+
+    // Matches the field name out of Jira's plain-text validator messages
+    // ("Le champ Catégorie composant est requis", or the English
+    // equivalents) -- there's no structured field id in these, only a
+    // human-readable sentence naming the field.
+    private static readonly Regex[] MissingFieldMessagePatterns =
+    {
+        new(@"champ\s+(.+?)\s+est\s+requis", RegexOptions.IgnoreCase),
+        new(@"field\s+'(.+?)'\s+is\s+required", RegexOptions.IgnoreCase),
+        new(@"'(.+?)'\s+field\s+is\s+required", RegexOptions.IgnoreCase),
+    };
+
+    public static List<string>
+    TryExtractMissingFieldNames(
+        string errorText)
+    {
+        var names = new List<string>();
+
+        var jsonStart = errorText.IndexOf('{');
+
+        if (jsonStart < 0)
+        {
+            return names;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(errorText[jsonStart..]);
+
+            if (!doc.RootElement.TryGetProperty("errorMessages", out var messagesEl)
+                || messagesEl.ValueKind != JsonValueKind.Array)
+            {
+                return names;
+            }
+
+            foreach (var messageEl in messagesEl.EnumerateArray())
+            {
+                var message = messageEl.GetString();
+
+                if (string.IsNullOrWhiteSpace(message))
+                {
+                    continue;
+                }
+
+                foreach (var pattern in MissingFieldMessagePatterns)
+                {
+                    var match = pattern.Match(message);
+
+                    if (match.Success)
+                    {
+                        names.Add(match.Groups[1].Value.Trim());
+
+                        break;
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not a JSON body (or not the shape expected) -- nothing to
+            // extract, fall through to the empty list.
+        }
+
+        return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     public async Task

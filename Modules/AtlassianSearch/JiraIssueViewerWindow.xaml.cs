@@ -259,6 +259,34 @@ public partial class JiraIssueViewerWindow
         {
             Logger.Error("JiraIssueViewerWindow: failed to change status.", ex);
 
+            // Some required fields are enforced by a workflow validator
+            // that never shows up in the transition's own screen data or
+            // in editmeta's "required" flags -- the only place they're
+            // ever named is in the failure message itself. Recovered here
+            // by looking that name up (editmeta lists every editable
+            // field, not just required ones) and adding it to the form so
+            // the next Apply can actually succeed.
+            var missingFieldNames = AtlassianService.TryExtractMissingFieldNames(ex.Message);
+
+            if (missingFieldNames.Count > 0)
+            {
+                var foundFields = await _atlassianService.GetJiraFieldsByName(_settings, _issueKey, missingFieldNames);
+
+                var newFields =
+                    foundFields.Where(f => !transition.RequiredFields.Any(rf => rf.FieldId == f.FieldId)).ToList();
+
+                if (newFields.Count > 0)
+                {
+                    transition.RequiredFields = transition.RequiredFields.Concat(newFields).ToList();
+                    RequiredFieldsItemsControl.ItemsSource = transition.RequiredFields;
+
+                    StatusMessageText.Text =
+                        $"'{transition.Name}' also requires {string.Join(", ", newFields.Select(f => f.Name))} -- fill it in above, then click Apply again.";
+
+                    return;
+                }
+            }
+
             StatusMessageText.Text = $"Could not change status: {ex.Message}";
         }
     }
