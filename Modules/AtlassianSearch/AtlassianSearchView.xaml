@@ -66,20 +66,18 @@
             <Button
                 x:Name="RefreshButton"
                 Grid.Column="4"
-                Width="34"
+                Width="70"
                 Margin="8,0,0,0"
-                Content="🔄"
-                FontSize="14"
+                Content="Refresh"
                 ToolTip="Re-run the current search/queue with the same filters"
                 Click="RefreshButton_Click"/>
 
             <Button
                 x:Name="PopoutJiraButton"
                 Grid.Column="5"
-                Width="34"
+                Width="80"
                 Margin="8,0,0,0"
-                Content="🗗"
-                FontSize="14"
+                Content="Pop out"
                 ToolTip="Pop out Jira into its own auto-refreshing window"
                 Click="PopoutJiraButton_Click"/>
 
