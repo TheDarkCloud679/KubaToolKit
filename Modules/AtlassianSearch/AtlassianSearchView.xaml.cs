@@ -413,27 +413,6 @@ public partial class AtlassianSearchView
         PopulateCombo(JiraQueueCombo, queues);
     }
 
-    // A queue's issue list comes from its own fixed, admin-defined
-    // criteria -- Reporter/Assignee/Priority/Status can't narrow it any
-    // further (the API for browsing a queue takes no such filters), so
-    // they're disabled while one is selected rather than silently ignored.
-    private void
-    JiraQueueCombo_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        var queueSelected = !string.IsNullOrWhiteSpace(GetComboSelectionValue(JiraQueueCombo));
-
-        JiraReporterSearchBox.IsEnabled = !queueSelected;
-        JiraReporterCombo.IsEnabled = !queueSelected;
-        JiraAssigneeSearchBox.IsEnabled = !queueSelected;
-        JiraAssigneeCombo.IsEnabled = !queueSelected;
-        JiraPrioritySearchBox.IsEnabled = !queueSelected;
-        JiraPriorityCombo.IsEnabled = !queueSelected;
-        JiraStatusSearchBox.IsEnabled = !queueSelected;
-        JiraStatusCombo.IsEnabled = !queueSelected;
-    }
-
     private void
     PopulateJiraSavedFilterCombo()
     {
@@ -757,15 +736,25 @@ public partial class AtlassianSearchView
             {
                 var queueResults = await _atlassianService.GetQueueIssues(_settings, _selectedJiraServiceDeskId, queueId);
 
-                // The queue endpoint takes no text filter of its own, so
-                // a typed query narrows the queue's results client-side
-                // instead of being dropped on the floor.
+                // The queue endpoint itself takes no extra filters, but
+                // Jira's own queue view lets you narrow by these same
+                // fields, so it's done client-side over the fetched page
+                // instead of just being the query text (this only sees
+                // whatever GetQueueIssues already fetched, not the whole
+                // queue, same caveat as the text filter below).
+                var reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox);
+                var assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox);
+                var priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox);
+                var status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox);
+
                 var filtered =
-                    string.IsNullOrWhiteSpace(query)
-                        ? queueResults
-                        : queueResults
-                            .Where(r => r.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
-                            .ToList();
+                    queueResults
+                        .Where(r => string.IsNullOrWhiteSpace(query) || r.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        .Where(r => string.IsNullOrWhiteSpace(reporter) || string.Equals(r.Reporter, reporter, StringComparison.OrdinalIgnoreCase))
+                        .Where(r => string.IsNullOrWhiteSpace(assignee) || string.Equals(r.Assignee, assignee, StringComparison.OrdinalIgnoreCase))
+                        .Where(r => string.IsNullOrWhiteSpace(priority) || string.Equals(r.Priority, priority, StringComparison.OrdinalIgnoreCase))
+                        .Where(r => string.IsNullOrWhiteSpace(status) || string.Equals(r.Status, status, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
 
                 return (filtered, null);
             }

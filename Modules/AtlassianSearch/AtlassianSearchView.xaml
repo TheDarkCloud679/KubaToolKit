@@ -301,8 +301,7 @@
                                 Margin="0,2,0,0"
                                 DisplayMemberPath="Display"
                                 SelectedValuePath="Value"
-                                ToolTip="A saved Service Management queue (e.g. 'L1 Incidents') -- overrides Reporter/Assignee/Priority/Status below, which don't apply to a queue's own fixed criteria"
-                                SelectionChanged="JiraQueueCombo_SelectionChanged"/>
+                                ToolTip="A saved Service Management queue (e.g. 'L1 Incidents') -- Reporter/Assignee/Priority/Status below narrow its results the same way Jira's own queue view lets you filter them"/>
                         </StackPanel>
 
                         <StackPanel Width="140" Margin="0,0,14,0">
