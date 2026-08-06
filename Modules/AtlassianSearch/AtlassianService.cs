@@ -1230,7 +1230,11 @@ public class AtlassianService
     // transitions -- there's no "set status to X" field update, so the
     // dropdown in the viewer is populated from whatever's actually legal
     // from the issue's current status rather than the full status list.
-    public async Task<List<NameValue>>
+    // expand=transitions.fields also surfaces each transition's screen
+    // fields, which is how a workflow requiring a comment on a specific
+    // transition (e.g. "Resolved" needing a resolution note) shows up --
+    // there's no other way to know that ahead of a failed attempt.
+    public async Task<List<JiraTransition>>
     GetJiraTransitions(
         AtlassianSettings settings,
         string key,
@@ -1238,7 +1242,7 @@ public class AtlassianService
     {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
-        var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions";
+        var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions?expand=transitions.fields";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
@@ -1256,7 +1260,7 @@ public class AtlassianService
 
         using var doc = JsonDocument.Parse(body);
 
-        var results = new List<NameValue>();
+        var results = new List<JiraTransition>();
 
         if (!doc.RootElement.TryGetProperty("transitions", out var transitionsEl)
             || transitionsEl.ValueKind != JsonValueKind.Array)
@@ -1269,10 +1273,18 @@ public class AtlassianService
             var id = TryGetString(transition, "id");
             var name = TryGetString(transition, "name") ?? TryGetString(transition, "to", "name");
 
-            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name))
             {
-                results.Add(new NameValue(id!, name!));
+                continue;
             }
+
+            var requiresComment =
+                transition.TryGetProperty("fields", out var fieldsEl)
+                && fieldsEl.TryGetProperty("comment", out var commentFieldEl)
+                && commentFieldEl.TryGetProperty("required", out var requiredEl)
+                && requiredEl.ValueKind == JsonValueKind.True;
+
+            results.Add(new JiraTransition { Id = id!, Name = name!, RequiresComment = requiresComment });
         }
 
         return results;
@@ -1283,18 +1295,35 @@ public class AtlassianService
         AtlassianSettings settings,
         string key,
         string transitionId,
+        string? commentText,
+        List<NameValue> mentionCandidates,
         CancellationToken cancellationToken = default)
     {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
         var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions";
 
-        var payload = JsonSerializer.Serialize(new { transition = new { id = transitionId } });
+        object payload =
+            string.IsNullOrWhiteSpace(commentText)
+                ? new { transition = new { id = transitionId } }
+                : new
+                {
+                    transition = new { id = transitionId },
+                    update = new
+                    {
+                        comment = new object[]
+                        {
+                            new { add = new { body = BuildAdfDocument(commentText, mentionCandidates) } }
+                        }
+                    }
+                };
+
+        var json = JsonSerializer.Serialize(payload);
 
         using var request =
             new HttpRequestMessage(HttpMethod.Post, url)
             {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
 
         request.Headers.Authorization = BuildAuthHeader(settings);
@@ -1428,7 +1457,11 @@ public class AtlassianService
     // flag); a plain Jira issue has no such concept, so it just goes
     // through the regular issue-comment API instead (which, unlike the
     // service desk one, requires the body wrapped in Atlassian Document
-    // Format rather than plain text).
+    // Format rather than plain text). mentionCandidates is the pool
+    // "@Display Name" is matched against and turned into a real mention
+    // (JSD's own "[~accountid:X]" syntax, or an ADF mention node) --
+    // there's no live-search/typeahead here, it's whoever's already
+    // fetched as assignable on this issue.
     public async Task
     PostJiraComment(
         AtlassianSettings settings,
@@ -1436,6 +1469,7 @@ public class AtlassianService
         string bodyText,
         bool isPublic,
         bool useServiceDeskApi,
+        List<NameValue> mentionCandidates,
         CancellationToken cancellationToken = default)
     {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
@@ -1446,31 +1480,16 @@ public class AtlassianService
         if (useServiceDeskApi)
         {
             url = $"{baseUrl}/rest/servicedeskapi/request/{Uri.EscapeDataString(key)}/comment";
-            payload = JsonSerializer.Serialize(new { body = bodyText, @public = isPublic });
+
+            payload =
+                JsonSerializer.Serialize(
+                    new { body = ConvertMentionsToJsdSyntax(bodyText, mentionCandidates), @public = isPublic });
         }
         else
         {
             url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/comment";
 
-            var adfBody =
-                new
-                {
-                    body = new
-                    {
-                        type = "doc",
-                        version = 1,
-                        content = new object[]
-                        {
-                            new
-                            {
-                                type = "paragraph",
-                                content = new object[] { new { type = "text", text = bodyText } }
-                            }
-                        }
-                    }
-                };
-
-            payload = JsonSerializer.Serialize(adfBody);
+            payload = JsonSerializer.Serialize(new { body = BuildAdfDocument(bodyText, mentionCandidates) });
         }
 
         using var request =
@@ -1489,6 +1508,90 @@ public class AtlassianService
 
             throw new Exception($"Failed to add comment: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
         }
+    }
+
+    // JSD's request-comment API takes a plain-text body -- its mention
+    // syntax is this bracket form, "[~accountid:<id>]", rather than any
+    // kind of markup.
+    private static string
+    ConvertMentionsToJsdSyntax(
+        string text,
+        List<NameValue> mentionCandidates)
+    {
+        foreach (var user in mentionCandidates.OrderByDescending(u => u.Display.Length))
+        {
+            if (string.IsNullOrWhiteSpace(user.Display) || string.IsNullOrWhiteSpace(user.Value))
+            {
+                continue;
+            }
+
+            text = text.Replace($"@{user.Display}", $"[~accountid:{user.Value}]", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return text;
+    }
+
+    // Builds a single-paragraph Atlassian Document Format doc, splitting
+    // out any "@Display Name" match against mentionCandidates into a real
+    // ADF mention node instead of leaving it as plain "@Name" text.
+    private static object
+    BuildAdfDocument(
+        string text,
+        List<NameValue> mentionCandidates)
+    {
+        var names =
+            mentionCandidates
+                .Where(u => !string.IsNullOrWhiteSpace(u.Display) && !string.IsNullOrWhiteSpace(u.Value))
+                .OrderByDescending(u => u.Display.Length)
+                .Select(u => System.Text.RegularExpressions.Regex.Escape(u.Display))
+                .ToList();
+
+        var content = new List<object>();
+
+        if (names.Count == 0)
+        {
+            content.Add(new { type = "text", text });
+        }
+        else
+        {
+            var pattern = "@(" + string.Join("|", names) + ")";
+            var lastIndex = 0;
+
+            foreach (System.Text.RegularExpressions.Match match
+                in System.Text.RegularExpressions.Regex.Matches(text, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                if (match.Index > lastIndex)
+                {
+                    content.Add(new { type = "text", text = text[lastIndex..match.Index] });
+                }
+
+                var matchedName = match.Groups[1].Value;
+
+                var user =
+                    mentionCandidates.First(u => string.Equals(u.Display, matchedName, StringComparison.OrdinalIgnoreCase));
+
+                content.Add(new { type = "mention", attrs = new { id = user.Value, text = $"@{user.Display}" } });
+
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < text.Length)
+            {
+                content.Add(new { type = "text", text = text[lastIndex..] });
+            }
+
+            if (content.Count == 0)
+            {
+                content.Add(new { type = "text", text = "" });
+            }
+        }
+
+        return new
+        {
+            type = "doc",
+            version = 1,
+            content = new object[] { new { type = "paragraph", content = content.ToArray() } }
+        };
     }
 
     private static string?

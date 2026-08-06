@@ -92,6 +92,7 @@
 
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Assignee" FontSize="11" Margin="0,0,0,2"/>
+                <TextBlock x:Name="CurrentAssigneeText" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBox x:Name="AssigneeSearchBox" ToolTip="Type to search assignable users"/>
                 <Grid Margin="0,2,0,0">
                     <Grid.ColumnDefinitions>
@@ -122,8 +123,9 @@
                     <ComboBox
                         x:Name="StatusCombo"
                         Grid.Column="0"
-                        DisplayMemberPath="Display"
-                        SelectedValuePath="Value"
+                        DisplayMemberPath="Name"
+                        SelectedValuePath="Id"
+                        SelectionChanged="StatusCombo_SelectionChanged"
                         ToolTip="Only transitions actually available from the current status are listed"/>
                     <Button
                         Grid.Column="1"
@@ -213,7 +215,7 @@
                 AcceptsReturn="True"
                 TextWrapping="Wrap"
                 VerticalScrollBarVisibility="Auto"
-                ToolTip="Write a comment"/>
+                ToolTip="Write a comment -- type @Name to mention one of this issue's assignable users"/>
 
             <Grid Grid.Row="1" Margin="0,6,0,0">
                 <Grid.ColumnDefinitions>

@@ -43,6 +43,7 @@ public partial class JiraIssueViewerWindow
     private readonly bool _isServiceDeskIssue;
 
     private List<NameValue> _assignableUsers = new();
+    private List<JiraTransition> _transitions = new();
 
     public JiraIssueViewerWindow(
         AtlassianService atlassianService,
@@ -105,17 +106,31 @@ public partial class JiraIssueViewerWindow
 
             await Task.WhenAll(transitionsTask, assignableUsersTask, commentsTask);
 
-            StatusCombo.ItemsSource = transitionsTask.Result;
+            _transitions = transitionsTask.Result;
+            StatusCombo.ItemsSource = _transitions;
 
-            if (transitionsTask.Result.Count > 0)
+            if (_transitions.Count > 0)
             {
                 StatusCombo.SelectedIndex = 0;
             }
+
+            CurrentAssigneeText.Text = $"Currently: {detail.Assignee}";
 
             _assignableUsers = assignableUsersTask.Result;
 
             var assigneeOptions =
                 new List<NameValue> { new("", UnassignedName) }.Concat(_assignableUsers).ToList();
+
+            // The "assignable" search is who could be assigned right now,
+            // which isn't guaranteed to include whoever already is (e.g.
+            // someone no longer active on the project) -- added here so
+            // the combo still shows and can keep the actual current
+            // assignee instead of silently falling back to "Unassigned".
+            if (!string.IsNullOrWhiteSpace(detail.AssigneeAccountId)
+                && !assigneeOptions.Any(a => string.Equals(a.Value, detail.AssigneeAccountId, StringComparison.OrdinalIgnoreCase)))
+            {
+                assigneeOptions.Add(new NameValue(detail.AssigneeAccountId, detail.Assignee));
+            }
 
             AssigneeCombo.ItemsSource = assigneeOptions;
 
@@ -138,13 +153,34 @@ public partial class JiraIssueViewerWindow
         }
     }
 
+    private void
+    StatusCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (StatusCombo.SelectedItem is JiraTransition { RequiresComment: true } transition)
+        {
+            StatusMessageText.Text =
+                $"'{transition.Name}' requires a comment -- write it below, then click Apply.";
+        }
+    }
+
     private async void
     ApplyStatusButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (StatusCombo.SelectedValue is not string transitionId || string.IsNullOrWhiteSpace(transitionId))
+        if (StatusCombo.SelectedItem is not JiraTransition transition)
         {
+            return;
+        }
+
+        var commentText = NewCommentTextBox.Text.Trim();
+
+        if (transition.RequiresComment && string.IsNullOrWhiteSpace(commentText))
+        {
+            StatusMessageText.Text = $"'{transition.Name}' requires a comment -- write it below first.";
+
             return;
         }
 
@@ -152,9 +188,21 @@ public partial class JiraIssueViewerWindow
         {
             StatusMessageText.Text = "Changing status...";
 
-            await _atlassianService.TransitionJiraIssue(_settings, _issueKey, transitionId);
+            await _atlassianService.TransitionJiraIssue(
+                _settings,
+                _issueKey,
+                transition.Id,
+                transition.RequiresComment ? commentText : null,
+                _assignableUsers);
 
             StatusMessageText.Text = "Status changed.";
+
+            if (transition.RequiresComment)
+            {
+                NewCommentTextBox.Clear();
+
+                CommentsItemsControl.ItemsSource = await _atlassianService.GetJiraComments(_settings, _issueKey);
+            }
 
             // The set of legal transitions depends on the status just
             // moved to, so it has to be refetched rather than just
@@ -163,10 +211,10 @@ public partial class JiraIssueViewerWindow
 
             StatusBadgeText.Text = detail.Status;
 
-            var transitions = await _atlassianService.GetJiraTransitions(_settings, _issueKey);
+            _transitions = await _atlassianService.GetJiraTransitions(_settings, _issueKey);
 
-            StatusCombo.ItemsSource = transitions;
-            StatusCombo.SelectedIndex = transitions.Count > 0 ? 0 : -1;
+            StatusCombo.ItemsSource = _transitions;
+            StatusCombo.SelectedIndex = _transitions.Count > 0 ? 0 : -1;
         }
         catch (Exception ex)
         {
@@ -193,6 +241,7 @@ public partial class JiraIssueViewerWindow
                 string.IsNullOrWhiteSpace(accountId) ? null : accountId);
 
             StatusMessageText.Text = "Assignee changed.";
+            CurrentAssigneeText.Text = $"Currently: {(AssigneeCombo.SelectedItem is NameValue nv ? nv.Display : UnassignedName)}";
         }
         catch (Exception ex)
         {
@@ -220,7 +269,7 @@ public partial class JiraIssueViewerWindow
 
             var isPublic = _isServiceDeskIssue && VisibleToCustomerRadio.IsChecked == true;
 
-            await _atlassianService.PostJiraComment(_settings, _issueKey, text, isPublic, _isServiceDeskIssue);
+            await _atlassianService.PostJiraComment(_settings, _issueKey, text, isPublic, _isServiceDeskIssue, _assignableUsers);
 
             NewCommentTextBox.Clear();
 
