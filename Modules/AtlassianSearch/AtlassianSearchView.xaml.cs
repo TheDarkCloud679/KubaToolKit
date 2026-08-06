@@ -40,6 +40,12 @@ public partial class AtlassianSearchView
     private Dictionary<string, string> _jiraServiceDesksByProjectKey = new(StringComparer.OrdinalIgnoreCase);
     private string? _selectedJiraServiceDeskId;
 
+    // Needed to evaluate a ">"/"<" priority filter client-side when
+    // browsing a queue's results (see ApplyPriorityFilter) -- JQL search
+    // doesn't need this, Jira resolves priority comparison against its
+    // own configured order server-side.
+    private List<string> _jiraPriorityRankOrder = new();
+
     // Set right when a search box's first keystroke opens its dropdown;
     // consumed (and cleared) the moment keyboard focus actually lands
     // somewhere else, so it's redirected straight back. Reacting to the
@@ -167,16 +173,19 @@ public partial class AtlassianSearchView
         var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
         var projectsTask = _atlassianService.GetJiraProjects(_settings);
         var prioritiesTask = _atlassianService.GetJiraPriorities(_settings);
+        var priorityRankOrderTask = _atlassianService.GetJiraPriorityRankOrder(_settings);
         var statusesTask = _atlassianService.GetJiraStatuses(_settings);
         var statusCategoriesTask = _atlassianService.GetJiraStatusCategories(_settings);
         var serviceDesksTask = _atlassianService.GetJiraServiceDesksByProjectKey(_settings);
         var usersTask = _atlassianService.GetJiraUsers(_settings);
 
         await Task.WhenAll(
-            spacesTask, projectsTask, prioritiesTask,
+            spacesTask, projectsTask, prioritiesTask, priorityRankOrderTask,
             statusesTask, statusCategoriesTask, serviceDesksTask, usersTask);
+
         JiraStatusColors.CategoryByStatus = statusCategoriesTask.Result;
         _jiraServiceDesksByProjectKey = serviceDesksTask.Result;
+        _jiraPriorityRankOrder = priorityRankOrderTask.Result;
 
         _allConfluenceSpaces = spacesTask.Result;
 
@@ -344,6 +353,36 @@ public partial class AtlassianSearchView
         ComboBox combo) =>
         combo.SelectedValue as string ?? "";
 
+    private static string
+    GetOperatorValue(
+        ComboBox operatorCombo) =>
+        (operatorCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "=";
+
+    private static void
+    SelectOperatorValue(
+        ComboBox operatorCombo,
+        string op)
+    {
+        foreach (ComboBoxItem item in operatorCombo.Items)
+        {
+            if (string.Equals(item.Content as string, op, StringComparison.Ordinal))
+            {
+                operatorCombo.SelectedItem = item;
+
+                return;
+            }
+        }
+
+        operatorCombo.SelectedIndex = 0;
+    }
+
+    private static JiraFieldFilter
+    GetJiraFieldFilter(
+        ComboBox valueCombo,
+        TextBox searchBox,
+        ComboBox operatorCombo) =>
+        new(GetComboFilterValue(valueCombo, searchBox), GetOperatorValue(operatorCombo));
+
     private async void
     ConfluenceGroupCombo_SelectionChanged(
         object sender,
@@ -456,11 +495,35 @@ public partial class AtlassianSearchView
     {
         QueryTextBox.Text = filter.Query;
 
-        SelectComboItemByValue(JiraProjectCombo, filter.Project);
-        SelectComboItemByValue(JiraReporterCombo, filter.Reporter);
-        SelectComboItemByValue(JiraAssigneeCombo, filter.Assignee);
-        SelectComboItemByValue(JiraPriorityCombo, filter.Priority);
-        SelectComboItemByValue(JiraStatusCombo, filter.Status);
+        ApplyJiraFieldFilterToUi(JiraProjectCombo, JiraProjectSearchBox, JiraProjectOperatorCombo, filter.Project, filter.ProjectOperator);
+        ApplyJiraFieldFilterToUi(JiraReporterCombo, JiraReporterSearchBox, JiraReporterOperatorCombo, filter.Reporter, filter.ReporterOperator);
+        ApplyJiraFieldFilterToUi(JiraAssigneeCombo, JiraAssigneeSearchBox, JiraAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
+        ApplyJiraFieldFilterToUi(JiraPriorityCombo, JiraPrioritySearchBox, JiraPriorityOperatorCombo, filter.Priority, filter.PriorityOperator);
+        ApplyJiraFieldFilterToUi(JiraStatusCombo, JiraStatusSearchBox, JiraStatusOperatorCombo, filter.Status, filter.StatusOperator);
+    }
+
+    // A saved "in"/"not in" value is a comma-separated list that will
+    // never match a single combo item, so the search box (which
+    // GetComboFilterValue falls back to) has to carry it -- the combo
+    // selection is reset first so a leftover prior selection can't win
+    // over the just-restored text.
+    private static void
+    ApplyJiraFieldFilterToUi(
+        ComboBox valueCombo,
+        TextBox searchBox,
+        ComboBox operatorCombo,
+        string value,
+        string op)
+    {
+        SelectOperatorValue(operatorCombo, op);
+
+        SelectComboItemByValue(valueCombo, "");
+        searchBox.Text = value;
+
+        if (!string.IsNullOrWhiteSpace(value) && !value.Contains(','))
+        {
+            SelectComboItemByValue(valueCombo, value);
+        }
     }
 
     private void
@@ -485,10 +548,15 @@ public partial class AtlassianSearchView
                 Name = name,
                 Query = QueryTextBox.Text.Trim(),
                 Project = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
+                ProjectOperator = GetOperatorValue(JiraProjectOperatorCombo),
                 Reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
+                ReporterOperator = GetOperatorValue(JiraReporterOperatorCombo),
                 Assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
+                AssigneeOperator = GetOperatorValue(JiraAssigneeOperatorCombo),
                 Priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
-                Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox)
+                PriorityOperator = GetOperatorValue(JiraPriorityOperatorCombo),
+                Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox),
+                StatusOperator = GetOperatorValue(JiraStatusOperatorCombo)
             };
 
         _settings.SavedJiraFilters.RemoveAll(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -732,6 +800,11 @@ public partial class AtlassianSearchView
         {
             var queueId = GetComboSelectionValue(JiraQueueCombo);
 
+            var reporterFilter = GetJiraFieldFilter(JiraReporterCombo, JiraReporterSearchBox, JiraReporterOperatorCombo);
+            var assigneeFilter = GetJiraFieldFilter(JiraAssigneeCombo, JiraAssigneeSearchBox, JiraAssigneeOperatorCombo);
+            var priorityFilter = GetJiraFieldFilter(JiraPriorityCombo, JiraPrioritySearchBox, JiraPriorityOperatorCombo);
+            var statusFilter = GetJiraFieldFilter(JiraStatusCombo, JiraStatusSearchBox, JiraStatusOperatorCombo);
+
             if (!string.IsNullOrWhiteSpace(queueId) && !string.IsNullOrWhiteSpace(_selectedJiraServiceDeskId))
             {
                 var queueResults = await _atlassianService.GetQueueIssues(_settings, _selectedJiraServiceDeskId, queueId);
@@ -739,35 +812,32 @@ public partial class AtlassianSearchView
                 // The queue endpoint itself takes no extra filters, but
                 // Jira's own queue view lets you narrow by these same
                 // fields, so it's done client-side over the fetched page
-                // instead of just being the query text (this only sees
-                // whatever GetQueueIssues already fetched, not the whole
-                // queue, same caveat as the text filter below).
-                var reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox);
-                var assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox);
-                var priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox);
-                var status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox);
+                // instead (this only sees whatever GetQueueIssues already
+                // fetched, not the queue's whole result set).
+                IEnumerable<JiraSearchResult> filtered = queueResults;
 
-                var filtered =
-                    queueResults
-                        .Where(r => string.IsNullOrWhiteSpace(query) || r.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
-                        .Where(r => string.IsNullOrWhiteSpace(reporter) || string.Equals(r.Reporter, reporter, StringComparison.OrdinalIgnoreCase))
-                        .Where(r => string.IsNullOrWhiteSpace(assignee) || string.Equals(r.Assignee, assignee, StringComparison.OrdinalIgnoreCase))
-                        .Where(r => string.IsNullOrWhiteSpace(priority) || string.Equals(r.Priority, priority, StringComparison.OrdinalIgnoreCase))
-                        .Where(r => string.IsNullOrWhiteSpace(status) || string.Equals(r.Status, status, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                if (!string.IsNullOrWhiteSpace(query))
+                {
+                    filtered = filtered.Where(r => r.Summary.Contains(query, StringComparison.OrdinalIgnoreCase));
+                }
 
-                return (filtered, null);
+                filtered = ApplyClientFieldFilter(filtered, r => r.Reporter, reporterFilter);
+                filtered = ApplyClientFieldFilter(filtered, r => r.Assignee, assigneeFilter);
+                filtered = ApplyClientFieldFilter(filtered, r => r.Status, statusFilter);
+                filtered = ApplyClientPriorityFilter(filtered, priorityFilter);
+
+                return (filtered.ToList(), null);
             }
 
             var results =
                 await _atlassianService.SearchJira(
                     _settings,
                     query,
-                    GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
-                    GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
-                    GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
-                    GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
-                    GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox));
+                    GetJiraFieldFilter(JiraProjectCombo, JiraProjectSearchBox, JiraProjectOperatorCombo),
+                    reporterFilter,
+                    assigneeFilter,
+                    priorityFilter,
+                    statusFilter);
 
             return (results, null);
         }
@@ -777,6 +847,83 @@ public partial class AtlassianSearchView
 
             return (new List<JiraSearchResult>(), $"Jira: {ex.Message}");
         }
+    }
+
+    // "in"/"not in" split the typed value on commas the same way the
+    // service layer does for JQL; "!=" and "not in" both mean "exclude a
+    // match", everything else means "require one".
+    private static IEnumerable<JiraSearchResult>
+    ApplyClientFieldFilter(
+        IEnumerable<JiraSearchResult> results,
+        Func<JiraSearchResult, string> selector,
+        JiraFieldFilter filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter.Value))
+        {
+            return results;
+        }
+
+        var values =
+            filter.Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        bool IsMatch(JiraSearchResult r) =>
+            values.Any(v => string.Equals(selector(r), v, StringComparison.OrdinalIgnoreCase));
+
+        return filter.Operator is "!=" or "not in"
+            ? results.Where(r => !IsMatch(r))
+            : results.Where(IsMatch);
+    }
+
+    // Same idea as ApplyClientFieldFilter, but ">"/">="/"<"/"<=" need the
+    // site's actual priority rank order to mean anything (JQL search
+    // doesn't need this -- Jira resolves that comparison server-side).
+    private IEnumerable<JiraSearchResult>
+    ApplyClientPriorityFilter(
+        IEnumerable<JiraSearchResult> results,
+        JiraFieldFilter filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter.Value))
+        {
+            return results;
+        }
+
+        if (filter.Operator is not (">" or ">=" or "<" or "<="))
+        {
+            return ApplyClientFieldFilter(results, r => r.Priority, filter);
+        }
+
+        var targetIndex =
+            _jiraPriorityRankOrder.FindIndex(p => string.Equals(p, filter.Value, StringComparison.OrdinalIgnoreCase));
+
+        if (targetIndex < 0)
+        {
+            return results;
+        }
+
+        bool Matches(JiraSearchResult r)
+        {
+            var index =
+                _jiraPriorityRankOrder.FindIndex(p => string.Equals(p, r.Priority, StringComparison.OrdinalIgnoreCase));
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            // Index 0 is the site's most urgent priority, so a *lower*
+            // index means *higher* urgency -- ">" (more urgent than)
+            // means a smaller index than the target's.
+            return filter.Operator switch
+            {
+                ">" => index < targetIndex,
+                ">=" => index <= targetIndex,
+                "<" => index > targetIndex,
+                "<=" => index >= targetIndex,
+                _ => false
+            };
+        }
+
+        return results.Where(Matches);
     }
 
     private static void

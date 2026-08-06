@@ -280,15 +280,23 @@
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
-                        <StackPanel Width="140" Margin="0,0,14,0">
+                        <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraProjectSearchBox" ToolTip="Type to search projects"/>
-                            <ComboBox
-                                x:Name="JiraProjectCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                SelectionChanged="JiraProjectCombo_SelectionChanged"/>
+                            <TextBox x:Name="JiraProjectSearchBox" ToolTip="Type to search projects, or a comma-separated list for 'in'/'not in'"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox x:Name="JiraProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraProjectCombo"
+                                    Width="126"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    SelectionChanged="JiraProjectCombo_SelectionChanged"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <StackPanel Width="160" Margin="0,0,14,0">
@@ -304,48 +312,89 @@
                                 ToolTip="A saved Service Management queue (e.g. 'L1 Incidents') -- Reporter/Assignee/Priority/Status below narrow its results the same way Jira's own queue view lets you filter them"/>
                         </StackPanel>
 
-                        <StackPanel Width="140" Margin="0,0,14,0">
+                        <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Reporter" FontSize="11" Margin="0,0,0,2"/>
                             <TextBox
                                 x:Name="JiraReporterSearchBox"
-                                ToolTip="Type to search, or type a name and leave it unpicked -- not every user may be listed"/>
-                            <ComboBox
-                                x:Name="JiraReporterCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                                ToolTip="Type to search, or a comma-separated list for 'in'/'not in' -- not every user may be listed"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox x:Name="JiraReporterOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraReporterCombo"
+                                    Width="126"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"/>
+                            </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Width="140" Margin="0,0,14,0">
+                        <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Assignee" FontSize="11" Margin="0,0,0,2"/>
                             <TextBox
                                 x:Name="JiraAssigneeSearchBox"
-                                ToolTip="Type to search, or type a name and leave it unpicked -- not every user may be listed"/>
-                            <ComboBox
-                                x:Name="JiraAssigneeCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                                ToolTip="Type to search, or a comma-separated list for 'in'/'not in' -- not every user may be listed"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox x:Name="JiraAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraAssigneeCombo"
+                                    Width="126"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"/>
+                            </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Width="110" Margin="0,0,14,0">
+                        <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Priority" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraPrioritySearchBox" ToolTip="Type to search"/>
-                            <ComboBox
-                                x:Name="JiraPriorityCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                            <TextBox x:Name="JiraPrioritySearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox
+                                    x:Name="JiraPriorityOperatorCombo"
+                                    Width="55"
+                                    Margin="0,0,4,0"
+                                    SelectedIndex="0"
+                                    ToolTip="'&gt;'/'&lt;' compare urgency using this site's own priority order">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="&gt;"/>
+                                    <ComboBoxItem Content="&gt;="/>
+                                    <ComboBoxItem Content="&lt;"/>
+                                    <ComboBoxItem Content="&lt;="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraPriorityCombo"
+                                    Width="126"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"/>
+                            </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Width="130">
+                        <StackPanel Width="185">
                             <TextBlock Text="Status" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraStatusSearchBox" ToolTip="Type to search"/>
-                            <ComboBox
-                                x:Name="JiraStatusCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"/>
+                            <TextBox x:Name="JiraStatusSearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <ComboBox x:Name="JiraStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                                <ComboBox
+                                    x:Name="JiraStatusCombo"
+                                    Width="126"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"/>
+                            </StackPanel>
                         </StackPanel>
                         </StackPanel>
 

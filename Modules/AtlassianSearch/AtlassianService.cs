@@ -321,6 +321,36 @@ public class AtlassianService
             cancellationToken);
     }
 
+    // Same endpoint as GetJiraPriorities, but keeping the API's own
+    // ordering instead of alphabetizing it -- needed to evaluate a ">"/"<"
+    // priority filter client-side when browsing a queue (Jira's REST API
+    // for that has no filter params of its own, so plain JQL comparison
+    // isn't available there the way it is for a normal search).
+    public async Task<List<string>>
+    GetJiraPriorityRankOrder(
+        AtlassianSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        try
+        {
+            var items = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/priority", cancellationToken);
+
+            return items
+                .Select(el => TryGetString(el, "name"))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load priority order from {baseUrl}.", ex);
+
+            return new List<string>();
+        }
+    }
+
     public async Task<List<NameValue>>
     GetJiraStatuses(
         AtlassianSettings settings,
@@ -720,11 +750,11 @@ public class AtlassianService
     SearchJira(
         AtlassianSettings settings,
         string query,
-        string? project,
-        string? reporter,
-        string? assignee,
-        string? priority,
-        string? status,
+        JiraFieldFilter project,
+        JiraFieldFilter reporter,
+        JiraFieldFilter assignee,
+        JiraFieldFilter priority,
+        JiraFieldFilter status,
         CancellationToken cancellationToken = default)
     {
         // A saved filter may carry no search text at all -- built as a
@@ -743,30 +773,11 @@ public class AtlassianService
             conditions.Add($"text ~ \"{EscapeForQuery(query)}*\"");
         }
 
-        if (!string.IsNullOrWhiteSpace(project))
-        {
-            conditions.Add($"project = \"{EscapeForQuery(project)}\"");
-        }
-
-        if (!string.IsNullOrWhiteSpace(reporter))
-        {
-            conditions.Add($"reporter = \"{EscapeForQuery(reporter)}\"");
-        }
-
-        if (!string.IsNullOrWhiteSpace(assignee))
-        {
-            conditions.Add($"assignee = \"{EscapeForQuery(assignee)}\"");
-        }
-
-        if (!string.IsNullOrWhiteSpace(priority))
-        {
-            conditions.Add($"priority = \"{EscapeForQuery(priority)}\"");
-        }
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            conditions.Add($"status = \"{EscapeForQuery(status)}\"");
-        }
+        AddJqlCondition(conditions, "project", project, allowComparison: false);
+        AddJqlCondition(conditions, "reporter", reporter, allowComparison: false);
+        AddJqlCondition(conditions, "assignee", assignee, allowComparison: false);
+        AddJqlCondition(conditions, "priority", priority, allowComparison: true);
+        AddJqlCondition(conditions, "status", status, allowComparison: false);
 
         var jql = string.Join(" and ", conditions) + " order by updated desc";
 
@@ -803,6 +814,48 @@ public class AtlassianService
         }
 
         return ParseJiraIssues(issuesEl, baseUrl);
+    }
+
+    private static readonly string[] EqualityOperators = { "=", "!=", "in", "not in" };
+    private static readonly string[] ComparisonOperators = { "=", "!=", ">", ">=", "<", "<=", "in", "not in" };
+
+    // "in"/"not in" take a comma-separated list of values in JQL's own
+    // parenthesized syntax; every other operator is a plain "field op
+    // value". The operator is restricted to a known-safe set rather than
+    // trusted as-is, since it ends up directly in the JQL string, unquoted.
+    private static void
+    AddJqlCondition(
+        List<string> conditions,
+        string field,
+        JiraFieldFilter filter,
+        bool allowComparison)
+    {
+        if (string.IsNullOrWhiteSpace(filter.Value))
+        {
+            return;
+        }
+
+        var allowedOperators = allowComparison ? ComparisonOperators : EqualityOperators;
+        var op = allowedOperators.Contains(filter.Operator) ? filter.Operator : "=";
+
+        if (op is "in" or "not in")
+        {
+            var values =
+                filter.Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (values.Length == 0)
+            {
+                return;
+            }
+
+            var quoted = string.Join(", ", values.Select(v => $"\"{EscapeForQuery(v)}\""));
+
+            conditions.Add($"{field} {op} ({quoted})");
+
+            return;
+        }
+
+        conditions.Add($"{field} {op} \"{EscapeForQuery(filter.Value)}\"");
     }
 
     // Shared between plain JQL search and queue browsing below -- both
