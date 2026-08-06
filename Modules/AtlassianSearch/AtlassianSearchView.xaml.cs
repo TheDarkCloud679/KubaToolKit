@@ -607,11 +607,10 @@ public partial class AtlassianSearchView
             return;
         }
 
-        var window =
-            new JiraPopoutWindow(_atlassianService, _settings, BuildJiraFilterSnapshot(), _settings.SavedJiraFilters)
-            {
-                Owner = Window.GetWindow(this)
-            };
+        // No Owner: an owned non-modal window minimizing/restoring can
+        // cascade to the main window in WPF -- same reasoning as the
+        // other popups (MainWindow_Closing closes it explicitly instead).
+        var window = new JiraPopoutWindow(_atlassianService, _settings, BuildJiraFilterSnapshot(), _settings.SavedJiraFilters);
 
         window.Show();
     }
@@ -1049,11 +1048,10 @@ public partial class AtlassianSearchView
             return;
         }
 
-        var window =
-            new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url)
-            {
-                Owner = Window.GetWindow(this)
-            };
+        // No Owner: an owned non-modal window minimizing/restoring can
+        // cascade to the main window in WPF -- same reasoning as the
+        // other popups (MainWindow_Closing closes it explicitly instead).
+        var window = new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url);
 
         window.Show();
     }
