@@ -745,7 +745,7 @@ public class AtlassianService
         return new ConfluencePageContent
         {
             Title = TryGetString(doc.RootElement, "title") ?? "",
-            Html = await InlineImages(settings, html, cancellationToken)
+            Html = await InlineImages(settings, html, new Uri($"{baseUrl}/wiki/"), cancellationToken)
         };
     }
 
@@ -754,17 +754,19 @@ public class AtlassianService
     // otherwise just show up broken -- fetched here with the same auth as
     // everything else and swapped in as data: URIs instead. Best-effort:
     // a failed or oversized image is left as its original (broken) src
-    // rather than failing the whole page load.
+    // rather than failing the whole page load. baseUri resolves any
+    // relative src (Confluence's are typically site-relative; Jira's
+    // rendered description usually already has absolute ones, which
+    // Uri.TryCreate leaves untouched either way).
     private async Task<string>
     InlineImages(
         AtlassianSettings settings,
         string html,
+        Uri baseUri,
         CancellationToken cancellationToken)
     {
         const int maxImages = 40;
         const long maxImageBytes = 5 * 1024 * 1024;
-
-        var baseUri = new Uri($"{settings.BaseUrl.TrimEnd('/')}/wiki/");
 
         var sources =
             System.Text.RegularExpressions.Regex.Matches(html, "src=\"([^\"]+)\"")
@@ -1174,6 +1176,319 @@ public class AtlassianService
         }
 
         return ParseJiraIssues(valuesEl, baseUrl);
+    }
+
+    public async Task<JiraIssueDetail>
+    GetJiraIssueDetail(
+        AtlassianSettings settings,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url =
+            $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}"
+            + "?fields=summary,description,priority,status,reporter,assignee,project"
+            + "&expand=renderedFields";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to load issue: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        var root = doc.RootElement;
+        var actualKey = TryGetString(root, "key") ?? key;
+        var descriptionHtml = TryGetString(root, "renderedFields", "description") ?? "";
+
+        return new JiraIssueDetail
+        {
+            Key = actualKey,
+            Summary = TryGetString(root, "fields", "summary") ?? "",
+            DescriptionHtml = await InlineImages(settings, descriptionHtml, new Uri($"{baseUrl}/"), cancellationToken),
+            Priority = TryGetString(root, "fields", "priority", "name") ?? "",
+            Status = TryGetString(root, "fields", "status", "name") ?? "",
+            Reporter = TryGetString(root, "fields", "reporter", "displayName") ?? "",
+            Assignee = TryGetString(root, "fields", "assignee", "displayName") ?? "Unassigned",
+            AssigneeAccountId = TryGetString(root, "fields", "assignee", "accountId") ?? "",
+            ProjectKey = TryGetString(root, "fields", "project", "key") ?? "",
+            Url = $"{baseUrl}/browse/{actualKey}"
+        };
+    }
+
+    // Jira only allows moving an issue along its workflow's defined
+    // transitions -- there's no "set status to X" field update, so the
+    // dropdown in the viewer is populated from whatever's actually legal
+    // from the issue's current status rather than the full status list.
+    public async Task<List<NameValue>>
+    GetJiraTransitions(
+        AtlassianSettings settings,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to load available statuses: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        var results = new List<NameValue>();
+
+        if (!doc.RootElement.TryGetProperty("transitions", out var transitionsEl)
+            || transitionsEl.ValueKind != JsonValueKind.Array)
+        {
+            return results;
+        }
+
+        foreach (var transition in transitionsEl.EnumerateArray())
+        {
+            var id = TryGetString(transition, "id");
+            var name = TryGetString(transition, "name") ?? TryGetString(transition, "to", "name");
+
+            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(name))
+            {
+                results.Add(new NameValue(id!, name!));
+            }
+        }
+
+        return results;
+    }
+
+    public async Task
+    TransitionJiraIssue(
+        AtlassianSettings settings,
+        string key,
+        string transitionId,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/transitions";
+
+        var payload = JsonSerializer.Serialize(new { transition = new { id = transitionId } });
+
+        using var request =
+            new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            throw new Exception($"Failed to change status: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+    }
+
+    // Scoped to who can actually be assigned this specific issue (project
+    // role/permission-aware), unlike GetJiraUsers' org-wide best-effort
+    // list used for the search filter.
+    public async Task<List<NameValue>>
+    GetJiraAssignableUsers(
+        AtlassianSettings settings,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url =
+            $"{baseUrl}/rest/api/3/user/assignable/search"
+            + $"?issueKey={Uri.EscapeDataString(key)}&maxResults=100";
+
+        var users = await GetJsonArray(settings, url, cancellationToken);
+
+        return users
+            .Select(el => new NameValue(TryGetString(el, "accountId") ?? "", TryGetString(el, "displayName") ?? ""))
+            .Where(nv => !string.IsNullOrWhiteSpace(nv.Value) && !string.IsNullOrWhiteSpace(nv.Display))
+            .OrderBy(nv => nv.Display, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public async Task
+    SetJiraAssignee(
+        AtlassianSettings settings,
+        string key,
+        string? accountId,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/assignee";
+
+        var payload = JsonSerializer.Serialize(new { accountId });
+
+        using var request =
+            new HttpRequestMessage(HttpMethod.Put, url)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            throw new Exception($"Failed to change assignee: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+    }
+
+    public async Task<List<JiraComment>>
+    GetJiraComments(
+        AtlassianSettings settings,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        var url =
+            $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/comment"
+            + "?expand=renderedBody&orderBy=-created&maxResults=100";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to load comments: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+
+        var results = new List<JiraComment>();
+
+        if (!doc.RootElement.TryGetProperty("comments", out var commentsEl)
+            || commentsEl.ValueKind != JsonValueKind.Array)
+        {
+            return results;
+        }
+
+        foreach (var comment in commentsEl.EnumerateArray())
+        {
+            // "jsdPublic" only exists at all on a Service Management
+            // issue's comments -- its absence just means there's no
+            // internal/public distinction to show for this one.
+            var hasVisibilityInfo = comment.TryGetProperty("jsdPublic", out var jsdPublicEl);
+
+            var renderedBody = TryGetString(comment, "renderedBody") ?? "";
+
+            results.Add(
+                new JiraComment
+                {
+                    Author = TryGetString(comment, "author", "displayName") ?? "",
+                    Created = TryGetString(comment, "created") ?? "",
+                    Body = System.Net.WebUtility.HtmlDecode(StripMarkup(renderedBody)),
+                    IsPublic = !hasVisibilityInfo || jsdPublicEl.ValueKind == JsonValueKind.True,
+                    HasVisibilityInfo = hasVisibilityInfo
+                });
+        }
+
+        return results;
+    }
+
+    // Service Management issues get the internal/public distinction
+    // correctly via the request-comment API (plain-text body, "public"
+    // flag); a plain Jira issue has no such concept, so it just goes
+    // through the regular issue-comment API instead (which, unlike the
+    // service desk one, requires the body wrapped in Atlassian Document
+    // Format rather than plain text).
+    public async Task
+    PostJiraComment(
+        AtlassianSettings settings,
+        string key,
+        string bodyText,
+        bool isPublic,
+        bool useServiceDeskApi,
+        CancellationToken cancellationToken = default)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        string url;
+        string payload;
+
+        if (useServiceDeskApi)
+        {
+            url = $"{baseUrl}/rest/servicedeskapi/request/{Uri.EscapeDataString(key)}/comment";
+            payload = JsonSerializer.Serialize(new { body = bodyText, @public = isPublic });
+        }
+        else
+        {
+            url = $"{baseUrl}/rest/api/3/issue/{Uri.EscapeDataString(key)}/comment";
+
+            var adfBody =
+                new
+                {
+                    body = new
+                    {
+                        type = "doc",
+                        version = 1,
+                        content = new object[]
+                        {
+                            new
+                            {
+                                type = "paragraph",
+                                content = new object[] { new { type = "text", text = bodyText } }
+                            }
+                        }
+                    }
+                };
+
+            payload = JsonSerializer.Serialize(adfBody);
+        }
+
+        using var request =
+            new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+
+        request.Headers.Authorization = BuildAuthHeader(settings);
+
+        using var response = await Client.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            throw new Exception($"Failed to add comment: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+        }
     }
 
     private static string?

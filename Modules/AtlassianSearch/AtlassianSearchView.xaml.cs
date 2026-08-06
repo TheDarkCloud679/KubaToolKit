@@ -1019,7 +1019,7 @@ public partial class AtlassianSearchView
 
         if (JiraGrid.SelectedItem is JiraSearchResult result)
         {
-            OpenUrl(result.Url);
+            OpenJiraResult(result);
         }
     }
 
@@ -1063,7 +1063,29 @@ public partial class AtlassianSearchView
     {
         if (sender is Button { DataContext: JiraSearchResult result })
         {
-            OpenUrl(result.Url);
+            OpenJiraResult(result);
         }
+    }
+
+    private void
+    OpenJiraResult(
+        JiraSearchResult result)
+    {
+        if (string.IsNullOrWhiteSpace(result.Key))
+        {
+            OpenUrl(result.Url);
+
+            return;
+        }
+
+        var isServiceDeskIssue = _jiraServiceDesksByProjectKey.ContainsKey(result.Project);
+
+        // No Owner: an owned non-modal window minimizing/restoring can
+        // cascade to the main window in WPF -- same reasoning as the
+        // other popups (MainWindow_Closing closes it explicitly instead).
+        var window =
+            new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
+
+        window.Show();
     }
 }

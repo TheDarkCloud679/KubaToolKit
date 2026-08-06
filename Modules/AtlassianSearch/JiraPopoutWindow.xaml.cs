@@ -36,6 +36,10 @@ public partial class JiraPopoutWindow
 
     private readonly DispatcherTimer _refreshTimer = new();
 
+    // Fetched once (not per-issue) so opening several issues from this
+    // window doesn't refetch it every time.
+    private Dictionary<string, string> _jiraServiceDesksByProjectKey = new(StringComparer.OrdinalIgnoreCase);
+
     public JiraPopoutWindow(
         AtlassianService atlassianService,
         AtlassianSettings settings,
@@ -72,7 +76,13 @@ public partial class JiraPopoutWindow
 
         _refreshTimer.Tick += (_, __) => _ = LoadAsync();
 
-        Loaded += async (_, __) => await LoadAsync();
+        Loaded += async (_, __) =>
+        {
+            _jiraServiceDesksByProjectKey = await _atlassianService.GetJiraServiceDesksByProjectKey(_settings);
+
+            await LoadAsync();
+        };
+
         Closed += (_, __) => _refreshTimer.Stop();
     }
 
@@ -233,7 +243,7 @@ public partial class JiraPopoutWindow
 
         if (JiraGrid.SelectedItem is JiraSearchResult result)
         {
-            OpenUrl(result.Url);
+            OpenJiraResult(result);
             MarkAsRead(result);
         }
     }
@@ -245,9 +255,28 @@ public partial class JiraPopoutWindow
     {
         if (sender is Button { DataContext: JiraSearchResult result })
         {
-            OpenUrl(result.Url);
+            OpenJiraResult(result);
             MarkAsRead(result);
         }
+    }
+
+    private void
+    OpenJiraResult(
+        JiraSearchResult result)
+    {
+        if (string.IsNullOrWhiteSpace(result.Key))
+        {
+            OpenUrl(result.Url);
+
+            return;
+        }
+
+        var isServiceDeskIssue = _jiraServiceDesksByProjectKey.ContainsKey(result.Project);
+
+        var window =
+            new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
+
+        window.Show();
     }
 
     private static void

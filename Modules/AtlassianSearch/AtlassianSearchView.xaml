@@ -482,7 +482,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Button
-                                                Content="Open"
+                                                Content="View"
                                                 Width="70"
                                                 Click="OpenJiraResult_Click"/>
                                         </DataTemplate>
