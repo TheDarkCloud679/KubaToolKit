@@ -616,28 +616,38 @@
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox
-                                    x:Name="StatsModuleSearchBox"
-                                    ToolTip="Free text -- matches the 'Component (migrated)' field, or a comma-separated list for 'in'/'not in'"/>
-                                <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,2,0,0" HorizontalAlignment="Left" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
+                                <TextBox x:Name="StatsModuleSearchBox" ToolTip="Type to search this instance's 'Component (migrated)' values, or a comma-separated list for 'in'/'not in'"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                        <ComboBoxItem Content="="/>
+                                        <ComboBoxItem Content="!="/>
+                                        <ComboBoxItem Content="in"/>
+                                        <ComboBoxItem Content="not in"/>
+                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="StatsModuleCombo"
+                                        Width="111"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"/>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox
-                                    x:Name="StatsEscalationSearchBox"
-                                    ToolTip="Free text -- must match this instance's 'Escalade' custom field, or a comma-separated list for 'in'/'not in'"/>
-                                <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,2,0,0" HorizontalAlignment="Left" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
+                                <TextBox x:Name="StatsEscalationSearchBox" ToolTip="Type to search this instance's 'Escalade' values, or a comma-separated list for 'in'/'not in'"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                        <ComboBoxItem Content="="/>
+                                        <ComboBoxItem Content="!="/>
+                                        <ComboBoxItem Content="in"/>
+                                        <ComboBoxItem Content="not in"/>
+                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="StatsEscalationCombo"
+                                        Width="111"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"/>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Width="130" Margin="0,0,14,0">
@@ -671,6 +681,7 @@
                             <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
                             <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
                             <ComboBox x:Name="StatsGroupByCombo" Width="130" Visibility="Collapsed" SelectionChanged="StatsGroupByCombo_SelectionChanged">
+                                <ComboBoxItem Content="Period" Tag="Period"/>
                                 <ComboBoxItem Content="Person" Tag="Assignee"/>
                                 <ComboBoxItem Content="État" Tag="Status"/>
                                 <ComboBoxItem Content="Priority" Tag="Priority"/>

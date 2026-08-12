@@ -12,6 +12,12 @@ public class JiraSearchResult
     public string UpdatedDisplay { get; set; } = "";
     public string Url { get; set; } = "";
 
+    // Raw ISO date strings (only populated when the caller requests
+    // these fields, e.g. the Stats section's "by period" chart) --
+    // kept unparsed here since most callers never touch them.
+    public string ResolvedDateRaw { get; set; } = "";
+    public string CreatedDateRaw { get; set; } = "";
+
     // Popout-window-only: flagged when a refresh finds this issue wasn't
     // present in the previous fetch. Not INotifyPropertyChanged -- the
     // popout calls DataGrid.Items.Refresh() after mutating it, which is

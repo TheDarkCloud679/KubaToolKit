@@ -1021,7 +1021,7 @@ public class AtlassianService
         {
             var url =
                 $"{baseUrl}/rest/api/3/search/jql?jql={Uri.EscapeDataString(jql)}"
-                + "&maxResults=100&fields=summary,reporter,assignee,priority,status,project,updated"
+                + "&maxResults=100&fields=summary,reporter,assignee,priority,status,project,updated,resolutiondate,created"
                 + (nextPageToken != null ? $"&nextPageToken={Uri.EscapeDataString(nextPageToken)}" : "");
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -1065,6 +1065,70 @@ public class AtlassianService
         }
 
         return results;
+    }
+
+    // Powers Module/Escalade's dropdowns -- rather than free text, these
+    // list the field's actual configured options the same way Priority/
+    // Status already do, resolved by field NAME (id -> context -> its
+    // options is the only path Jira exposes for a custom select field's
+    // possible values). Best-effort: falls back to an empty list (leaving
+    // the dropdown showing just "(Any)") if the field can't be resolved
+    // this way, e.g. a permission restriction on field administration, or
+    // if it turns out not to be a select-type field at all.
+    public async Task<List<NameValue>>
+    GetJiraFieldOptions(
+        AtlassianSettings settings,
+        string fieldName,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+            var fields = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/field", cancellationToken);
+
+            var fieldId =
+                fields
+                    .FirstOrDefault(el => string.Equals(TryGetString(el, "name"), fieldName, StringComparison.OrdinalIgnoreCase))
+                    is { } match
+                    ? TryGetString(match, "id")
+                    : null;
+
+            if (string.IsNullOrWhiteSpace(fieldId))
+            {
+                return new List<NameValue>();
+            }
+
+            var contexts =
+                await GetJsonArray(settings, $"{baseUrl}/rest/api/3/field/{Uri.EscapeDataString(fieldId)}/context", cancellationToken);
+
+            var contextId = contexts.Count > 0 ? TryGetString(contexts[0], "id") : null;
+
+            if (string.IsNullOrWhiteSpace(contextId))
+            {
+                return new List<NameValue>();
+            }
+
+            var options =
+                await GetJsonArray(
+                    settings,
+                    $"{baseUrl}/rest/api/3/field/{Uri.EscapeDataString(fieldId)}/context/{Uri.EscapeDataString(contextId)}/option?maxResults=200",
+                    cancellationToken);
+
+            return options
+                .Select(el => TryGetString(el, "value"))
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .Select(v => new NameValue(v!, v!))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AtlassianService: failed to load options for field '{fieldName}'.", ex);
+
+            return new List<NameValue>();
+        }
     }
 
     private static readonly string[] EqualityOperators = { "=", "!=", "in", "not in" };
@@ -1137,6 +1201,8 @@ public class AtlassianService
                     Priority = TryGetString(issue, "fields", "priority", "name") ?? "No priority",
                     Status = TryGetString(issue, "fields", "status", "name") ?? "",
                     UpdatedDisplay = TryGetString(issue, "fields", "updated") ?? "",
+                    ResolvedDateRaw = TryGetString(issue, "fields", "resolutiondate") ?? "",
+                    CreatedDateRaw = TryGetString(issue, "fields", "created") ?? "",
                     Url = string.IsNullOrWhiteSpace(key) ? "" : $"{baseUrl}/browse/{key}"
                 });
         }

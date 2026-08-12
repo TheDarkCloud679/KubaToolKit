@@ -4,6 +4,7 @@ using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -91,6 +92,8 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(StatsProjectSearchBox, StatsProjectCombo);
         SetupSearchableCombo(StatsAssigneeSearchBox, StatsAssigneeCombo);
         SetupSearchableCombo(StatsStatusSearchBox, StatsStatusCombo);
+        SetupSearchableCombo(StatsModuleSearchBox, StatsModuleCombo);
+        SetupSearchableCombo(StatsEscalationSearchBox, StatsEscalationCombo);
 
         StatsViewListRadio.IsChecked = true;
 
@@ -202,10 +205,13 @@ public partial class AtlassianSearchView
         var statusCategoriesTask = _atlassianService.GetJiraStatusCategories(_settings);
         var serviceDesksTask = _atlassianService.GetJiraServiceDesksByProjectKey(_settings);
         var usersTask = _atlassianService.GetJiraUsers(_settings);
+        var moduleOptionsTask = _atlassianService.GetJiraFieldOptions(_settings, "Component (migrated)");
+        var escalationOptionsTask = _atlassianService.GetJiraFieldOptions(_settings, "Escalade");
 
         await Task.WhenAll(
             spacesTask, projectsTask, prioritiesTask, priorityRankOrderTask,
-            statusesTask, statusCategoriesTask, serviceDesksTask, usersTask);
+            statusesTask, statusCategoriesTask, serviceDesksTask, usersTask,
+            moduleOptionsTask, escalationOptionsTask);
 
         JiraStatusColors.CategoryByStatus = statusCategoriesTask.Result;
         _jiraServiceDesksByProjectKey = serviceDesksTask.Result;
@@ -231,6 +237,8 @@ public partial class AtlassianSearchView
         PopulateCombo(StatsProjectCombo, projectsTask.Result);
         PopulateCombo(StatsAssigneeCombo, usersTask.Result);
         PopulateCombo(StatsStatusCombo, statusesTask.Result);
+        PopulateCombo(StatsModuleCombo, moduleOptionsTask.Result);
+        PopulateCombo(StatsEscalationCombo, escalationOptionsTask.Result);
 
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
@@ -661,12 +669,8 @@ public partial class AtlassianSearchView
         ApplyJiraFieldFilterToUi(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
         ApplyJiraFieldFilterToUi(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
         ApplyJiraFieldFilterToUi(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo, filter.Status, filter.StatusOperator);
-
-        SelectOperatorValue(StatsModuleOperatorCombo, filter.ModuleOperator);
-        StatsModuleSearchBox.Text = filter.Module;
-
-        SelectOperatorValue(StatsEscalationOperatorCombo, filter.EscalationOperator);
-        StatsEscalationSearchBox.Text = filter.Escalation;
+        ApplyJiraFieldFilterToUi(StatsModuleCombo, StatsModuleSearchBox, StatsModuleOperatorCombo, filter.Module, filter.ModuleOperator);
+        ApplyJiraFieldFilterToUi(StatsEscalationCombo, StatsEscalationSearchBox, StatsEscalationOperatorCombo, filter.Escalation, filter.EscalationOperator);
 
         StatsFromDatePicker.SelectedDate = filter.From;
         StatsToDatePicker.SelectedDate = filter.To;
@@ -729,9 +733,9 @@ public partial class AtlassianSearchView
             AssigneeOperator = GetOperatorValue(StatsAssigneeOperatorCombo),
             Status = GetComboFilterValue(StatsStatusCombo, StatsStatusSearchBox),
             StatusOperator = GetOperatorValue(StatsStatusOperatorCombo),
-            Module = StatsModuleSearchBox.Text.Trim(),
+            Module = GetComboFilterValue(StatsModuleCombo, StatsModuleSearchBox),
             ModuleOperator = GetOperatorValue(StatsModuleOperatorCombo),
-            Escalation = StatsEscalationSearchBox.Text.Trim(),
+            Escalation = GetComboFilterValue(StatsEscalationCombo, StatsEscalationSearchBox),
             EscalationOperator = GetOperatorValue(StatsEscalationOperatorCombo),
             From = StatsFromDatePicker.SelectedDate,
             To = StatsToDatePicker.SelectedDate
@@ -771,8 +775,8 @@ public partial class AtlassianSearchView
             var project = GetJiraFieldFilter(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo);
             var assignee = GetJiraFieldFilter(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo);
             var status = GetJiraFieldFilter(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo);
-            var module = new JiraFieldFilter(StatsModuleSearchBox.Text.Trim(), GetOperatorValue(StatsModuleOperatorCombo));
-            var escalation = new JiraFieldFilter(StatsEscalationSearchBox.Text.Trim(), GetOperatorValue(StatsEscalationOperatorCombo));
+            var module = GetJiraFieldFilter(StatsModuleCombo, StatsModuleSearchBox, StatsModuleOperatorCombo);
+            var escalation = GetJiraFieldFilter(StatsEscalationCombo, StatsEscalationSearchBox, StatsEscalationOperatorCombo);
 
             var results =
                 await _atlassianService.SearchJiraStats(
@@ -857,23 +861,12 @@ public partial class AtlassianSearchView
             return;
         }
 
-        var groupBy = (StatsGroupByCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "Assignee";
-
-        Func<JiraSearchResult, string> keySelector =
-            groupBy switch
-            {
-                "Status" => r => string.IsNullOrWhiteSpace(r.Status) ? "(None)" : r.Status,
-                "Priority" => r => string.IsNullOrWhiteSpace(r.Priority) ? "(None)" : r.Priority,
-                "Project" => r => string.IsNullOrWhiteSpace(r.Project) ? "(None)" : r.Project,
-                _ => r => string.IsNullOrWhiteSpace(r.Assignee) ? "(Unassigned)" : r.Assignee,
-            };
+        var groupBy = (StatsGroupByCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "Period";
 
         var groups =
-            _statsResults
-                .GroupBy(keySelector)
-                .Select(g => new { Label = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .ToList();
+            groupBy == "Period"
+                ? BuildPeriodGroups()
+                : BuildCategoryGroups(groupBy);
 
         const double MaxBarHeight = 160;
 
@@ -892,6 +885,65 @@ public partial class AtlassianSearchView
 
         StatsChartItemsControl.ItemsSource = bars;
     }
+
+    private List<(string Label, int Count)>
+    BuildCategoryGroups(
+        string groupBy)
+    {
+        Func<JiraSearchResult, string> keySelector =
+            groupBy switch
+            {
+                "Status" => r => string.IsNullOrWhiteSpace(r.Status) ? "(None)" : r.Status,
+                "Priority" => r => string.IsNullOrWhiteSpace(r.Priority) ? "(None)" : r.Priority,
+                "Project" => r => string.IsNullOrWhiteSpace(r.Project) ? "(None)" : r.Project,
+                _ => r => string.IsNullOrWhiteSpace(r.Assignee) ? "(Unassigned)" : r.Assignee,
+            };
+
+        return
+            _statsResults
+                .GroupBy(keySelector)
+                .Select(g => (Label: g.Key, Count: g.Count()))
+                .OrderByDescending(g => g.Count)
+                .ToList();
+    }
+
+    // "How many per month" -- bucketed by resolution date (falling back to
+    // creation date for issues that were never resolved, e.g. when État
+    // includes open/pending, so they still land somewhere on the timeline
+    // rather than being silently dropped), regardless of whether From/To
+    // narrowed the underlying query -- month is always the granularity,
+    // per how this was asked for.
+    private List<(string Label, int Count)>
+    BuildPeriodGroups()
+    {
+        var buckets = new SortedDictionary<DateTime, int>();
+
+        foreach (var result in _statsResults)
+        {
+            var date = ParseJiraDate(result.ResolvedDateRaw) ?? ParseJiraDate(result.CreatedDateRaw);
+
+            if (date == null)
+            {
+                continue;
+            }
+
+            var monthStart = new DateTime(date.Value.Year, date.Value.Month, 1);
+
+            buckets[monthStart] = buckets.GetValueOrDefault(monthStart) + 1;
+        }
+
+        return
+            buckets
+                .Select(kv => (Label: kv.Key.ToString("MMM yyyy", CultureInfo.InvariantCulture), Count: kv.Value))
+                .ToList();
+    }
+
+    private static DateTime?
+    ParseJiraDate(
+        string raw) =>
+        !string.IsNullOrWhiteSpace(raw) && DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+            ? date
+            : null;
 
     private void
     StatsGrid_MouseDoubleClick(
