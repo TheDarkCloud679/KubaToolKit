@@ -175,10 +175,10 @@
                                     <DataTemplate>
                                         <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
+                                                <Border Width="60" Height="6" CornerRadius="2" Background="{StaticResource BorderStrongBrush}">
                                                     <Border
                                                         HorizontalAlignment="Left"
-                                                        CornerRadius="{StaticResource RadiusPill}"
+                                                        CornerRadius="2"
                                                         Background="{Binding CpuAccentBrush}"
                                                         Width="{Binding CpuBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
                                                 </Border>
@@ -202,10 +202,10 @@
                                     <DataTemplate>
                                         <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
+                                                <Border Width="60" Height="6" CornerRadius="2" Background="{StaticResource BorderStrongBrush}">
                                                     <Border
                                                         HorizontalAlignment="Left"
-                                                        CornerRadius="{StaticResource RadiusPill}"
+                                                        CornerRadius="2"
                                                         Background="{Binding ActivityAccentBrush}"
                                                         Width="{Binding ActivityBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
                                                 </Border>
@@ -332,10 +332,10 @@
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center"
                                             ToolTip="Worst mount point found for this instance">
-                                            <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
+                                            <Border Width="60" Height="6" CornerRadius="2" Background="{StaticResource BorderStrongBrush}">
                                                 <Border
                                                     HorizontalAlignment="Left"
-                                                    CornerRadius="{StaticResource RadiusPill}"
+                                                    CornerRadius="2"
                                                     Background="{Binding DiskAccentBrush}"
                                                     Width="{Binding DiskBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
                                             </Border>
