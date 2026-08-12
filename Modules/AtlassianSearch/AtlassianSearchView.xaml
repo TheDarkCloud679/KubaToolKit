@@ -618,7 +618,7 @@
                                 <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
                                 <TextBox
                                     x:Name="StatsModuleSearchBox"
-                                    ToolTip="Free text -- must match this instance's 'Module' custom field, or a comma-separated list for 'in'/'not in'"/>
+                                    ToolTip="Free text -- matches the 'Component (migrated)' field, or a comma-separated list for 'in'/'not in'"/>
                                 <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,2,0,0" HorizontalAlignment="Left" SelectedIndex="0">
                                     <ComboBoxItem Content="="/>
                                     <ComboBoxItem Content="!="/>
@@ -650,13 +650,19 @@
                                 <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound (only relevant when État includes resolved issues)"/>
                             </StackPanel>
 
-                            <StackPanel VerticalAlignment="Bottom">
+                            <StackPanel VerticalAlignment="Bottom" Orientation="Horizontal">
                                 <Button
                                     x:Name="RunStatsButton"
                                     Content="Run stats"
                                     Width="90"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Click="RunStatsButton_Click"/>
+                                <ProgressBar
+                                    x:Name="StatsProgressBar"
+                                    Width="80"
+                                    Margin="8,0,0,0"
+                                    Visibility="Collapsed"
+                                    IsIndeterminate="True"/>
                             </StackPanel>
                         </StackPanel>
 

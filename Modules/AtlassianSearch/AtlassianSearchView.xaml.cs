@@ -32,6 +32,11 @@ public partial class AtlassianSearchView
     private DataGridColumn? _statsSortColumn;
     private ListSortDirection _statsSortDirection = ListSortDirection.Ascending;
 
+    // Non-null exactly while a stats query is in flight -- RunStatsButton
+    // doubles as the cancel button during that window, same idea as the
+    // Search/Cancel toggle the CloudWatch/CloudTrail/S3 modules use.
+    private CancellationTokenSource? _statsCancellation;
+
     // Cached so the space picker doesn't need a fresh network round-trip
     // every time it's opened.
     private List<NameValue> _allConfluenceSpaces = new();
@@ -737,6 +742,13 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
+        if (_statsCancellation != null)
+        {
+            _statsCancellation.Cancel();
+
+            return;
+        }
+
         if (!_settings.IsComplete)
         {
             MessageBox.Show(
@@ -746,9 +758,14 @@ public partial class AtlassianSearchView
             return;
         }
 
+        _statsCancellation = new CancellationTokenSource();
+
+        var cancellationToken = _statsCancellation.Token;
+
         try
         {
-            RunStatsButton.IsEnabled = false;
+            RunStatsButton.Content = "Cancel";
+            StatsProgressBar.Visibility = Visibility.Visible;
             StatsStatusText.Text = "Running...";
 
             var project = GetJiraFieldFilter(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo);
@@ -766,7 +783,8 @@ public partial class AtlassianSearchView
                     module,
                     escalation,
                     StatsFromDatePicker.SelectedDate,
-                    StatsToDatePicker.SelectedDate);
+                    StatsToDatePicker.SelectedDate,
+                    cancellationToken);
 
             _statsResults.Clear();
 
@@ -779,6 +797,10 @@ public partial class AtlassianSearchView
 
             UpdateStatsChart();
         }
+        catch (OperationCanceledException)
+        {
+            StatsStatusText.Text = "Cancelled.";
+        }
         catch (Exception ex)
         {
             Logger.Error("AtlassianSearchView: stats query failed.", ex);
@@ -787,7 +809,11 @@ public partial class AtlassianSearchView
         }
         finally
         {
-            RunStatsButton.IsEnabled = true;
+            RunStatsButton.Content = "Run stats";
+            StatsProgressBar.Visibility = Visibility.Collapsed;
+
+            _statsCancellation?.Dispose();
+            _statsCancellation = null;
         }
     }
 

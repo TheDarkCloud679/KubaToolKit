@@ -966,9 +966,10 @@ public class AtlassianService
     // (a 25-row preview), this pages up to SafetyCap so the result is a
     // usable list for both direct viewing and the "group by" chart, which
     // needs the actual matching issues, not just a count, to aggregate by
-    // person/status/priority/project. Module and Escalade are
-    // instance-specific custom fields referenced by display name --
-    // JQL resolves that server-side, so no field id lookup is needed.
+    // person/status/priority/project. Module maps to this instance's
+    // "Component (migrated)" field, Escalade to its "Escalade" custom
+    // field -- both referenced by display name directly in the JQL, which
+    // Jira resolves server-side, so no field id lookup is needed.
     public async Task<List<JiraSearchResult>>
     SearchJiraStats(
         AtlassianSettings settings,
@@ -986,7 +987,7 @@ public class AtlassianService
         AddJqlCondition(conditions, "project", project, allowComparison: false);
         AddJqlCondition(conditions, "assignee", assignee, allowComparison: false);
         AddJqlCondition(conditions, "status", status, allowComparison: false);
-        AddJqlCondition(conditions, "\"Module\"", module, allowComparison: false);
+        AddJqlCondition(conditions, "\"Component (migrated)\"", module, allowComparison: false);
         AddJqlCondition(conditions, "\"Escalade\"", escalation, allowComparison: false);
 
         if (from.HasValue)
