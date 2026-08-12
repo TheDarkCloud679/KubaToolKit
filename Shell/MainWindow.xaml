@@ -256,6 +256,7 @@
                     <Grid x:Name="ProfileGroup" Grid.Column="0" Margin="0,0,20,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="260"/>
                         </Grid.ColumnDefinitions>
 
@@ -266,9 +267,20 @@
                             Foreground="{StaticResource TextSecondaryBrush}"
                             Text="Profile"/>
 
+                        <Button
+                            x:Name="ProfileColorButton"
+                            Grid.Column="1"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="6,0,0,0"
+                            Content="🎨"
+                            ToolTip="Assign colors to profiles"
+                            Click="ProfileColorButton_Click"/>
+
                         <ComboBox
                             x:Name="ProfileCombo"
-                            Grid.Column="1"
+                            Grid.Column="2"
                             Margin="6,0,0,0"
                             SelectionChanged="ProfileCombo_SelectionChanged">
                             <ComboBox.ItemTemplate>

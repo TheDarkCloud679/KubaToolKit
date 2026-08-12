@@ -31,6 +31,9 @@ public partial class MainWindow
     private readonly ApiClientView _apiClientView;
     private readonly AtlassianSearchView _atlassianSearchView;
 
+    private readonly ProfileColorSettingsService _profileColorSettingsService = new();
+    private ProfileColorSettings _profileColorSettings = new();
+
     private bool _windowLoaded = false;
     private bool _waitingForEndDate = false;
     private bool _forceKeepCalendarOpen = false;
@@ -158,6 +161,9 @@ MainWindow_Loaded(
                 .OrderBy(x => x)
                 .ToList();
         ProfileCombo.ItemsSource = profiles;
+
+        _profileColorSettings = _profileColorSettingsService.Load();
+        ProfileRiskBrushConverter.Overrides = _profileColorSettings.Colors;
     }
 
     private void LoadPatterns()
@@ -249,6 +255,31 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         else
         {
         }
+    }
+
+    private void
+    ProfileColorButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (ProfileCombo.ItemsSource is not IEnumerable<string> profiles)
+        {
+            return;
+        }
+
+        var window =
+            new ProfileColorPickerWindow(profiles, _profileColorSettingsService, _profileColorSettings)
+            {
+                Owner = this
+            };
+
+        window.ShowDialog();
+
+        // Overrides is a static the converter reads from -- already
+        // current since the picker saves into the same _profileColorSettings
+        // instance, but the combo's already-realized items need an
+        // explicit nudge to actually re-run the converter and repaint.
+        ProfileCombo.Items.Refresh();
     }
 
     private async Task
