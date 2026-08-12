@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.Dashboard;
@@ -54,7 +55,7 @@ public partial class DashboardView
             _rdsExpandedHeight = RdsRow.Height;
         }
 
-        UpdateSectionRows();
+        AnimateSectionRows();
     }
 
     private void
@@ -62,7 +63,7 @@ public partial class DashboardView
         object sender,
         RoutedEventArgs e)
     {
-        UpdateSectionRows();
+        AnimateSectionRows();
     }
 
     private void
@@ -92,6 +93,77 @@ public partial class DashboardView
         }
 
         RdsEc2Splitter.IsEnabled = rdsExpanded && ec2Expanded;
+    }
+
+    // RowDefinition.Height (GridLength) isn't itself animatable, and with
+    // RDS/EC2 sharing one Grid, toggling either one can change both rows'
+    // target size at once (RDS reflows to fill whatever EC2 just gave up,
+    // or vice versa) -- so both get measured and animated together via
+    // MaxHeight (a plain double, and animatable) instead, rather than
+    // trying to predict star-sized target heights by hand.
+    private void
+    AnimateSectionRows()
+    {
+        if (RdsRow == null
+            || Ec2Row == null
+            || RdsExpander == null
+            || Ec2Expander == null
+            || RdsEc2Splitter == null)
+        {
+            return;
+        }
+
+        var oldRdsHeight = RdsRow.ActualHeight;
+        var oldEc2Height = Ec2Row.ActualHeight;
+
+        UpdateSectionRows();
+
+        // Let layout compute what the just-set Height (Auto/Star/fixed)
+        // actually resolves to, without ever letting that unclamped size
+        // reach the screen: measure it, then clamp straight back down to
+        // the old size before this dispatcher operation yields to a
+        // render pass, so nothing visibly jumps.
+        RdsRow.MaxHeight = double.PositiveInfinity;
+        Ec2Row.MaxHeight = double.PositiveInfinity;
+
+        UpdateLayout();
+
+        var targetRdsHeight = RdsRow.ActualHeight;
+        var targetEc2Height = Ec2Row.ActualHeight;
+
+        RdsRow.MaxHeight = oldRdsHeight;
+        Ec2Row.MaxHeight = oldEc2Height;
+
+        AnimateRowMaxHeight(RdsRow, oldRdsHeight, targetRdsHeight);
+        AnimateRowMaxHeight(Ec2Row, oldEc2Height, targetEc2Height);
+    }
+
+    private static void
+    AnimateRowMaxHeight(
+        RowDefinition row,
+        double from,
+        double to)
+    {
+        if (Math.Abs(from - to) < 0.5)
+        {
+            row.MaxHeight = double.PositiveInfinity;
+
+            return;
+        }
+
+        var animation =
+            new DoubleAnimation(from, to, new Duration(TimeSpan.FromSeconds(0.45)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+        // Releases the cap once settled -- otherwise this row would stay
+        // artificially pinned at whatever pixel height it last animated
+        // to, instead of following Auto/Star sizing normally again (e.g.
+        // on a window resize).
+        animation.Completed += (_, _) => row.MaxHeight = double.PositiveInfinity;
+
+        row.BeginAnimation(RowDefinition.MaxHeightProperty, animation);
     }
 
     public async Task
