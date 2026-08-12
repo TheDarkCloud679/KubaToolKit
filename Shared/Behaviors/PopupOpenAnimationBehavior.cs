@@ -68,17 +68,18 @@ public static class PopupOpenAnimationBehavior
             return;
         }
 
-        const double RiseDistance = 10;
+        const double RiseDistance = 18;
 
         var translate = new TranslateTransform(0, -RiseDistance);
 
         child.RenderTransform = translate;
         child.Opacity = 0;
 
-        // Matches Tokens.xaml's MotionNormal -- slow enough to actually
-        // register as motion rather than a flicker (0.14s read as
-        // "instant" in practice).
-        var duration = new Duration(TimeSpan.FromSeconds(0.22));
+        // Deliberately exaggerated (0.14s, then 0.22s both still read as
+        // instant) -- if this still looks instant, the animation likely
+        // isn't rendering at all on this machine, rather than just
+        // needing to be slower.
+        var duration = new Duration(TimeSpan.FromSeconds(0.45));
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
         child.BeginAnimation(
