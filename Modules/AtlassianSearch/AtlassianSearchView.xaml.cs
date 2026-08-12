@@ -21,6 +21,7 @@ public partial class AtlassianSearchView
 
     private readonly ObservableCollection<ConfluenceSearchResult> _confluenceResults = new();
     private readonly ObservableCollection<JiraSearchResult> _jiraResults = new();
+    private readonly ObservableCollection<JiraStatsResult> _statsResults = new();
 
     private DataGridColumn? _confluenceSortColumn;
     private ListSortDirection _confluenceSortDirection = ListSortDirection.Ascending;
@@ -60,6 +61,7 @@ public partial class AtlassianSearchView
 
         ConfluenceGrid.ItemsSource = _confluenceResults;
         JiraGrid.ItemsSource = _jiraResults;
+        StatsGrid.ItemsSource = _statsResults;
 
         AddHandler(Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(AtlassianSearchView_PreviewGotKeyboardFocus), true);
 
@@ -78,10 +80,13 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(JiraAssigneeSearchBox, JiraAssigneeCombo);
         SetupSearchableCombo(JiraPrioritySearchBox, JiraPriorityCombo);
         SetupSearchableCombo(JiraStatusSearchBox, JiraStatusCombo);
+        SetupSearchableCombo(StatsProjectSearchBox, StatsProjectCombo);
+        SetupSearchableCombo(StatsAssigneeSearchBox, StatsAssigneeCombo);
 
         _settings = _settingsService.Load();
 
         PopulateJiraSavedFilterCombo();
+        PopulateJiraStatsSavedFilterCombo();
 
         UpdateStatusForMissingSettings();
 
@@ -204,6 +209,8 @@ public partial class AtlassianSearchView
         PopulateCombo(JiraStatusCombo, statusesTask.Result);
         PopulateCombo(JiraReporterCombo, usersTask.Result);
         PopulateCombo(JiraAssigneeCombo, usersTask.Result);
+        PopulateCombo(StatsProjectCombo, projectsTask.Result);
+        PopulateCombo(StatsAssigneeCombo, usersTask.Result);
 
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
@@ -590,6 +597,164 @@ public partial class AtlassianSearchView
             StatusOperator = GetOperatorValue(JiraStatusOperatorCombo)
         };
 
+    private void
+    PopulateJiraStatsSavedFilterCombo()
+    {
+        var options =
+            _settings.SavedJiraStatsFilters
+                .Select(f => new NameValue(f.Name, f.Name))
+                .OrderBy(o => o.Display, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        PopulateCombo(StatsSavedFilterCombo, options);
+
+        DeleteStatsFilterButton.IsEnabled = false;
+    }
+
+    private void
+    StatsSavedFilterCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var name = StatsSavedFilterCombo.SelectedValue as string;
+
+        DeleteStatsFilterButton.IsEnabled = !string.IsNullOrWhiteSpace(name);
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var filter =
+            _settings.SavedJiraStatsFilters.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        if (filter != null)
+        {
+            ApplyJiraStatsSavedFilter(filter);
+        }
+    }
+
+    private void
+    ApplyJiraStatsSavedFilter(
+        SavedJiraStatsFilter filter)
+    {
+        ApplyJiraFieldFilterToUi(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
+        ApplyJiraFieldFilterToUi(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
+
+        StatsFromDatePicker.SelectedDate = filter.From;
+        StatsToDatePicker.SelectedDate = filter.To;
+    }
+
+    private void
+    SaveStatsFilterButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var name =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Save stats filter",
+                "Name for this saved list:");
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var filter = BuildJiraStatsFilterSnapshot();
+        filter.Name = name;
+
+        _settings.SavedJiraStatsFilters.RemoveAll(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
+        _settings.SavedJiraStatsFilters.Add(filter);
+
+        _settingsService.Save(_settings);
+
+        PopulateJiraStatsSavedFilterCombo();
+        SelectComboItemByValue(StatsSavedFilterCombo, name);
+    }
+
+    private void
+    DeleteStatsFilterButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var name = StatsSavedFilterCombo.SelectedValue as string;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        _settings.SavedJiraStatsFilters.RemoveAll(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        _settingsService.Save(_settings);
+
+        PopulateJiraStatsSavedFilterCombo();
+    }
+
+    private SavedJiraStatsFilter
+    BuildJiraStatsFilterSnapshot() =>
+        new()
+        {
+            Project = GetComboFilterValue(StatsProjectCombo, StatsProjectSearchBox),
+            ProjectOperator = GetOperatorValue(StatsProjectOperatorCombo),
+            Assignee = GetComboFilterValue(StatsAssigneeCombo, StatsAssigneeSearchBox),
+            AssigneeOperator = GetOperatorValue(StatsAssigneeOperatorCombo),
+            From = StatsFromDatePicker.SelectedDate,
+            To = StatsToDatePicker.SelectedDate
+        };
+
+    private async void
+    RunStatsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_settings.IsComplete)
+        {
+            MessageBox.Show(
+                "Set up the Jira/Confluence connection first (Settings).",
+                "Atlassian Search");
+
+            return;
+        }
+
+        try
+        {
+            RunStatsButton.IsEnabled = false;
+            StatsStatusText.Text = "Running...";
+
+            var project = GetJiraFieldFilter(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo);
+            var assignee = GetJiraFieldFilter(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo);
+
+            var results =
+                await _atlassianService.GetJiraResolvedCounts(
+                    _settings,
+                    project,
+                    assignee,
+                    StatsFromDatePicker.SelectedDate,
+                    StatsToDatePicker.SelectedDate);
+
+            _statsResults.Clear();
+
+            foreach (var result in results)
+            {
+                _statsResults.Add(result);
+            }
+
+            StatsStatusText.Text = $"{results.Sum(r => r.ResolvedCount)} issue(s) resolved in total.";
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: stats query failed.", ex);
+
+            StatsStatusText.Text = $"Stats query failed: {ex.Message}";
+        }
+        finally
+        {
+            RunStatsButton.IsEnabled = true;
+        }
+    }
+
     // The popout only ever runs a plain JQL search (see BuildJiraFilterSnapshot)
     // -- a selected Queue's own fixed criteria isn't something SavedJiraFilter
     // can express, so it's intentionally left out of what gets popped out.
@@ -630,6 +795,9 @@ public partial class AtlassianSearchView
 
         JiraRow.Height =
             JiraResultsExpander.IsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+
+        StatsRow.Height =
+            StatsResultsExpander.IsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
     }
 
     private void

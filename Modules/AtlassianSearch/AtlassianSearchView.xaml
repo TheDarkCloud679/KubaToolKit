@@ -104,6 +104,8 @@
                 <RowDefinition x:Name="ConfluenceRow" Height="Auto"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="JiraRow" Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition x:Name="StatsRow" Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Confluence -->
@@ -488,6 +490,151 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Expander>
+            </Border>
+
+            <GridSplitter
+                Grid.Row="3"
+                Height="6"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Stats -->
+            <Border
+                Grid.Row="4"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}"
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}"
+                Padding="{StaticResource CardPadding}">
+
+                <Expander
+                    x:Name="StatsResultsExpander"
+                    Header="Jira stats"
+                    IsExpanded="False"
+                    Expanded="ResultsExpander_Changed"
+                    Collapsed="ResultsExpander_Changed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Center">
+                            <TextBlock Text="Saved list" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox
+                                x:Name="StatsSavedFilterCombo"
+                                Width="200"
+                                DisplayMemberPath="Display"
+                                SelectedValuePath="Value"
+                                ToolTip="A saved combination of the filters below"
+                                SelectionChanged="StatsSavedFilterCombo_SelectionChanged"/>
+                            <Button
+                                x:Name="SaveStatsFilterButton"
+                                Content="Save current..."
+                                Width="110"
+                                Margin="8,0,0,0"
+                                Click="SaveStatsFilterButton_Click"/>
+                            <Button
+                                x:Name="DeleteStatsFilterButton"
+                                Content="Delete"
+                                Width="70"
+                                Margin="8,0,0,0"
+                                IsEnabled="False"
+                                Click="DeleteStatsFilterButton_Click"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+
+                            <StackPanel Width="185" Margin="0,0,14,0">
+                                <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox x:Name="StatsProjectSearchBox" ToolTip="Type to search projects, or a comma-separated list for 'in'/'not in'"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <ComboBox x:Name="StatsProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                        <ComboBoxItem Content="="/>
+                                        <ComboBoxItem Content="!="/>
+                                        <ComboBoxItem Content="in"/>
+                                        <ComboBoxItem Content="not in"/>
+                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="StatsProjectCombo"
+                                        Width="126"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Width="220" Margin="0,0,14,0">
+                                <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox
+                                    x:Name="StatsAssigneeSearchBox"
+                                    ToolTip="Type to search, or a comma-separated list (with '=' or 'in') for a breakdown per person -- not every user may be listed"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                        <ComboBoxItem Content="="/>
+                                        <ComboBoxItem Content="!="/>
+                                        <ComboBoxItem Content="in"/>
+                                        <ComboBoxItem Content="not in"/>
+                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="StatsAssigneeCombo"
+                                        Width="161"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Width="130" Margin="0,0,14,0">
+                                <TextBlock Text="From" FontSize="11" Margin="0,0,0,2"/>
+                                <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound"/>
+                            </StackPanel>
+
+                            <StackPanel Width="130" Margin="0,0,14,0">
+                                <TextBlock Text="To" FontSize="11" Margin="0,0,0,2"/>
+                                <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound"/>
+                            </StackPanel>
+
+                            <StackPanel VerticalAlignment="Bottom">
+                                <Button
+                                    x:Name="RunStatsButton"
+                                    Content="Run stats"
+                                    Width="90"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Click="RunStatsButton_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock
+                            x:Name="StatsStatusText"
+                            Grid.Row="2"
+                            FontSize="11"
+                            Margin="0,0,0,8"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            TextWrapping="Wrap"/>
+
+                        <DataGrid
+                            x:Name="StatsGrid"
+                            Grid.Row="3"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserSortColumns="False"
+                            HeadersVisibility="Column"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VirtualizingPanel.ScrollUnit="Pixel"
+                            RowHeight="32">
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Person" Binding="{Binding Person}" SortMemberPath="Person" Width="*"/>
+                                <DataGridTextColumn Header="Resolved" Binding="{Binding ResolvedCount}" SortMemberPath="ResolvedCount" Width="Auto"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

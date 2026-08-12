@@ -946,6 +946,182 @@ public class AtlassianService
         return ParseJiraIssues(issuesEl, baseUrl);
     }
 
+    // "How many did X resolve between date A and B" -- statusCategory
+    // (rather than a specific status name like "Resolved"/"Closed") is
+    // used so this works the same across projects whose workflows call
+    // their terminal status something else. When Assignee names more than
+    // one person (a comma list, or operator "in"), each is counted
+    // separately so the result can show a per-person breakdown instead of
+    // just a combined total.
+    public async Task<List<JiraStatsResult>>
+    GetJiraResolvedCounts(
+        AtlassianSettings settings,
+        JiraFieldFilter project,
+        JiraFieldFilter assignee,
+        DateTime? from,
+        DateTime? to,
+        CancellationToken cancellationToken = default)
+    {
+        var baseConditions = new List<string> { "statusCategory = Done" };
+
+        AddJqlCondition(baseConditions, "project", project, allowComparison: false);
+
+        if (from.HasValue)
+        {
+            baseConditions.Add($"resolutiondate >= \"{from.Value:yyyy-MM-dd}\"");
+        }
+
+        if (to.HasValue)
+        {
+            // JQL date literals are day-granular -- comparing "< the next
+            // day" instead of "<= to" is what makes the To date's own day
+            // actually included.
+            baseConditions.Add($"resolutiondate < \"{to.Value.AddDays(1):yyyy-MM-dd}\"");
+        }
+
+        var people =
+            string.IsNullOrWhiteSpace(assignee.Value)
+                ? new List<string>()
+                : assignee.Value
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+
+        // "!=" / "not in" describe a group ("everyone except these
+        // people"), not a set of people to break out individually -- only
+        // "="/"in" name people directly enough to report one row each.
+        var breakDownPerPerson = people.Count > 0 && assignee.Operator is "=" or "in";
+
+        var results = new List<JiraStatsResult>();
+
+        if (breakDownPerPerson)
+        {
+            foreach (var person in people)
+            {
+                var conditions = new List<string>(baseConditions) { $"assignee = \"{EscapeForQuery(person)}\"" };
+
+                var count = await CountJiraIssues(settings, string.Join(" and ", conditions), cancellationToken);
+
+                results.Add(new JiraStatsResult { Person = person, ResolvedCount = count });
+            }
+        }
+        else
+        {
+            var conditions = new List<string>(baseConditions);
+
+            AddJqlCondition(conditions, "assignee", assignee, allowComparison: false);
+
+            var count = await CountJiraIssues(settings, string.Join(" and ", conditions), cancellationToken);
+
+            var label =
+                string.IsNullOrWhiteSpace(assignee.Value)
+                    ? "(All assignees)"
+                    : $"{assignee.Operator} {assignee.Value}";
+
+            results.Add(new JiraStatsResult { Person = label, ResolvedCount = count });
+        }
+
+        return results.OrderByDescending(r => r.ResolvedCount).ToList();
+    }
+
+    // Prefers the dedicated count endpoint (no need to page through every
+    // matching issue just to know how many there are); falls back to
+    // paging key-only results for sites/versions where that endpoint
+    // isn't available, capped so one stats query can't run away against
+    // an unexpectedly huge result set.
+    private async Task<int>
+    CountJiraIssues(
+        AtlassianSettings settings,
+        string jql,
+        CancellationToken cancellationToken)
+    {
+        var baseUrl = settings.BaseUrl.TrimEnd('/');
+
+        try
+        {
+            var url = $"{baseUrl}/rest/api/3/search/approximate-count";
+
+            using var request =
+                new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(new { jql }), Encoding.UTF8, "application/json")
+                };
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                using var doc = JsonDocument.Parse(body);
+
+                if (doc.RootElement.TryGetProperty("count", out var countEl) && countEl.TryGetInt32(out var count))
+                {
+                    return count;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianService: approximate-count failed, falling back to paging.", ex);
+        }
+
+        const int SafetyCap = 5000;
+
+        var total = 0;
+        string? nextPageToken = null;
+
+        while (total < SafetyCap)
+        {
+            var url =
+                $"{baseUrl}/rest/api/3/search/jql?jql={Uri.EscapeDataString(jql)}&maxResults=100&fields=key"
+                + (nextPageToken != null ? $"&nextPageToken={Uri.EscapeDataString(nextPageToken)}" : "");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to count issues: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+            }
+
+            using var doc = JsonDocument.Parse(body);
+
+            if (!doc.RootElement.TryGetProperty("issues", out var issuesEl) || issuesEl.ValueKind != JsonValueKind.Array)
+            {
+                break;
+            }
+
+            var count = issuesEl.GetArrayLength();
+
+            total += count;
+
+            var isLast = doc.RootElement.TryGetProperty("isLast", out var lastEl) && lastEl.ValueKind == JsonValueKind.True;
+
+            if (isLast || count == 0)
+            {
+                break;
+            }
+
+            nextPageToken = TryGetString(doc.RootElement, "nextPageToken");
+
+            if (string.IsNullOrWhiteSpace(nextPageToken))
+            {
+                break;
+            }
+        }
+
+        return total;
+    }
+
     private static readonly string[] EqualityOperators = { "=", "!=", "in", "not in" };
     private static readonly string[] ComparisonOperators = { "=", "!=", ">", ">=", "<", "<=", "in", "not in" };
 
