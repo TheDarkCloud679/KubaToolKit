@@ -463,21 +463,22 @@
                             Margin="{TemplateBinding Padding}"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Left"/>
-                        <!-- PopupAnimation left off in favor of a custom
-                             fade + slight rise on DropDownBorder, triggered
-                             off its own Loaded event: Popup content lives
-                             in a separate visual tree branch, and that's
-                             re-raised every time the popup reopens, which
-                             is the reliable way to animate it (a plain
-                             IsDropDownOpen property trigger on Popup
-                             content is a known-flaky combination in WPF). -->
+                        <!-- PopupAnimation left off in favor of
+                             PopupOpenAnimationBehavior: Popup content lives
+                             in a separate visual tree branch that WPF can
+                             keep alive across open/close cycles, so the
+                             XAML Loaded-event-trigger version of this only
+                             ever fired once (the very first open) instead
+                             of every time, so driving it from Popup.Opened
+                             in code is the reliable way. -->
                         <Popup
                             x:Name="Popup"
                             Placement="Bottom"
                             IsOpen="{TemplateBinding IsDropDownOpen}"
                             AllowsTransparency="True"
                             Focusable="False"
-                            PopupAnimation="None">
+                            PopupAnimation="None"
+                            behaviors:PopupOpenAnimationBehavior.IsEnabled="True">
                             <Border
                                 x:Name="DropDownBorder"
                                 Background="{StaticResource SurfaceBrush}"
@@ -485,33 +486,10 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource RadiusMedium}"
                                 Margin="0,4,0,0"
-                                Opacity="0"
                                 MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                 MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                 Effect="{StaticResource CardShadowEffect}"
                                 SnapsToDevicePixels="True">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="DropDownTranslate" Y="-6"/>
-                                </Border.RenderTransform>
-                                <Border.Triggers>
-                                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="1"
-                                                    Duration="{StaticResource MotionFast}"
-                                                    EasingFunction="{StaticResource MotionEaseOut}"/>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="DropDownTranslate"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="0"
-                                                    Duration="{StaticResource MotionFast}"
-                                                    EasingFunction="{StaticResource MotionEaseOut}"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Border.Triggers>
                                 <ScrollViewer
                                     SnapsToDevicePixels="True"
                                     behaviors:ScrollSpeedBehavior.LinesPerNotch="0.5">
