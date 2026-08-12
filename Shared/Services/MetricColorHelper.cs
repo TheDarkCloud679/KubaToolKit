@@ -4,47 +4,79 @@ namespace KubaToolKit.Shared.Services;
 
 public static class MetricColorHelper
 {
-    private static readonly Color LowColor = Color.FromRgb(0x2F, 0x6F, 0xED);
-    private static readonly Color HighColor = Color.FromRgb(0xE5, 0x48, 0x4D);
-    private static readonly Color SuccessColor = Color.FromRgb(0x1F, 0xA9, 0x71);
+    // Matches Styles/Colors.xaml's SuccessColor/WarningColor/DangerColor --
+    // kept as a separate C# copy since this runs outside the XAML resource
+    // system, but the values need to stay identical to it.
+    private static readonly Color SuccessColor = Color.FromRgb(0x1E, 0x9E, 0x6B);
     private static readonly Color DangerColor = Color.FromRgb(0xE5, 0x48, 0x4D);
     private static readonly Color WarningColor = Color.FromRgb(0xF2, 0xA9, 0x3B);
 
-    public static Brush?
-    GetLoadBrush(
-        double? ratio,
-        double opacity = 0.20)
+    // Discrete traffic-light bands rather than a continuous blend between
+    // two colors: a continuous blend's midpoint reads as neither "fine"
+    // nor "attention" -- exactly what made the old blue-to-red load
+    // gradient's medium-load purple ambiguous.
+    private static Color?
+    GetLoadColor(
+        double? ratio)
     {
         if (!ratio.HasValue)
         {
             return null;
         }
 
-        double clamped =
-            Math.Clamp(ratio.Value, 0, 1);
+        var clamped = Math.Clamp(ratio.Value, 0, 1);
 
-        byte r =
-            (byte)(LowColor.R + (HighColor.R - LowColor.R) * clamped);
-
-        byte g =
-            (byte)(LowColor.G + (HighColor.G - LowColor.G) * clamped);
-
-        byte b =
-            (byte)(LowColor.B + (HighColor.B - LowColor.B) * clamped);
-
-        return ToBrush(r, g, b, opacity);
+        return clamped switch
+        {
+            < 0.5 => SuccessColor,
+            < 0.8 => WarningColor,
+            _ => DangerColor
+        };
     }
 
     public static Brush?
-    GetStatusBrush(
-        string? status,
+    GetLoadBrush(
+        double? ratio,
         double opacity = 0.20)
+    {
+        var color = GetLoadColor(ratio);
+
+        return color.HasValue
+            ? ToBrush(color.Value.R, color.Value.G, color.Value.B, opacity)
+            : null;
+    }
+
+    // Solid (not translucent) severity color for the load mini-bar's fill
+    // and percentage text, which sit on a neutral track rather than
+    // needing to blend into the page background the way the soft pill/
+    // text backgrounds above do.
+    public static Brush?
+    GetLoadAccentBrush(
+        double? ratio)
+    {
+        var color = GetLoadColor(ratio);
+
+        if (!color.HasValue)
+        {
+            return null;
+        }
+
+        var brush = new SolidColorBrush(color.Value);
+
+        brush.Freeze();
+
+        return brush;
+    }
+
+    private static Color?
+    GetStatusColor(
+        string? status)
     {
         var normalized =
             status?.Trim().ToLowerInvariant()
             ?? "";
 
-        Color? color = normalized switch
+        return normalized switch
         {
             "available" or "running" or "succeeded" => SuccessColor,
 
@@ -71,17 +103,38 @@ public static class MetricColorHelper
 
             _ => null
         };
+    }
 
-        if (color == null)
+    public static Brush?
+    GetStatusBrush(
+        string? status,
+        double opacity = 0.20)
+    {
+        var color = GetStatusColor(status);
+
+        return color.HasValue
+            ? ToBrush(color.Value.R, color.Value.G, color.Value.B, opacity)
+            : null;
+    }
+
+    // Solid dot/text color to pair with GetStatusBrush's soft background
+    // in the pill-with-dot status badges.
+    public static Brush?
+    GetStatusAccentBrush(
+        string? status)
+    {
+        var color = GetStatusColor(status);
+
+        if (!color.HasValue)
         {
             return null;
         }
 
-        return ToBrush(
-            color.Value.R,
-            color.Value.G,
-            color.Value.B,
-            opacity);
+        var brush = new SolidColorBrush(color.Value);
+
+        brush.Freeze();
+
+        return brush;
     }
 
     public static Brush?

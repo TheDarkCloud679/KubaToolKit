@@ -1,7 +1,12 @@
 <UserControl
     x:Class="KubaToolKit.Modules.Dashboard.DashboardView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:KubaToolKit.Modules.Dashboard">
+
+    <UserControl.Resources>
+        <local:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
+    </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -145,14 +150,18 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
-                                            Padding="10,4"
-                                            CornerRadius="4"
+                                            Padding="8,3"
+                                            CornerRadius="{StaticResource RadiusPill}"
                                             HorizontalAlignment="Left"
                                             Background="{Binding StatusBackground}">
-                                            <TextBlock
-                                                Text="{Binding Status}"
-                                                FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding StatusAccentBrush}"/>
+                                                <TextBlock
+                                                    Text="{Binding Status}"
+                                                    FontWeight="Bold"
+                                                    FontSize="11"
+                                                    Foreground="{Binding StatusAccentBrush}"/>
+                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -164,14 +173,22 @@
                                 Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border
-                                            Style="{StaticResource MetricCellStyle}"
-                                            Background="{Binding CpuBackground}"
-                                            MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
-                                            <TextBlock
-                                                Text="{Binding CpuDisplay}"
-                                                FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                                    <Border
+                                                        HorizontalAlignment="Left"
+                                                        CornerRadius="{StaticResource RadiusPill}"
+                                                        Background="{Binding CpuAccentBrush}"
+                                                        Width="{Binding CpuBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
+                                                </Border>
+                                                <TextBlock
+                                                    Text="{Binding CpuDisplay}"
+                                                    FontWeight="Bold"
+                                                    FontSize="11"
+                                                    Margin="8,0,0,0"
+                                                    Foreground="{Binding CpuAccentBrush}"/>
+                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -183,14 +200,22 @@
                                 Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border
-                                            Style="{StaticResource MetricCellStyle}"
-                                            Background="{Binding ActivityBackground}"
-                                            MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
-                                            <TextBlock
-                                                Text="{Binding ActivityDisplay}"
-                                                FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                                    <Border
+                                                        HorizontalAlignment="Left"
+                                                        CornerRadius="{StaticResource RadiusPill}"
+                                                        Background="{Binding ActivityAccentBrush}"
+                                                        Width="{Binding ActivityBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
+                                                </Border>
+                                                <TextBlock
+                                                    Text="{Binding ActivityDisplay}"
+                                                    FontWeight="Bold"
+                                                    FontSize="11"
+                                                    Margin="8,0,0,0"
+                                                    Foreground="{Binding ActivityAccentBrush}"/>
+                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -280,14 +305,18 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border
-                                            Padding="10,4"
-                                            CornerRadius="4"
+                                            Padding="8,3"
+                                            CornerRadius="{StaticResource RadiusPill}"
                                             HorizontalAlignment="Left"
                                             Background="{Binding StateBackground}">
-                                            <TextBlock
-                                                Text="{Binding State}"
-                                                FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding StateAccentBrush}"/>
+                                                <TextBlock
+                                                    Text="{Binding State}"
+                                                    FontWeight="Bold"
+                                                    FontSize="11"
+                                                    Foreground="{Binding StateAccentBrush}"/>
+                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -299,17 +328,24 @@
                                 Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border
-                                            Padding="10,4"
-                                            CornerRadius="4"
-                                            HorizontalAlignment="Left"
-                                            Background="{Binding DiskBackground}"
+                                        <StackPanel
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
                                             ToolTip="Worst mount point found for this instance">
+                                            <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                                <Border
+                                                    HorizontalAlignment="Left"
+                                                    CornerRadius="{StaticResource RadiusPill}"
+                                                    Background="{Binding DiskAccentBrush}"
+                                                    Width="{Binding DiskBarPercent, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=60}"/>
+                                            </Border>
                                             <TextBlock
                                                 Text="{Binding DiskDisplay}"
-                                                FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        </Border>
+                                                FontWeight="Bold"
+                                                FontSize="11"
+                                                Margin="8,0,0,0"
+                                                Foreground="{Binding DiskAccentBrush}"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

@@ -20,12 +20,21 @@ public class Ec2MetricItem
             ? $"{DiskPercent.Value:F0} %"
             : "—";
 
+    private double? DiskRatio =>
+        DiskPercent.HasValue ? DiskPercent.Value / 100.0 : (double?)null;
+
+    public double DiskBarPercent =>
+        Math.Clamp((DiskRatio ?? 0) * 100, 0, 100);
+
     public Brush? DiskBackground =>
-        MetricColorHelper.GetLoadBrush(
-            DiskPercent.HasValue
-                ? DiskPercent.Value / 100.0
-                : (double?)null);
+        MetricColorHelper.GetLoadBrush(DiskRatio);
+
+    public Brush? DiskAccentBrush =>
+        MetricColorHelper.GetLoadAccentBrush(DiskRatio);
 
     public Brush? StateBackground =>
         MetricColorHelper.GetStatusBrush(State);
+
+    public Brush? StateAccentBrush =>
+        MetricColorHelper.GetStatusAccentBrush(State);
 }
