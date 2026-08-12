@@ -895,7 +895,11 @@
                                     ContentTemplate="{TemplateBinding ContentTemplate}"
                                     Margin="10,0,10,10"
                                     Opacity="0"
-                                    Visibility="Collapsed"/>
+                                    Visibility="Collapsed">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="ExpanderContentTranslate" Y="-18"/>
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
                             </DockPanel>
                         </Grid>
                     </Border>
@@ -903,11 +907,38 @@
                         <Trigger Property="IsExpanded" Value="True">
                             <Setter TargetName="ExpanderContent" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="AccentBar" Property="Opacity" Value="1"/>
+                            <!-- Same fade + rise (and the same duration,
+                                 confirmed actually visible) as the ComboBox
+                                 dropdown's PopupOpenAnimationBehavior.
+                                 This one's safe as a plain property trigger
+                                 (not a Popup) since the content is a normal
+                                 in-tree element: it doesn't have the
+                                 Popup-content-only-fires-once problem that
+                                 needed a code-behind workaround there. The
+                                 outer Border's ClipToBounds keeps the -18px
+                                 starting offset from poking out during the
+                                 rise. -->
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="ExpanderContent" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2"/>
-                                        <DoubleAnimation Storyboard.TargetName="AccentBarScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="ExpanderContent"
+                                            Storyboard.TargetProperty="Opacity"
+                                            To="1"
+                                            Duration="0:0:0.45"
+                                            EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="ExpanderContentTranslate"
+                                            Storyboard.TargetProperty="Y"
+                                            To="0"
+                                            Duration="0:0:0.45"
+                                            EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="AccentBarScale"
+                                            Storyboard.TargetProperty="ScaleY"
+                                            To="1"
+                                            Duration="0:0:0.45"
+                                            EasingFunction="{StaticResource MotionEaseOut}"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
