@@ -6,26 +6,31 @@
          PALETTE
          ===================================================== -->
 
-    <Color x:Key="WindowBackgroundColor">#F3F5F8</Color>
+    <!-- "Signal" palette: a teal-forward accent (distinct from the sea of
+         generic SaaS blues) on genuinely neutral grays (no blue undertone
+         competing with the accent), for a more deliberate, less
+         default-Windows-Forms identity. -->
+
+    <Color x:Key="WindowBackgroundColor">#F4F4F5</Color>
     <Color x:Key="SurfaceColor">#FFFFFF</Color>
-    <Color x:Key="SurfaceAltColor">#F7F9FC</Color>
+    <Color x:Key="SurfaceAltColor">#F7F7F8</Color>
     <Color x:Key="HeaderColor">#FFFFFF</Color>
 
-    <Color x:Key="BorderColor">#E1E5EC</Color>
-    <Color x:Key="BorderStrongColor">#C9D0DC</Color>
+    <Color x:Key="BorderColor">#E3E3E6</Color>
+    <Color x:Key="BorderStrongColor">#CBCBD1</Color>
 
-    <Color x:Key="TextPrimaryColor">#1E2430</Color>
-    <Color x:Key="TextSecondaryColor">#68707E</Color>
-    <Color x:Key="TextMutedColor">#98A1AF</Color>
+    <Color x:Key="TextPrimaryColor">#16181D</Color>
+    <Color x:Key="TextSecondaryColor">#5C6068</Color>
+    <Color x:Key="TextMutedColor">#8B8F98</Color>
     <Color x:Key="TextOnAccentColor">#FFFFFF</Color>
 
-    <Color x:Key="AccentColor">#2F6FED</Color>
-    <Color x:Key="AccentHoverColor">#2A62D6</Color>
-    <Color x:Key="AccentPressedColor">#234FB0</Color>
-    <Color x:Key="AccentSoftColor">#E8F0FE</Color>
-    <Color x:Key="AccentSoftHoverColor">#DBE7FD</Color>
+    <Color x:Key="AccentColor">#0C8599</Color>
+    <Color x:Key="AccentHoverColor">#0A7186</Color>
+    <Color x:Key="AccentPressedColor">#085C6E</Color>
+    <Color x:Key="AccentSoftColor">#E3F4F6</Color>
+    <Color x:Key="AccentSoftHoverColor">#CDEBEF</Color>
 
-    <Color x:Key="SuccessColor">#1FA971</Color>
+    <Color x:Key="SuccessColor">#1E9E6B</Color>
     <Color x:Key="DangerColor">#E5484D</Color>
     <Color x:Key="DangerHoverColor">#D33D42</Color>
     <Color x:Key="WarningColor">#F2A93B</Color>
@@ -74,10 +79,10 @@
 
     <DropShadowEffect
         x:Key="CardShadowEffect"
-        Color="#1E2430"
+        Color="{StaticResource TextPrimaryColor}"
         Direction="270"
-        ShadowDepth="1"
-        BlurRadius="10"
-        Opacity="0.08"/>
+        ShadowDepth="2"
+        BlurRadius="16"
+        Opacity="0.09"/>
 
 </ResourceDictionary>
