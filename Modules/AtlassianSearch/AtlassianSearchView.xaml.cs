@@ -88,6 +88,13 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(StatsStatusSearchBox, StatsStatusCombo);
 
         StatsViewListRadio.IsChecked = true;
+
+        // Set here rather than IsSelected="True" in XAML -- that would
+        // fire SelectionChanged (and so UpdateStatsChart, which touches
+        // StatsChartItemsControl) mid-parse, before that element -- declared
+        // later in the tree -- has actually been assigned yet.
+        StatsGroupByCombo.SelectedIndex = 0;
+
         UpdateStatsViewVisibility();
 
         _settings = _settingsService.Load();

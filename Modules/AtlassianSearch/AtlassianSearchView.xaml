@@ -665,7 +665,7 @@
                             <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
                             <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
                             <ComboBox x:Name="StatsGroupByCombo" Width="130" Visibility="Collapsed" SelectionChanged="StatsGroupByCombo_SelectionChanged">
-                                <ComboBoxItem Content="Person" Tag="Assignee" IsSelected="True"/>
+                                <ComboBoxItem Content="Person" Tag="Assignee"/>
                                 <ComboBoxItem Content="État" Tag="Status"/>
                                 <ComboBoxItem Content="Priority" Tag="Priority"/>
                                 <ComboBoxItem Content="Project" Tag="Project"/>
