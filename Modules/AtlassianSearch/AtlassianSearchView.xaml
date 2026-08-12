@@ -293,20 +293,18 @@
 
                         <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraProjectSearchBox" ToolTip="Type to search projects, or a comma-separated list for 'in'/'not in'"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <StackPanel Orientation="Horizontal">
                                 <ComboBox x:Name="JiraProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
                                     <ComboBoxItem Content="in"/>
                                     <ComboBoxItem Content="not in"/>
                                 </ComboBox>
-                                <ComboBox
-                                    x:Name="JiraProjectCombo"
+                                <Button
+                                    x:Name="JiraProjectPickerButton"
+                                    Content="(Any)"
                                     Width="126"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"
-                                    SelectionChanged="JiraProjectCombo_SelectionChanged"/>
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,4"
+                                    Click="JiraProjectPickerButton_Click"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -325,41 +323,37 @@
 
                         <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Reporter" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox
-                                x:Name="JiraReporterSearchBox"
-                                ToolTip="Type to search, or a comma-separated list for 'in'/'not in' -- not every user may be listed"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <StackPanel Orientation="Horizontal">
                                 <ComboBox x:Name="JiraReporterOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
                                     <ComboBoxItem Content="in"/>
                                     <ComboBoxItem Content="not in"/>
                                 </ComboBox>
-                                <ComboBox
-                                    x:Name="JiraReporterCombo"
+                                <Button
+                                    x:Name="JiraReporterPickerButton"
+                                    Content="(Any)"
                                     Width="126"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"/>
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,4"
+                                    ToolTip="Not every user may be listed"
+                                    Click="JiraReporterPickerButton_Click"/>
                             </StackPanel>
                         </StackPanel>
 
                         <StackPanel Width="185" Margin="0,0,14,0">
                             <TextBlock Text="Assignee" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox
-                                x:Name="JiraAssigneeSearchBox"
-                                ToolTip="Type to search, or a comma-separated list for 'in'/'not in' -- not every user may be listed"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <StackPanel Orientation="Horizontal">
                                 <ComboBox x:Name="JiraAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
                                     <ComboBoxItem Content="in"/>
                                     <ComboBoxItem Content="not in"/>
                                 </ComboBox>
-                                <ComboBox
-                                    x:Name="JiraAssigneeCombo"
+                                <Button
+                                    x:Name="JiraAssigneePickerButton"
+                                    Content="(Any)"
                                     Width="126"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"/>
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,4"
+                                    ToolTip="Not every user may be listed"
+                                    Click="JiraAssigneePickerButton_Click"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -392,19 +386,18 @@
 
                         <StackPanel Width="185">
                             <TextBlock Text="Status" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraStatusSearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <StackPanel Orientation="Horizontal">
                                 <ComboBox x:Name="JiraStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
                                     <ComboBoxItem Content="in"/>
                                     <ComboBoxItem Content="not in"/>
                                 </ComboBox>
-                                <ComboBox
-                                    x:Name="JiraStatusCombo"
+                                <Button
+                                    x:Name="JiraStatusPickerButton"
+                                    Content="(Any)"
                                     Width="126"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"/>
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,4"
+                                    Click="JiraStatusPickerButton_Click"/>
                             </StackPanel>
                         </StackPanel>
                         </StackPanel>
@@ -557,57 +550,53 @@
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="StatsProjectSearchBox" ToolTip="Type to search projects, or a comma-separated list for 'in'/'not in'"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="StatsProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="="/>
-                                        <ComboBoxItem Content="!="/>
                                         <ComboBoxItem Content="in"/>
                                         <ComboBoxItem Content="not in"/>
                                     </ComboBox>
-                                    <ComboBox
-                                        x:Name="StatsProjectCombo"
+                                    <Button
+                                        x:Name="StatsProjectPickerButton"
+                                        Content="(Any)"
                                         Width="111"
-                                        DisplayMemberPath="Display"
-                                        SelectedValuePath="Value"/>
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        Click="StatsProjectPickerButton_Click"/>
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Width="205" Margin="0,0,14,0">
+                            <StackPanel Width="220" Margin="0,0,14,0">
                                 <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox
-                                    x:Name="StatsAssigneeSearchBox"
-                                    ToolTip="Type to search (this includes yourself), or a comma-separated list (with '=' or 'in') for multiple people"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="="/>
-                                        <ComboBoxItem Content="!="/>
                                         <ComboBoxItem Content="in"/>
                                         <ComboBoxItem Content="not in"/>
                                     </ComboBox>
-                                    <ComboBox
-                                        x:Name="StatsAssigneeCombo"
-                                        Width="146"
-                                        DisplayMemberPath="Display"
-                                        SelectedValuePath="Value"/>
+                                    <Button
+                                        x:Name="StatsAssigneePickerButton"
+                                        Content="(Any)"
+                                        Width="161"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        ToolTip="Includes yourself -- not every user may be listed"
+                                        Click="StatsAssigneePickerButton_Click"/>
                                 </StackPanel>
                             </StackPanel>
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="État" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="StatsStatusSearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="StatsStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="="/>
-                                        <ComboBoxItem Content="!="/>
                                         <ComboBoxItem Content="in"/>
                                         <ComboBoxItem Content="not in"/>
                                     </ComboBox>
-                                    <ComboBox
-                                        x:Name="StatsStatusCombo"
+                                    <Button
+                                        x:Name="StatsStatusPickerButton"
+                                        Content="(Any)"
                                         Width="111"
-                                        DisplayMemberPath="Display"
-                                        SelectedValuePath="Value"/>
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        Click="StatsStatusPickerButton_Click"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -616,37 +605,36 @@
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="StatsModuleSearchBox" ToolTip="Type to search this instance's 'Component (migrated)' values, or a comma-separated list for 'in'/'not in'"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="="/>
-                                        <ComboBoxItem Content="!="/>
                                         <ComboBoxItem Content="in"/>
                                         <ComboBoxItem Content="not in"/>
                                     </ComboBox>
-                                    <ComboBox
-                                        x:Name="StatsModuleCombo"
+                                    <Button
+                                        x:Name="StatsModulePickerButton"
+                                        Content="(Any)"
                                         Width="111"
-                                        DisplayMemberPath="Display"
-                                        SelectedValuePath="Value"/>
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        ToolTip="'Component (migrated)' values"
+                                        Click="StatsModulePickerButton_Click"/>
                                 </StackPanel>
                             </StackPanel>
 
                             <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="StatsEscalationSearchBox" ToolTip="Type to search this instance's 'Escalade' values, or a comma-separated list for 'in'/'not in'"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="="/>
-                                        <ComboBoxItem Content="!="/>
                                         <ComboBoxItem Content="in"/>
                                         <ComboBoxItem Content="not in"/>
                                     </ComboBox>
-                                    <ComboBox
-                                        x:Name="StatsEscalationCombo"
+                                    <Button
+                                        x:Name="StatsEscalationPickerButton"
+                                        Content="(Any)"
                                         Width="111"
-                                        DisplayMemberPath="Display"
-                                        SelectedValuePath="Value"/>
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        Click="StatsEscalationPickerButton_Click"/>
                                 </StackPanel>
                             </StackPanel>
 

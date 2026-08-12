@@ -1068,13 +1068,14 @@ public class AtlassianService
     }
 
     // Powers Module/Escalade's dropdowns -- rather than free text, these
-    // list the field's actual configured options the same way Priority/
-    // Status already do, resolved by field NAME (id -> context -> its
-    // options is the only path Jira exposes for a custom select field's
-    // possible values). Best-effort: falls back to an empty list (leaving
-    // the dropdown showing just "(Any)") if the field can't be resolved
-    // this way, e.g. a permission restriction on field administration, or
-    // if it turns out not to be a select-type field at all.
+    // list the field's actual usable values. Goes through the same JQL
+    // autocomplete endpoint Jira's own search bar uses (fieldName ->
+    // suggested values), rather than the field-context/option admin API:
+    // that one 404s/403s for any account without Jira administrator
+    // rights, which most API tokens won't have, while this is available
+    // to anyone who can search issues at all. Best-effort: falls back to
+    // an empty list (leaving the dropdown showing just "(Any)") if the
+    // field name doesn't resolve to anything.
     public async Task<List<NameValue>>
     GetJiraFieldOptions(
         AtlassianSettings settings,
@@ -1085,37 +1086,30 @@ public class AtlassianService
         {
             var baseUrl = settings.BaseUrl.TrimEnd('/');
 
-            var fields = await GetJsonArray(settings, $"{baseUrl}/rest/api/3/field", cancellationToken);
+            var url = $"{baseUrl}/rest/api/3/jql/autocompletedata/suggestions?fieldName={Uri.EscapeDataString(fieldName)}";
 
-            var fieldId =
-                fields
-                    .FirstOrDefault(el => string.Equals(TryGetString(el, "name"), fieldName, StringComparison.OrdinalIgnoreCase))
-                    is { } match
-                    ? TryGetString(match, "id")
-                    : null;
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-            if (string.IsNullOrWhiteSpace(fieldId))
+            request.Headers.Authorization = BuildAuthHeader(settings);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await Client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
             {
                 return new List<NameValue>();
             }
 
-            var contexts =
-                await GetJsonArray(settings, $"{baseUrl}/rest/api/3/field/{Uri.EscapeDataString(fieldId)}/context", cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            var contextId = contexts.Count > 0 ? TryGetString(contexts[0], "id") : null;
+            using var doc = JsonDocument.Parse(body);
 
-            if (string.IsNullOrWhiteSpace(contextId))
+            if (!doc.RootElement.TryGetProperty("results", out var resultsEl) || resultsEl.ValueKind != JsonValueKind.Array)
             {
                 return new List<NameValue>();
             }
 
-            var options =
-                await GetJsonArray(
-                    settings,
-                    $"{baseUrl}/rest/api/3/field/{Uri.EscapeDataString(fieldId)}/context/{Uri.EscapeDataString(contextId)}/option?maxResults=200",
-                    cancellationToken);
-
-            return options
+            return resultsEl.EnumerateArray()
                 .Select(el => TryGetString(el, "value"))
                 .Where(v => !string.IsNullOrWhiteSpace(v))
                 .Distinct(StringComparer.OrdinalIgnoreCase)

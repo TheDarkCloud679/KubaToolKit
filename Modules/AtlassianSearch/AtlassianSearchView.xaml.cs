@@ -64,6 +64,21 @@ public partial class AtlassianSearchView
     // missed it.
     private TextBox? _pendingFocusReturnBox;
 
+    // Backing state for every filter that now supports picking several
+    // values at once via MultiSelectPickerWindow (Priority keeps its old
+    // single-ComboBox shape instead, since its ">"/"<" comparison
+    // operators only mean anything against one value).
+    private readonly MultiSelectFilterState _jiraProjectFilter = new();
+    private readonly MultiSelectFilterState _jiraReporterFilter = new();
+    private readonly MultiSelectFilterState _jiraAssigneeFilter = new();
+    private readonly MultiSelectFilterState _jiraStatusFilter = new();
+
+    private readonly MultiSelectFilterState _statsProjectFilter = new();
+    private readonly MultiSelectFilterState _statsAssigneeFilter = new();
+    private readonly MultiSelectFilterState _statsStatusFilter = new();
+    private readonly MultiSelectFilterState _statsModuleFilter = new();
+    private readonly MultiSelectFilterState _statsEscalationFilter = new();
+
     public AtlassianSearchView()
     {
         InitializeComponent();
@@ -83,17 +98,8 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(ConfluenceGroupSearchBox, ConfluenceGroupCombo);
         SetupSearchableCombo(ConfluencePageSearchBox, ConfluencePageCombo);
         SetupSearchableCombo(ConfluenceArticleSearchBox, ConfluenceArticleCombo);
-        SetupSearchableCombo(JiraProjectSearchBox, JiraProjectCombo);
         SetupSearchableCombo(JiraQueueSearchBox, JiraQueueCombo);
-        SetupSearchableCombo(JiraReporterSearchBox, JiraReporterCombo);
-        SetupSearchableCombo(JiraAssigneeSearchBox, JiraAssigneeCombo);
         SetupSearchableCombo(JiraPrioritySearchBox, JiraPriorityCombo);
-        SetupSearchableCombo(JiraStatusSearchBox, JiraStatusCombo);
-        SetupSearchableCombo(StatsProjectSearchBox, StatsProjectCombo);
-        SetupSearchableCombo(StatsAssigneeSearchBox, StatsAssigneeCombo);
-        SetupSearchableCombo(StatsStatusSearchBox, StatsStatusCombo);
-        SetupSearchableCombo(StatsModuleSearchBox, StatsModuleCombo);
-        SetupSearchableCombo(StatsEscalationSearchBox, StatsEscalationCombo);
 
         StatsViewListRadio.IsChecked = true;
 
@@ -229,19 +235,119 @@ public partial class AtlassianSearchView
 
         await UpdateConfluenceSpaceSelectionAsync();
 
-        PopulateCombo(JiraProjectCombo, projectsTask.Result);
         PopulateCombo(JiraPriorityCombo, prioritiesTask.Result);
-        PopulateCombo(JiraStatusCombo, statusesTask.Result);
-        PopulateCombo(JiraReporterCombo, usersTask.Result);
-        PopulateCombo(JiraAssigneeCombo, usersTask.Result);
-        PopulateCombo(StatsProjectCombo, projectsTask.Result);
-        PopulateCombo(StatsAssigneeCombo, usersTask.Result);
-        PopulateCombo(StatsStatusCombo, statusesTask.Result);
-        PopulateCombo(StatsModuleCombo, moduleOptionsTask.Result);
-        PopulateCombo(StatsEscalationCombo, escalationOptionsTask.Result);
 
-        SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
+        _jiraProjectFilter.AllOptions = projectsTask.Result;
+        _jiraReporterFilter.AllOptions = usersTask.Result;
+        _jiraAssigneeFilter.AllOptions = usersTask.Result;
+        _jiraStatusFilter.AllOptions = statusesTask.Result;
+
+        _statsProjectFilter.AllOptions = projectsTask.Result;
+        _statsAssigneeFilter.AllOptions = usersTask.Result;
+        _statsStatusFilter.AllOptions = statusesTask.Result;
+        _statsModuleFilter.AllOptions = moduleOptionsTask.Result;
+        _statsEscalationFilter.AllOptions = escalationOptionsTask.Result;
+
+        var defaultProject =
+            projectsTask.Result.FirstOrDefault(p => string.Equals(p.Display, DefaultJiraProjectName, StringComparison.OrdinalIgnoreCase));
+
+        if (defaultProject.Value != null)
+        {
+            _jiraProjectFilter.SelectedValues = new List<string> { defaultProject.Value };
+        }
+
+        UpdateFilterButton(JiraProjectPickerButton, _jiraProjectFilter);
+        UpdateFilterButton(JiraReporterPickerButton, _jiraReporterFilter);
+        UpdateFilterButton(JiraAssigneePickerButton, _jiraAssigneeFilter);
+        UpdateFilterButton(JiraStatusPickerButton, _jiraStatusFilter);
+
+        UpdateFilterButton(StatsProjectPickerButton, _statsProjectFilter);
+        UpdateFilterButton(StatsAssigneePickerButton, _statsAssigneeFilter);
+        UpdateFilterButton(StatsStatusPickerButton, _statsStatusFilter);
+        UpdateFilterButton(StatsModulePickerButton, _statsModuleFilter);
+        UpdateFilterButton(StatsEscalationPickerButton, _statsEscalationFilter);
     }
+
+    // Shared by every multi-select filter button below -- opens the
+    // picker pre-seeded with whatever's currently selected, and on OK
+    // (a null result means Cancel) writes the new selection back into
+    // both the state and the button's own summary text.
+    private void
+    OpenMultiSelectFilter(
+        Button button,
+        MultiSelectFilterState state,
+        string title)
+    {
+        var result =
+            MultiSelectPickerWindow.Prompt(Window.GetWindow(this), title, state.AllOptions, state.SelectedValues);
+
+        if (result == null)
+        {
+            return;
+        }
+
+        state.SelectedValues = result;
+
+        UpdateFilterButton(button, state);
+    }
+
+    private void
+    JiraProjectPickerButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OpenMultiSelectFilter(JiraProjectPickerButton, _jiraProjectFilter, "Select project(s)");
+
+        _ = UpdateJiraQueueCascadeAsync();
+    }
+
+    private void
+    JiraReporterPickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(JiraReporterPickerButton, _jiraReporterFilter, "Select reporter(s)");
+
+    private void
+    JiraAssigneePickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(JiraAssigneePickerButton, _jiraAssigneeFilter, "Select assignee(s)");
+
+    private void
+    JiraStatusPickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(JiraStatusPickerButton, _jiraStatusFilter, "Select status(es)");
+
+    private void
+    StatsProjectPickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(StatsProjectPickerButton, _statsProjectFilter, "Select project(s)");
+
+    private void
+    StatsAssigneePickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(StatsAssigneePickerButton, _statsAssigneeFilter, "Select person(s)");
+
+    private void
+    StatsStatusPickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(StatsStatusPickerButton, _statsStatusFilter, "Select status(es)");
+
+    private void
+    StatsModulePickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(StatsModulePickerButton, _statsModuleFilter, "Select module(s)");
+
+    private void
+    StatsEscalationPickerButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenMultiSelectFilter(StatsEscalationPickerButton, _statsEscalationFilter, "Select escalade(s)");
 
     private void
     ConfluenceSpaceButton_Click(
@@ -321,20 +427,10 @@ public partial class AtlassianSearchView
     }
 
     private static void
-    SelectComboOptionByDisplayName(
-        ComboBox combo,
-        List<NameValue> options,
-        string displayName)
-    {
-        var match =
-            options.FirstOrDefault(o =>
-                string.Equals(o.Display, displayName, StringComparison.OrdinalIgnoreCase));
-
-        if (match.Value != null)
-        {
-            SelectComboItemByValue(combo, match.Value);
-        }
-    }
+    UpdateFilterButton(
+        Button button,
+        MultiSelectFilterState state) =>
+        button.Content = state.Summary();
 
     private static void
     PopulateCombo(
@@ -463,19 +559,25 @@ public partial class AtlassianSearchView
     // Queues only exist for Service Management projects, keyed by a
     // service desk Id rather than the project key shown here -- a plain
     // Jira project (no service desk) just leaves Queue empty, no error.
-    private async void
-    JiraProjectCombo_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+    private async Task
+    UpdateJiraQueueCascadeAsync()
     {
         PopulateCombo(JiraQueueCombo, new List<NameValue>());
 
         _selectedJiraServiceDeskId = null;
 
-        var projectKey = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox);
+        // A queue is scoped to exactly one service desk project -- with
+        // several projects selected there's no single queue list to
+        // cascade into, so it's just left empty until the pick narrows
+        // back down to one.
+        if (_jiraProjectFilter.SelectedValues.Count != 1)
+        {
+            return;
+        }
 
-        if (string.IsNullOrWhiteSpace(projectKey)
-            || !_jiraServiceDesksByProjectKey.TryGetValue(projectKey, out var serviceDeskId))
+        var projectKey = _jiraProjectFilter.SelectedValues[0];
+
+        if (!_jiraServiceDesksByProjectKey.TryGetValue(projectKey, out var serviceDeskId))
         {
             return;
         }
@@ -530,12 +632,44 @@ public partial class AtlassianSearchView
     {
         QueryTextBox.Text = filter.Query;
 
-        ApplyJiraFieldFilterToUi(JiraProjectCombo, JiraProjectSearchBox, JiraProjectOperatorCombo, filter.Project, filter.ProjectOperator);
-        ApplyJiraFieldFilterToUi(JiraReporterCombo, JiraReporterSearchBox, JiraReporterOperatorCombo, filter.Reporter, filter.ReporterOperator);
-        ApplyJiraFieldFilterToUi(JiraAssigneeCombo, JiraAssigneeSearchBox, JiraAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
+        ApplyMultiSelectFilterToUi(JiraProjectPickerButton, _jiraProjectFilter, JiraProjectOperatorCombo, filter.Project, filter.ProjectOperator);
+        ApplyMultiSelectFilterToUi(JiraReporterPickerButton, _jiraReporterFilter, JiraReporterOperatorCombo, filter.Reporter, filter.ReporterOperator);
+        ApplyMultiSelectFilterToUi(JiraAssigneePickerButton, _jiraAssigneeFilter, JiraAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
         ApplyJiraFieldFilterToUi(JiraPriorityCombo, JiraPrioritySearchBox, JiraPriorityOperatorCombo, filter.Priority, filter.PriorityOperator);
-        ApplyJiraFieldFilterToUi(JiraStatusCombo, JiraStatusSearchBox, JiraStatusOperatorCombo, filter.Status, filter.StatusOperator);
+        ApplyMultiSelectFilterToUi(JiraStatusPickerButton, _jiraStatusFilter, JiraStatusOperatorCombo, filter.Status, filter.StatusOperator);
+
+        _ = UpdateJiraQueueCascadeAsync();
     }
+
+    // Maps a saved filter's (comma-list) value/operator back onto both
+    // the picker state and its button's summary text -- the inverse of
+    // building a JiraFieldFilter from them.
+    private void
+    ApplyMultiSelectFilterToUi(
+        Button button,
+        MultiSelectFilterState state,
+        ComboBox operatorCombo,
+        string value,
+        string op)
+    {
+        state.SetFromCommaList(value);
+        SelectOperatorValue(operatorCombo, NormalizeMultiSelectOperator(op));
+        UpdateFilterButton(button, state);
+    }
+
+    // A filter saved before multi-select existed may carry "="/"!=" --
+    // equivalent to "in"/"not in" against a single value, so still
+    // restorable rather than silently dropped.
+    private static string
+    NormalizeMultiSelectOperator(
+        string op) =>
+        op switch
+        {
+            "=" => "in",
+            "!=" => "not in",
+            "in" or "not in" => op,
+            _ => "in"
+        };
 
     // A saved "in"/"not in" value is a comma-separated list that will
     // never match a single combo item, so the search box (which
@@ -613,15 +747,15 @@ public partial class AtlassianSearchView
         new()
         {
             Query = QueryTextBox.Text.Trim(),
-            Project = GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox),
+            Project = _jiraProjectFilter.JqlValue(),
             ProjectOperator = GetOperatorValue(JiraProjectOperatorCombo),
-            Reporter = GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox),
+            Reporter = _jiraReporterFilter.JqlValue(),
             ReporterOperator = GetOperatorValue(JiraReporterOperatorCombo),
-            Assignee = GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox),
+            Assignee = _jiraAssigneeFilter.JqlValue(),
             AssigneeOperator = GetOperatorValue(JiraAssigneeOperatorCombo),
             Priority = GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox),
             PriorityOperator = GetOperatorValue(JiraPriorityOperatorCombo),
-            Status = GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox),
+            Status = _jiraStatusFilter.JqlValue(),
             StatusOperator = GetOperatorValue(JiraStatusOperatorCombo)
         };
 
@@ -666,11 +800,11 @@ public partial class AtlassianSearchView
     ApplyJiraStatsSavedFilter(
         SavedJiraStatsFilter filter)
     {
-        ApplyJiraFieldFilterToUi(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
-        ApplyJiraFieldFilterToUi(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
-        ApplyJiraFieldFilterToUi(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo, filter.Status, filter.StatusOperator);
-        ApplyJiraFieldFilterToUi(StatsModuleCombo, StatsModuleSearchBox, StatsModuleOperatorCombo, filter.Module, filter.ModuleOperator);
-        ApplyJiraFieldFilterToUi(StatsEscalationCombo, StatsEscalationSearchBox, StatsEscalationOperatorCombo, filter.Escalation, filter.EscalationOperator);
+        ApplyMultiSelectFilterToUi(StatsProjectPickerButton, _statsProjectFilter, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
+        ApplyMultiSelectFilterToUi(StatsAssigneePickerButton, _statsAssigneeFilter, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
+        ApplyMultiSelectFilterToUi(StatsStatusPickerButton, _statsStatusFilter, StatsStatusOperatorCombo, filter.Status, filter.StatusOperator);
+        ApplyMultiSelectFilterToUi(StatsModulePickerButton, _statsModuleFilter, StatsModuleOperatorCombo, filter.Module, filter.ModuleOperator);
+        ApplyMultiSelectFilterToUi(StatsEscalationPickerButton, _statsEscalationFilter, StatsEscalationOperatorCombo, filter.Escalation, filter.EscalationOperator);
 
         StatsFromDatePicker.SelectedDate = filter.From;
         StatsToDatePicker.SelectedDate = filter.To;
@@ -727,15 +861,15 @@ public partial class AtlassianSearchView
     BuildJiraStatsFilterSnapshot() =>
         new()
         {
-            Project = GetComboFilterValue(StatsProjectCombo, StatsProjectSearchBox),
+            Project = _statsProjectFilter.JqlValue(),
             ProjectOperator = GetOperatorValue(StatsProjectOperatorCombo),
-            Assignee = GetComboFilterValue(StatsAssigneeCombo, StatsAssigneeSearchBox),
+            Assignee = _statsAssigneeFilter.JqlValue(),
             AssigneeOperator = GetOperatorValue(StatsAssigneeOperatorCombo),
-            Status = GetComboFilterValue(StatsStatusCombo, StatsStatusSearchBox),
+            Status = _statsStatusFilter.JqlValue(),
             StatusOperator = GetOperatorValue(StatsStatusOperatorCombo),
-            Module = GetComboFilterValue(StatsModuleCombo, StatsModuleSearchBox),
+            Module = _statsModuleFilter.JqlValue(),
             ModuleOperator = GetOperatorValue(StatsModuleOperatorCombo),
-            Escalation = GetComboFilterValue(StatsEscalationCombo, StatsEscalationSearchBox),
+            Escalation = _statsEscalationFilter.JqlValue(),
             EscalationOperator = GetOperatorValue(StatsEscalationOperatorCombo),
             From = StatsFromDatePicker.SelectedDate,
             To = StatsToDatePicker.SelectedDate
@@ -772,11 +906,11 @@ public partial class AtlassianSearchView
             StatsProgressBar.Visibility = Visibility.Visible;
             StatsStatusText.Text = "Running...";
 
-            var project = GetJiraFieldFilter(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo);
-            var assignee = GetJiraFieldFilter(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo);
-            var status = GetJiraFieldFilter(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo);
-            var module = GetJiraFieldFilter(StatsModuleCombo, StatsModuleSearchBox, StatsModuleOperatorCombo);
-            var escalation = GetJiraFieldFilter(StatsEscalationCombo, StatsEscalationSearchBox, StatsEscalationOperatorCombo);
+            var project = new JiraFieldFilter(_statsProjectFilter.JqlValue(), GetOperatorValue(StatsProjectOperatorCombo));
+            var assignee = new JiraFieldFilter(_statsAssigneeFilter.JqlValue(), GetOperatorValue(StatsAssigneeOperatorCombo));
+            var status = new JiraFieldFilter(_statsStatusFilter.JqlValue(), GetOperatorValue(StatsStatusOperatorCombo));
+            var module = new JiraFieldFilter(_statsModuleFilter.JqlValue(), GetOperatorValue(StatsModuleOperatorCombo));
+            var escalation = new JiraFieldFilter(_statsEscalationFilter.JqlValue(), GetOperatorValue(StatsEscalationOperatorCombo));
 
             var results =
                 await _atlassianService.SearchJiraStats(
@@ -1106,11 +1240,11 @@ public partial class AtlassianSearchView
             var jiraHasCriteria =
                 hasQuery
                 || queueSelected
-                || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraProjectCombo, JiraProjectSearchBox))
-                || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraReporterCombo, JiraReporterSearchBox))
-                || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraAssigneeCombo, JiraAssigneeSearchBox))
+                || _jiraProjectFilter.SelectedValues.Count > 0
+                || _jiraReporterFilter.SelectedValues.Count > 0
+                || _jiraAssigneeFilter.SelectedValues.Count > 0
                 || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraPriorityCombo, JiraPrioritySearchBox))
-                || !string.IsNullOrWhiteSpace(GetComboFilterValue(JiraStatusCombo, JiraStatusSearchBox));
+                || _jiraStatusFilter.SelectedValues.Count > 0;
 
             var jiraTask =
                 jiraHasCriteria
@@ -1210,10 +1344,10 @@ public partial class AtlassianSearchView
         {
             var queueId = GetComboSelectionValue(JiraQueueCombo);
 
-            var reporterFilter = GetJiraFieldFilter(JiraReporterCombo, JiraReporterSearchBox, JiraReporterOperatorCombo);
-            var assigneeFilter = GetJiraFieldFilter(JiraAssigneeCombo, JiraAssigneeSearchBox, JiraAssigneeOperatorCombo);
+            var reporterFilter = new JiraFieldFilter(_jiraReporterFilter.JqlValue(), GetOperatorValue(JiraReporterOperatorCombo));
+            var assigneeFilter = new JiraFieldFilter(_jiraAssigneeFilter.JqlValue(), GetOperatorValue(JiraAssigneeOperatorCombo));
             var priorityFilter = GetJiraFieldFilter(JiraPriorityCombo, JiraPrioritySearchBox, JiraPriorityOperatorCombo);
-            var statusFilter = GetJiraFieldFilter(JiraStatusCombo, JiraStatusSearchBox, JiraStatusOperatorCombo);
+            var statusFilter = new JiraFieldFilter(_jiraStatusFilter.JqlValue(), GetOperatorValue(JiraStatusOperatorCombo));
 
             if (!string.IsNullOrWhiteSpace(queueId) && !string.IsNullOrWhiteSpace(_selectedJiraServiceDeskId))
             {
@@ -1243,7 +1377,7 @@ public partial class AtlassianSearchView
                 await _atlassianService.SearchJira(
                     _settings,
                     query,
-                    GetJiraFieldFilter(JiraProjectCombo, JiraProjectSearchBox, JiraProjectOperatorCombo),
+                    new JiraFieldFilter(_jiraProjectFilter.JqlValue(), GetOperatorValue(JiraProjectOperatorCombo)),
                     reporterFilter,
                     assigneeFilter,
                     priorityFilter,
