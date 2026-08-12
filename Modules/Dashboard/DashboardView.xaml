@@ -151,7 +151,7 @@
                                     <DataTemplate>
                                         <Border
                                             Padding="8,3"
-                                            CornerRadius="{StaticResource RadiusPill}"
+                                            CornerRadius="{StaticResource RadiusMedium}"
                                             HorizontalAlignment="Left"
                                             Background="{Binding StatusBackground}">
                                             <StackPanel Orientation="Horizontal">
@@ -306,7 +306,7 @@
                                     <DataTemplate>
                                         <Border
                                             Padding="8,3"
-                                            CornerRadius="{StaticResource RadiusPill}"
+                                            CornerRadius="{StaticResource RadiusMedium}"
                                             HorizontalAlignment="Left"
                                             Background="{Binding StateBackground}">
                                             <StackPanel Orientation="Horizontal">
