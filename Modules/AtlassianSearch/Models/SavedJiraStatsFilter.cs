@@ -13,6 +13,15 @@ public class SavedJiraStatsFilter
     public string Assignee { get; set; } = "";
     public string AssigneeOperator { get; set; } = "=";
 
+    public string Status { get; set; } = "";
+    public string StatusOperator { get; set; } = "=";
+
+    public string Module { get; set; } = "";
+    public string ModuleOperator { get; set; } = "=";
+
+    public string Escalation { get; set; } = "";
+    public string EscalationOperator { get; set; } = "=";
+
     public DateTime? From { get; set; }
     public DateTime? To { get; set; }
 }

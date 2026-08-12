@@ -21,13 +21,16 @@ public partial class AtlassianSearchView
 
     private readonly ObservableCollection<ConfluenceSearchResult> _confluenceResults = new();
     private readonly ObservableCollection<JiraSearchResult> _jiraResults = new();
-    private readonly ObservableCollection<JiraStatsResult> _statsResults = new();
+    private readonly ObservableCollection<JiraSearchResult> _statsResults = new();
 
     private DataGridColumn? _confluenceSortColumn;
     private ListSortDirection _confluenceSortDirection = ListSortDirection.Ascending;
 
     private DataGridColumn? _jiraSortColumn;
     private ListSortDirection _jiraSortDirection = ListSortDirection.Ascending;
+
+    private DataGridColumn? _statsSortColumn;
+    private ListSortDirection _statsSortDirection = ListSortDirection.Ascending;
 
     // Cached so the space picker doesn't need a fresh network round-trip
     // every time it's opened.
@@ -82,6 +85,10 @@ public partial class AtlassianSearchView
         SetupSearchableCombo(JiraStatusSearchBox, JiraStatusCombo);
         SetupSearchableCombo(StatsProjectSearchBox, StatsProjectCombo);
         SetupSearchableCombo(StatsAssigneeSearchBox, StatsAssigneeCombo);
+        SetupSearchableCombo(StatsStatusSearchBox, StatsStatusCombo);
+
+        StatsViewListRadio.IsChecked = true;
+        UpdateStatsViewVisibility();
 
         _settings = _settingsService.Load();
 
@@ -211,6 +218,7 @@ public partial class AtlassianSearchView
         PopulateCombo(JiraAssigneeCombo, usersTask.Result);
         PopulateCombo(StatsProjectCombo, projectsTask.Result);
         PopulateCombo(StatsAssigneeCombo, usersTask.Result);
+        PopulateCombo(StatsStatusCombo, statusesTask.Result);
 
         SelectComboOptionByDisplayName(JiraProjectCombo, projectsTask.Result, DefaultJiraProjectName);
     }
@@ -640,6 +648,13 @@ public partial class AtlassianSearchView
     {
         ApplyJiraFieldFilterToUi(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
         ApplyJiraFieldFilterToUi(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
+        ApplyJiraFieldFilterToUi(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo, filter.Status, filter.StatusOperator);
+
+        SelectOperatorValue(StatsModuleOperatorCombo, filter.ModuleOperator);
+        StatsModuleSearchBox.Text = filter.Module;
+
+        SelectOperatorValue(StatsEscalationOperatorCombo, filter.EscalationOperator);
+        StatsEscalationSearchBox.Text = filter.Escalation;
 
         StatsFromDatePicker.SelectedDate = filter.From;
         StatsToDatePicker.SelectedDate = filter.To;
@@ -700,6 +715,12 @@ public partial class AtlassianSearchView
             ProjectOperator = GetOperatorValue(StatsProjectOperatorCombo),
             Assignee = GetComboFilterValue(StatsAssigneeCombo, StatsAssigneeSearchBox),
             AssigneeOperator = GetOperatorValue(StatsAssigneeOperatorCombo),
+            Status = GetComboFilterValue(StatsStatusCombo, StatsStatusSearchBox),
+            StatusOperator = GetOperatorValue(StatsStatusOperatorCombo),
+            Module = StatsModuleSearchBox.Text.Trim(),
+            ModuleOperator = GetOperatorValue(StatsModuleOperatorCombo),
+            Escalation = StatsEscalationSearchBox.Text.Trim(),
+            EscalationOperator = GetOperatorValue(StatsEscalationOperatorCombo),
             From = StatsFromDatePicker.SelectedDate,
             To = StatsToDatePicker.SelectedDate
         };
@@ -725,12 +746,18 @@ public partial class AtlassianSearchView
 
             var project = GetJiraFieldFilter(StatsProjectCombo, StatsProjectSearchBox, StatsProjectOperatorCombo);
             var assignee = GetJiraFieldFilter(StatsAssigneeCombo, StatsAssigneeSearchBox, StatsAssigneeOperatorCombo);
+            var status = GetJiraFieldFilter(StatsStatusCombo, StatsStatusSearchBox, StatsStatusOperatorCombo);
+            var module = new JiraFieldFilter(StatsModuleSearchBox.Text.Trim(), GetOperatorValue(StatsModuleOperatorCombo));
+            var escalation = new JiraFieldFilter(StatsEscalationSearchBox.Text.Trim(), GetOperatorValue(StatsEscalationOperatorCombo));
 
             var results =
-                await _atlassianService.GetJiraResolvedCounts(
+                await _atlassianService.SearchJiraStats(
                     _settings,
                     project,
                     assignee,
+                    status,
+                    module,
+                    escalation,
                     StatsFromDatePicker.SelectedDate,
                     StatsToDatePicker.SelectedDate);
 
@@ -741,7 +768,9 @@ public partial class AtlassianSearchView
                 _statsResults.Add(result);
             }
 
-            StatsStatusText.Text = $"{results.Sum(r => r.ResolvedCount)} issue(s) resolved in total.";
+            StatsStatusText.Text = $"{results.Count} incident(s) found.";
+
+            UpdateStatsChart();
         }
         catch (Exception ex)
         {
@@ -752,6 +781,106 @@ public partial class AtlassianSearchView
         finally
         {
             RunStatsButton.IsEnabled = true;
+        }
+    }
+
+    private void
+    StatsViewRadio_Checked(
+        object sender,
+        RoutedEventArgs e) =>
+        UpdateStatsViewVisibility();
+
+    private void
+    UpdateStatsViewVisibility()
+    {
+        var showChart = StatsViewChartRadio.IsChecked == true;
+
+        StatsGrid.Visibility = showChart ? Visibility.Collapsed : Visibility.Visible;
+        StatsChartScrollViewer.Visibility = showChart ? Visibility.Visible : Visibility.Collapsed;
+        StatsGroupByLabel.Visibility = showChart ? Visibility.Visible : Visibility.Collapsed;
+        StatsGroupByCombo.Visibility = showChart ? Visibility.Visible : Visibility.Collapsed;
+
+        if (showChart)
+        {
+            UpdateStatsChart();
+        }
+    }
+
+    private void
+    StatsGroupByCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        UpdateStatsChart();
+
+    // Computed client-side from whatever SearchJiraStats last returned --
+    // no extra round trip needed, and it stays a genuine breakdown of the
+    // exact same result set the List view shows, not a separately-queried
+    // approximation.
+    private void
+    UpdateStatsChart()
+    {
+        if (StatsGroupByCombo.ItemsSource == null && StatsGroupByCombo.Items.Count == 0)
+        {
+            return;
+        }
+
+        var groupBy = (StatsGroupByCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "Assignee";
+
+        Func<JiraSearchResult, string> keySelector =
+            groupBy switch
+            {
+                "Status" => r => string.IsNullOrWhiteSpace(r.Status) ? "(None)" : r.Status,
+                "Priority" => r => string.IsNullOrWhiteSpace(r.Priority) ? "(None)" : r.Priority,
+                "Project" => r => string.IsNullOrWhiteSpace(r.Project) ? "(None)" : r.Project,
+                _ => r => string.IsNullOrWhiteSpace(r.Assignee) ? "(Unassigned)" : r.Assignee,
+            };
+
+        var groups =
+            _statsResults
+                .GroupBy(keySelector)
+                .Select(g => new { Label = g.Key, Count = g.Count() })
+                .OrderByDescending(g => g.Count)
+                .ToList();
+
+        const double MaxBarHeight = 160;
+
+        var max = groups.Count > 0 ? groups.Max(g => g.Count) : 0;
+
+        var bars =
+            groups
+                .Select(g =>
+                    new ChartBarItem
+                    {
+                        Label = g.Label,
+                        Count = g.Count,
+                        BarHeight = max > 0 ? Math.Max(4, g.Count / (double)max * MaxBarHeight) : 4
+                    })
+                .ToList();
+
+        StatsChartItemsControl.ItemsSource = bars;
+    }
+
+    private void
+    StatsGrid_MouseDoubleClick(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (DataGridSortHelper.FindAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject)
+            is { } header)
+        {
+            DataGridSortHelper.SortByColumn(
+                _statsResults,
+                StatsGrid.Columns,
+                header.Column,
+                ref _statsSortColumn,
+                ref _statsSortDirection);
+
+            return;
+        }
+
+        if (StatsGrid.SelectedItem is JiraSearchResult result)
+        {
+            OpenJiraResult(result);
         }
     }
 

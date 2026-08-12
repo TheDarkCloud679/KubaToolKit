@@ -463,12 +463,28 @@ public class AtlassianService
                 $"{baseUrl}/rest/api/3/users/search?maxResults=200",
                 cancellationToken);
 
-        return users
-            .Where(el =>
-                (TryGetString(el, "accountType") ?? "atlassian") == "atlassian"
-                && !string.IsNullOrWhiteSpace(TryGetString(el, "displayName")))
-            .Select(el => TryGetString(el, "displayName")!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var names =
+            users
+                .Where(el =>
+                    (TryGetString(el, "accountType") ?? "atlassian") == "atlassian"
+                    && !string.IsNullOrWhiteSpace(TryGetString(el, "displayName")))
+                .Select(el => TryGetString(el, "displayName")!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        // /users/search's coverage can be scoped enough (permissions,
+        // pagination, site configuration) to leave out the very account
+        // making the request -- added back in explicitly so "filter by
+        // myself" is never silently impossible.
+        var currentUser = await GetCurrentJiraUserDisplayName(settings, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(currentUser)
+            && !names.Any(n => string.Equals(n, currentUser, StringComparison.OrdinalIgnoreCase)))
+        {
+            names.Add(currentUser);
+        }
+
+        return names
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .Select(name => new NameValue(name, name))
             .ToList();
@@ -946,29 +962,36 @@ public class AtlassianService
         return ParseJiraIssues(issuesEl, baseUrl);
     }
 
-    // "How many did X resolve between date A and B" -- statusCategory
-    // (rather than a specific status name like "Resolved"/"Closed") is
-    // used so this works the same across projects whose workflows call
-    // their terminal status something else. When Assignee names more than
-    // one person (a comma list, or operator "in"), each is counted
-    // separately so the result can show a per-person breakdown instead of
-    // just a combined total.
-    public async Task<List<JiraStatsResult>>
-    GetJiraResolvedCounts(
+    // The Stats section's underlying data source -- unlike SearchJira
+    // (a 25-row preview), this pages up to SafetyCap so the result is a
+    // usable list for both direct viewing and the "group by" chart, which
+    // needs the actual matching issues, not just a count, to aggregate by
+    // person/status/priority/project. Module and Escalade are
+    // instance-specific custom fields referenced by display name --
+    // JQL resolves that server-side, so no field id lookup is needed.
+    public async Task<List<JiraSearchResult>>
+    SearchJiraStats(
         AtlassianSettings settings,
         JiraFieldFilter project,
         JiraFieldFilter assignee,
+        JiraFieldFilter status,
+        JiraFieldFilter module,
+        JiraFieldFilter escalation,
         DateTime? from,
         DateTime? to,
         CancellationToken cancellationToken = default)
     {
-        var baseConditions = new List<string> { "statusCategory = Done" };
+        var conditions = new List<string>();
 
-        AddJqlCondition(baseConditions, "project", project, allowComparison: false);
+        AddJqlCondition(conditions, "project", project, allowComparison: false);
+        AddJqlCondition(conditions, "assignee", assignee, allowComparison: false);
+        AddJqlCondition(conditions, "status", status, allowComparison: false);
+        AddJqlCondition(conditions, "\"Module\"", module, allowComparison: false);
+        AddJqlCondition(conditions, "\"Escalade\"", escalation, allowComparison: false);
 
         if (from.HasValue)
         {
-            baseConditions.Add($"resolutiondate >= \"{from.Value:yyyy-MM-dd}\"");
+            conditions.Add($"resolutiondate >= \"{from.Value:yyyy-MM-dd}\"");
         }
 
         if (to.HasValue)
@@ -976,107 +999,28 @@ public class AtlassianService
             // JQL date literals are day-granular -- comparing "< the next
             // day" instead of "<= to" is what makes the To date's own day
             // actually included.
-            baseConditions.Add($"resolutiondate < \"{to.Value.AddDays(1):yyyy-MM-dd}\"");
+            conditions.Add($"resolutiondate < \"{to.Value.AddDays(1):yyyy-MM-dd}\"");
         }
 
-        var people =
-            string.IsNullOrWhiteSpace(assignee.Value)
-                ? new List<string>()
-                : assignee.Value
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .ToList();
-
-        // "!=" / "not in" describe a group ("everyone except these
-        // people"), not a set of people to break out individually -- only
-        // "="/"in" name people directly enough to report one row each.
-        var breakDownPerPerson = people.Count > 0 && assignee.Operator is "=" or "in";
-
-        var results = new List<JiraStatsResult>();
-
-        if (breakDownPerPerson)
+        if (conditions.Count == 0)
         {
-            foreach (var person in people)
-            {
-                var conditions = new List<string>(baseConditions) { $"assignee = \"{EscapeForQuery(person)}\"" };
-
-                var count = await CountJiraIssues(settings, string.Join(" and ", conditions), cancellationToken);
-
-                results.Add(new JiraStatsResult { Person = person, ResolvedCount = count });
-            }
-        }
-        else
-        {
-            var conditions = new List<string>(baseConditions);
-
-            AddJqlCondition(conditions, "assignee", assignee, allowComparison: false);
-
-            var count = await CountJiraIssues(settings, string.Join(" and ", conditions), cancellationToken);
-
-            var label =
-                string.IsNullOrWhiteSpace(assignee.Value)
-                    ? "(All assignees)"
-                    : $"{assignee.Operator} {assignee.Value}";
-
-            results.Add(new JiraStatsResult { Person = label, ResolvedCount = count });
+            return new List<JiraSearchResult>();
         }
 
-        return results.OrderByDescending(r => r.ResolvedCount).ToList();
-    }
+        var jql = string.Join(" and ", conditions) + " order by updated desc";
 
-    // Prefers the dedicated count endpoint (no need to page through every
-    // matching issue just to know how many there are); falls back to
-    // paging key-only results for sites/versions where that endpoint
-    // isn't available, capped so one stats query can't run away against
-    // an unexpectedly huge result set.
-    private async Task<int>
-    CountJiraIssues(
-        AtlassianSettings settings,
-        string jql,
-        CancellationToken cancellationToken)
-    {
         var baseUrl = settings.BaseUrl.TrimEnd('/');
 
-        try
-        {
-            var url = $"{baseUrl}/rest/api/3/search/approximate-count";
+        const int SafetyCap = 500;
 
-            using var request =
-                new HttpRequestMessage(HttpMethod.Post, url)
-                {
-                    Content = new StringContent(JsonSerializer.Serialize(new { jql }), Encoding.UTF8, "application/json")
-                };
-
-            request.Headers.Authorization = BuildAuthHeader(settings);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            using var response = await Client.SendAsync(request, cancellationToken);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-                using var doc = JsonDocument.Parse(body);
-
-                if (doc.RootElement.TryGetProperty("count", out var countEl) && countEl.TryGetInt32(out var count))
-                {
-                    return count;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("AtlassianService: approximate-count failed, falling back to paging.", ex);
-        }
-
-        const int SafetyCap = 5000;
-
-        var total = 0;
+        var results = new List<JiraSearchResult>();
         string? nextPageToken = null;
 
-        while (total < SafetyCap)
+        while (results.Count < SafetyCap)
         {
             var url =
-                $"{baseUrl}/rest/api/3/search/jql?jql={Uri.EscapeDataString(jql)}&maxResults=100&fields=key"
+                $"{baseUrl}/rest/api/3/search/jql?jql={Uri.EscapeDataString(jql)}"
+                + "&maxResults=100&fields=summary,reporter,assignee,priority,status,project,updated"
                 + (nextPageToken != null ? $"&nextPageToken={Uri.EscapeDataString(nextPageToken)}" : "");
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -1090,7 +1034,7 @@ public class AtlassianService
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"Failed to count issues: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
+                throw new Exception($"Jira stats search failed: HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{body}");
             }
 
             using var doc = JsonDocument.Parse(body);
@@ -1100,13 +1044,13 @@ public class AtlassianService
                 break;
             }
 
-            var count = issuesEl.GetArrayLength();
+            var page = ParseJiraIssues(issuesEl, baseUrl);
 
-            total += count;
+            results.AddRange(page);
 
             var isLast = doc.RootElement.TryGetProperty("isLast", out var lastEl) && lastEl.ValueKind == JsonValueKind.True;
 
-            if (isLast || count == 0)
+            if (isLast || page.Count == 0)
             {
                 break;
             }
@@ -1119,7 +1063,7 @@ public class AtlassianService
             }
         }
 
-        return total;
+        return results;
     }
 
     private static readonly string[] EqualityOperators = { "=", "!=", "in", "not in" };

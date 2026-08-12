@@ -524,6 +524,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
@@ -553,7 +555,7 @@
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
 
-                            <StackPanel Width="185" Margin="0,0,14,0">
+                            <StackPanel Width="170" Margin="0,0,14,0">
                                 <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
                                 <TextBox x:Name="StatsProjectSearchBox" ToolTip="Type to search projects, or a comma-separated list for 'in'/'not in'"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
@@ -565,17 +567,17 @@
                                     </ComboBox>
                                     <ComboBox
                                         x:Name="StatsProjectCombo"
-                                        Width="126"
+                                        Width="111"
                                         DisplayMemberPath="Display"
                                         SelectedValuePath="Value"/>
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Width="220" Margin="0,0,14,0">
+                            <StackPanel Width="205" Margin="0,0,14,0">
                                 <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
                                 <TextBox
                                     x:Name="StatsAssigneeSearchBox"
-                                    ToolTip="Type to search, or a comma-separated list (with '=' or 'in') for a breakdown per person -- not every user may be listed"/>
+                                    ToolTip="Type to search (this includes yourself), or a comma-separated list (with '=' or 'in') for multiple people"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                     <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
                                         <ComboBoxItem Content="="/>
@@ -585,20 +587,67 @@
                                     </ComboBox>
                                     <ComboBox
                                         x:Name="StatsAssigneeCombo"
-                                        Width="161"
+                                        Width="146"
                                         DisplayMemberPath="Display"
                                         SelectedValuePath="Value"/>
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Width="130" Margin="0,0,14,0">
-                                <TextBlock Text="From" FontSize="11" Margin="0,0,0,2"/>
-                                <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound"/>
+                            <StackPanel Width="170" Margin="0,0,14,0">
+                                <TextBlock Text="État" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox x:Name="StatsStatusSearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <ComboBox x:Name="StatsStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                        <ComboBoxItem Content="="/>
+                                        <ComboBoxItem Content="!="/>
+                                        <ComboBoxItem Content="in"/>
+                                        <ComboBoxItem Content="not in"/>
+                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="StatsStatusCombo"
+                                        Width="111"
+                                        DisplayMemberPath="Display"
+                                        SelectedValuePath="Value"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+
+                            <StackPanel Width="170" Margin="0,0,14,0">
+                                <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox
+                                    x:Name="StatsModuleSearchBox"
+                                    ToolTip="Free text -- must match this instance's 'Module' custom field, or a comma-separated list for 'in'/'not in'"/>
+                                <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,2,0,0" HorizontalAlignment="Left" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Width="170" Margin="0,0,14,0">
+                                <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
+                                <TextBox
+                                    x:Name="StatsEscalationSearchBox"
+                                    ToolTip="Free text -- must match this instance's 'Escalade' custom field, or a comma-separated list for 'in'/'not in'"/>
+                                <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,2,0,0" HorizontalAlignment="Left" SelectedIndex="0">
+                                    <ComboBoxItem Content="="/>
+                                    <ComboBoxItem Content="!="/>
+                                    <ComboBoxItem Content="in"/>
+                                    <ComboBoxItem Content="not in"/>
+                                </ComboBox>
                             </StackPanel>
 
                             <StackPanel Width="130" Margin="0,0,14,0">
-                                <TextBlock Text="To" FontSize="11" Margin="0,0,0,2"/>
-                                <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound"/>
+                                <TextBlock Text="Resolved from" FontSize="11" Margin="0,0,0,2"/>
+                                <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound (only relevant when État includes resolved issues)"/>
+                            </StackPanel>
+
+                            <StackPanel Width="130" Margin="0,0,14,0">
+                                <TextBlock Text="Resolved to" FontSize="11" Margin="0,0,0,2"/>
+                                <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound (only relevant when État includes resolved issues)"/>
                             </StackPanel>
 
                             <StackPanel VerticalAlignment="Bottom">
@@ -611,32 +660,144 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+                            <RadioButton x:Name="StatsViewListRadio" Content="List" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
+                            <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
+                            <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
+                            <ComboBox x:Name="StatsGroupByCombo" Width="130" Visibility="Collapsed" SelectionChanged="StatsGroupByCombo_SelectionChanged">
+                                <ComboBoxItem Content="Person" Tag="Assignee" IsSelected="True"/>
+                                <ComboBoxItem Content="État" Tag="Status"/>
+                                <ComboBoxItem Content="Priority" Tag="Priority"/>
+                                <ComboBoxItem Content="Project" Tag="Project"/>
+                            </ComboBox>
+                        </StackPanel>
+
                         <TextBlock
                             x:Name="StatsStatusText"
-                            Grid.Row="2"
+                            Grid.Row="4"
                             FontSize="11"
                             Margin="0,0,0,8"
                             Foreground="{StaticResource TextSecondaryBrush}"
                             TextWrapping="Wrap"/>
 
-                        <DataGrid
-                            x:Name="StatsGrid"
-                            Grid.Row="3"
-                            AutoGenerateColumns="False"
-                            IsReadOnly="True"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="False"
-                            CanUserSortColumns="False"
-                            HeadersVisibility="Column"
-                            HorizontalScrollBarVisibility="Disabled"
-                            VirtualizingPanel.ScrollUnit="Pixel"
-                            RowHeight="32">
+                        <Grid Grid.Row="5">
+                            <DataGrid
+                                x:Name="StatsGrid"
+                                AutoGenerateColumns="False"
+                                IsReadOnly="True"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="False"
+                                CanUserSortColumns="False"
+                                HeadersVisibility="Column"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VirtualizingPanel.ScrollUnit="Pixel"
+                                RowHeight="40"
+                                MouseDoubleClick="StatsGrid_MouseDoubleClick">
 
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Person" Binding="{Binding Person}" SortMemberPath="Person" Width="*"/>
-                                <DataGridTextColumn Header="Resolved" Binding="{Binding ResolvedCount}" SortMemberPath="ResolvedCount" Width="Auto"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
+
+                                    <DataGridTextColumn
+                                        Header="Summary"
+                                        Binding="{Binding Summary}"
+                                        SortMemberPath="Summary"
+                                        Width="2*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                <Setter Property="ToolTip" Value="{Binding Summary}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+
+                                    <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
+                                                    CornerRadius="3"
+                                                    Padding="6,1"
+                                                    Margin="0,0,6,0"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center">
+                                                    <TextBlock
+                                                        Text="{Binding Priority}"
+                                                        FontSize="11"
+                                                        FontWeight="Bold"
+                                                        Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="État" SortMemberPath="Status" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                                    CornerRadius="3"
+                                                    Padding="6,1"
+                                                    Margin="0,0,6,0"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center">
+                                                    <TextBlock
+                                                        Text="{Binding Status}"
+                                                        FontSize="11"
+                                                        FontWeight="Bold"
+                                                        Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
+
+                                    <DataGridTemplateColumn Header="" Width="80">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button
+                                                    Content="View"
+                                                    Width="70"
+                                                    Click="OpenJiraResult_Click"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <ScrollViewer
+                                x:Name="StatsChartScrollViewer"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Disabled"
+                                Visibility="Collapsed">
+                                <ItemsControl x:Name="StatsChartItemsControl" Margin="4,8,4,4">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Width="80" Margin="6,0" VerticalAlignment="Bottom">
+                                                <TextBlock Text="{Binding Count}" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/>
+                                                <Border
+                                                    Background="{StaticResource AccentBrush}"
+                                                    Height="{Binding BarHeight}"
+                                                    Width="42"
+                                                    HorizontalAlignment="Center"
+                                                    CornerRadius="3,3,0,0"
+                                                    Margin="0,2,0,0"/>
+                                                <TextBlock
+                                                    Text="{Binding Label}"
+                                                    HorizontalAlignment="Center"
+                                                    FontSize="10"
+                                                    TextWrapping="Wrap"
+                                                    TextAlignment="Center"
+                                                    Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
                     </Grid>
                 </Expander>
             </Border>
