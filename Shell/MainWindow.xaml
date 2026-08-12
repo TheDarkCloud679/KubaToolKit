@@ -52,13 +52,8 @@
                         Width="34"
                         Height="34"
                         CornerRadius="{StaticResource RadiusMedium}"
+                        Background="{StaticResource BrandGradientBrush}"
                         Effect="{StaticResource CardShadowEffect}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
-                                <GradientStop Color="{StaticResource AccentPressedColor}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
                         <TextBlock
                             Text="K"
                             FontWeight="Bold"
@@ -89,86 +84,161 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Source -->
-                <StackPanel
+                <!-- Module switcher: a segmented pill track (NavPillRadioButtonStyle)
+                     rather than plain radio labels, same RadioButton/GroupName/
+                     Checked wiring underneath, only the visual shell changed. -->
+                <Border
                     Grid.Row="1"
-                    Orientation="Horizontal"
-                    Margin="0,0,0,12">
-
-                    <TextBlock
-                        Text="Source"
-                        VerticalAlignment="Center"
-                        Margin="0,0,12,0"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                    <WrapPanel VerticalAlignment="Center">
+                    Margin="0,0,0,12"
+                    Background="{StaticResource SurfaceAltBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusPill}"
+                    Padding="5"
+                    HorizontalAlignment="Left">
+                    <WrapPanel>
                         <RadioButton
                             x:Name="DashboardModeRadio"
-                            Content="Dashboard"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             IsChecked="True"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M0.5,0.5 H6.5 V6.5 H0.5 Z M9.5,0.5 H15.5 V6.5 H9.5 Z M0.5,9.5 H6.5 V15.5 H0.5 Z M9.5,9.5 H15.5 V15.5 H9.5 Z"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.4"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="CloudWatchModeRadio"
-                            Content="CloudWatch"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M0.5,9 L4,9 L6,3.5 L9.5,13.5 L11.5,9 L15.5,9"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="CloudWatch" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="CloudTrailModeRadio"
-                            Content="CloudTrail"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M1,3 H15 M1,8 H15 M1,13 H10"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="CloudTrail" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="S3ModeRadio"
-                            Content="S3 Explorer"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M1,3.5 L6,3.5 L7.5,5.5 L15,5.5 L15,13 L1,13 Z"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.4" StrokeLineJoin="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="S3 Explorer" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="SqsModeRadio"
-                            Content="SQS"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M1,4 H15 V12 H1 Z M1,4 L8,9.5 L15,4"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.4" StrokeLineJoin="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="SQS" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="StepFunctionsModeRadio"
-                            Content="Step Functions"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M3,13 L3,8 L8,8 L8,3 M8,8 L13,8 L13,13"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="Step Functions" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="ApiClientModeRadio"
-                            Content="API Client"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M5,3 L1.5,8 L5,13 M11,3 L14.5,8 L11,13"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                    StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="14" Height="14" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBlock Text="API Client" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton
                             x:Name="AtlassianSearchModeRadio"
-                            Content="Atlassian Search"
+                            Style="{StaticResource NavPillRadioButtonStyle}"
                             GroupName="Mode"
                             Checked="ModeRadio_Checked"
-                            VerticalAlignment="Center"
-                            Margin="0,0,20,0"/>
+                            Margin="2,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center">
+                                    <Ellipse
+                                        Width="9" Height="9" Margin="0,0,5,5"
+                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                        StrokeThickness="1.5"/>
+                                    <Line
+                                        X1="9" Y1="9" X2="14" Y2="14"
+                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                        StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                </Grid>
+                                <TextBlock Text="Atlassian Search" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
                     </WrapPanel>
-                </StackPanel>
+                </Border>
 
                 <Grid
                     x:Name="ProfilePatternSearchRow"

@@ -35,6 +35,11 @@
     <Color x:Key="DangerHoverColor">#D33D42</Color>
     <Color x:Key="WarningColor">#F2A93B</Color>
 
+    <!-- Warm counterpoint to the teal accent, used sparingly (brand
+         mark, occasional highlight), never for state/status so it can't
+         be mistaken for success/warning/danger. -->
+    <Color x:Key="AccentSecondaryColor">#FF6B4A</Color>
+
     <!-- =====================================================
          BRUSHES
          ===================================================== -->
@@ -62,6 +67,20 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
     <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="AccentSecondaryBrush" Color="{StaticResource AccentSecondaryColor}"/>
+
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource AccentPressedColor}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- The brand mark's own gradient, teal into the warm secondary,
+         kept off every other control so it reads as "the logo", not "the
+         button color". -->
+    <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource AccentSecondaryColor}" Offset="1"/>
+    </LinearGradientBrush>
 
     <!-- Native selection colors (TreeView / ListBox / ComboBoxItem) recolored
          so the built-in highlight chrome matches the accent palette instead of

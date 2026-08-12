@@ -57,8 +57,20 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="6"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        RenderTransformOrigin="0.5,0.5"
                         SnapsToDevicePixels="True">
+                        <!-- Plain RenderTransform (no Effect): this style
+                             sits on every "View" button in every DataGrid
+                             row across the app, so the hover/press feedback
+                             has to stay cheap (GPU-composited transform)
+                             rather than a per-instance bitmap effect. -->
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <TranslateTransform x:Name="BdTranslate" Y="0"/>
+                                <ScaleTransform x:Name="BdScale" ScaleX="1" ScaleY="1"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
                         <ContentPresenter
                             Margin="{TemplateBinding Padding}"
                             HorizontalAlignment="Center"
@@ -69,10 +81,40 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdTranslate" Storyboard.TargetProperty="Y" To="-1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleY" To="0.97" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
@@ -84,8 +126,12 @@
         </Setter>
     </Style>
 
+    <!-- Reserved for the handful of primary actions per screen (Search,
+         Run stats, Apply...), never used inside a DataGrid row, so the
+         extra glow Effect here doesn't multiply across many realized
+         rows the way it would on the plain Button style above. -->
     <Style x:Key="AccentButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Background" Value="{StaticResource AccentGradientBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -103,8 +149,18 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="6"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        RenderTransformOrigin="0.5,0.5"
                         SnapsToDevicePixels="True">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <TranslateTransform x:Name="BdTranslate" Y="0"/>
+                                <ScaleTransform x:Name="BdScale" ScaleX="1" ScaleY="1"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="BdShadow" Color="{StaticResource AccentColor}" Direction="270" ShadowDepth="6" BlurRadius="18" Opacity="0"/>
+                        </Border.Effect>
                         <ContentPresenter
                             Margin="{TemplateBinding Padding}"
                             HorizontalAlignment="Center"
@@ -114,12 +170,43 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdTranslate" Storyboard.TargetProperty="Y" To="-1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdShadow" Storyboard.TargetProperty="Opacity" To="0.35" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdShadow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentPressedBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleY" To="0.97" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="BdScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
@@ -516,6 +603,46 @@
         </Setter>
     </Style>
 
+    <!-- Scoped to the module switcher in MainWindow: a segmented pill
+         control instead of plain radio dots. Kept as its own style key
+         rather than replacing the base RadioButton style above, since
+         that one still needs its usual dot look everywhere else it's
+         used (e.g. comment visibility toggles). -->
+    <Style x:Key="NavPillRadioButtonStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="15,8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border
+                        x:Name="Bd"
+                        Background="Transparent"
+                        CornerRadius="{StaticResource RadiusPill}"
+                        Padding="{TemplateBinding Padding}"
+                        SnapsToDevicePixels="True">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- =====================================================
          DATAGRID
          ===================================================== -->
@@ -644,71 +771,115 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="6"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ClipToBounds="True"
                         SnapsToDevicePixels="True">
-                        <DockPanel>
-                            <ToggleButton
-                                x:Name="HeaderToggle"
-                                DockPanel.Dock="Top"
-                                IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                                OverridesDefaultStyle="True"
-                                Focusable="False">
-                                <ToggleButton.Template>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <Border Background="Transparent" Padding="10,9" Cursor="Hand">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Path
-                                                    x:Name="Arrow"
-                                                    Grid.Column="0"
-                                                    Data="M0,0 L4,4 L8,0"
-                                                    Stroke="{StaticResource TextSecondaryBrush}"
-                                                    StrokeThickness="1.6"
-                                                    StrokeStartLineCap="Round"
-                                                    StrokeEndLineCap="Round"
-                                                    StrokeLineJoin="Round"
-                                                    Width="10"
-                                                    Height="6"
-                                                    Margin="0,0,10,0"
-                                                    VerticalAlignment="Center"
-                                                    RenderTransformOrigin="0.5,0.5">
-                                                    <Path.RenderTransform>
-                                                        <RotateTransform Angle="-90"/>
-                                                    </Path.RenderTransform>
-                                                </Path>
-                                                <ContentPresenter
-                                                    Grid.Column="1"
-                                                    Content="{Binding Path=Header, RelativeSource={RelativeSource AncestorType=Expander}}"
-                                                    VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="Arrow" Property="RenderTransform">
-                                                    <Setter.Value>
-                                                        <RotateTransform Angle="0"/>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </ToggleButton.Template>
-                            </ToggleButton>
-                            <ContentPresenter
-                                x:Name="ExpanderContent"
-                                DockPanel.Dock="Bottom"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                Margin="10,0,10,10"
-                                Visibility="Collapsed"/>
-                        </DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Only shows once expanded, a quiet visual
+                                 cue for which section (of possibly several
+                                 side by side) is actually open. -->
+                            <Border
+                                x:Name="AccentBar"
+                                Grid.Column="0"
+                                Background="{StaticResource AccentBrush}"
+                                RenderTransformOrigin="0.5,0"
+                                Opacity="0">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AccentBarScale" ScaleY="0"/>
+                                </Border.RenderTransform>
+                            </Border>
+
+                            <DockPanel Grid.Column="1">
+                                <ToggleButton
+                                    x:Name="HeaderToggle"
+                                    DockPanel.Dock="Top"
+                                    IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                    OverridesDefaultStyle="True"
+                                    Focusable="False">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border x:Name="HeaderBd" Background="Transparent" Padding="10,9" Cursor="Hand">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Path
+                                                        x:Name="Arrow"
+                                                        Grid.Column="0"
+                                                        Data="M0,0 L4,4 L8,0"
+                                                        Stroke="{StaticResource TextSecondaryBrush}"
+                                                        StrokeThickness="1.6"
+                                                        StrokeStartLineCap="Round"
+                                                        StrokeEndLineCap="Round"
+                                                        StrokeLineJoin="Round"
+                                                        Width="10"
+                                                        Height="6"
+                                                        Margin="0,0,10,0"
+                                                        VerticalAlignment="Center"
+                                                        RenderTransformOrigin="0.5,0.5">
+                                                        <Path.RenderTransform>
+                                                            <RotateTransform x:Name="ArrowRotate" Angle="-90"/>
+                                                        </Path.RenderTransform>
+                                                    </Path>
+                                                    <ContentPresenter
+                                                        Grid.Column="1"
+                                                        Content="{Binding Path=Header, RelativeSource={RelativeSource AncestorType=Expander}}"
+                                                        VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="ArrowRotate" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.16"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="ArrowRotate" Storyboard.TargetProperty="Angle" To="-90" Duration="0:0:0.16"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="HeaderBd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter
+                                    x:Name="ExpanderContent"
+                                    DockPanel.Dock="Bottom"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Margin="10,0,10,10"
+                                    Opacity="0"
+                                    Visibility="Collapsed"/>
+                            </DockPanel>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
                             <Setter TargetName="ExpanderContent" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="AccentBar" Property="Opacity" Value="1"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ExpanderContent" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="AccentBarScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
