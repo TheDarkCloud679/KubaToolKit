@@ -620,7 +620,7 @@
                     <Border
                         x:Name="Bd"
                         Background="Transparent"
-                        CornerRadius="{StaticResource RadiusPill}"
+                        CornerRadius="{StaticResource RadiusMedium}"
                         Padding="{TemplateBinding Padding}"
                         SnapsToDevicePixels="True">
                         <!-- Only ever a handful of these on screen at once
