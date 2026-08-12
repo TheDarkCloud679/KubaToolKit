@@ -175,7 +175,7 @@
                                     <DataTemplate>
                                         <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="CpuMetric_MouseLeftButtonDown">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                                <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
                                                     <Border
                                                         HorizontalAlignment="Left"
                                                         CornerRadius="{StaticResource RadiusPill}"
@@ -202,7 +202,7 @@
                                     <DataTemplate>
                                         <Border Style="{StaticResource MetricCellStyle}" MouseLeftButtonDown="ActivityMetric_MouseLeftButtonDown">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                                <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
                                                     <Border
                                                         HorizontalAlignment="Left"
                                                         CornerRadius="{StaticResource RadiusPill}"
@@ -332,7 +332,7 @@
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center"
                                             ToolTip="Worst mount point found for this instance">
-                                            <Border Width="60" Height="5" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderBrush}">
+                                            <Border Width="60" Height="6" CornerRadius="{StaticResource RadiusPill}" Background="{StaticResource BorderStrongBrush}">
                                                 <Border
                                                     HorizontalAlignment="Left"
                                                     CornerRadius="{StaticResource RadiusPill}"
