@@ -84,19 +84,16 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Module switcher: a segmented pill track (NavPillRadioButtonStyle)
-                     rather than plain radio labels, same RadioButton/GroupName/
-                     Checked wiring underneath, only the visual shell changed. -->
-                <Border
+                <!-- Module switcher: pill-highlighted radio labels
+                     (NavPillRadioButtonStyle) directly on the header, no
+                     enclosing track: the header card is already a rounded
+                     surface, and a second rounded container just for the
+                     nav on top of it read as nested-rounded-rectangle
+                     clutter rather than a clean segmented control. Same
+                     RadioButton/GroupName/Checked wiring underneath. -->
+                <WrapPanel
                     Grid.Row="1"
-                    Margin="0,0,0,12"
-                    Background="{StaticResource SurfaceAltBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusPill}"
-                    Padding="5"
-                    HorizontalAlignment="Left">
-                    <WrapPanel>
+                    Margin="0,0,0,12">
                         <RadioButton
                             x:Name="DashboardModeRadio"
                             Style="{StaticResource NavPillRadioButtonStyle}"
@@ -237,8 +234,7 @@
                                 <TextBlock Text="Atlassian Search" VerticalAlignment="Center"/>
                             </StackPanel>
                         </RadioButton>
-                    </WrapPanel>
-                </Border>
+                </WrapPanel>
 
                 <Grid
                     x:Name="ProfilePatternSearchRow"

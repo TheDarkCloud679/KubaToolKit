@@ -623,6 +623,14 @@
                         CornerRadius="{StaticResource RadiusPill}"
                         Padding="{TemplateBinding Padding}"
                         SnapsToDevicePixels="True">
+                        <!-- Only ever a handful of these on screen at once
+                             (one per module), so a real elevation shadow on
+                             the active pill is cheap here; without it the
+                             selected tab reads as a flat colored blob
+                             rather than a raised, clearly-selected segment. -->
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="BdShadow" Color="{StaticResource AccentColor}" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0"/>
+                        </Border.Effect>
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -636,6 +644,20 @@
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}"/>
                             <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdShadow" Storyboard.TargetProperty="Opacity" To="0.32" Duration="0:0:0.14"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdShadow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.14"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
