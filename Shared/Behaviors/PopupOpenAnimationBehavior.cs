@@ -68,12 +68,17 @@ public static class PopupOpenAnimationBehavior
             return;
         }
 
-        var translate = new TranslateTransform(0, -6);
+        const double RiseDistance = 10;
+
+        var translate = new TranslateTransform(0, -RiseDistance);
 
         child.RenderTransform = translate;
         child.Opacity = 0;
 
-        var duration = new Duration(TimeSpan.FromSeconds(0.14));
+        // Matches Tokens.xaml's MotionNormal -- slow enough to actually
+        // register as motion rather than a flicker (0.14s read as
+        // "instant" in practice).
+        var duration = new Duration(TimeSpan.FromSeconds(0.22));
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
         child.BeginAnimation(
@@ -82,6 +87,6 @@ public static class PopupOpenAnimationBehavior
 
         translate.BeginAnimation(
             TranslateTransform.YProperty,
-            new DoubleAnimation(-6, 0, duration) { EasingFunction = ease });
+            new DoubleAnimation(-RiseDistance, 0, duration) { EasingFunction = ease });
     }
 }
