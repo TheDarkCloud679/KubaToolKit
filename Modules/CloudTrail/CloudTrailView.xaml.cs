@@ -175,8 +175,6 @@ public partial class CloudTrailView
         SearchProgressBar.Value = 0;
 
         ProgressTextBlock.Text =
-            truncated
-                ? $"Done ({results.Count} results, truncated — narrow the time range or pick an attribute)"
-                : $"Done ({results.Count} results)";
+            $"Done ({results.Count} results)";
     }
 }
