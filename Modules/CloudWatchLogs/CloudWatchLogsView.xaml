@@ -265,6 +265,7 @@
                                             CanUserDeleteRows="False"
                                             Margin="0,6,0,0"
                                             MaxHeight="350"
+                                            RowHeight="48"
                                             MouseDoubleClick="LogsDataGrid_DoubleClick"
                                             HorizontalScrollBarVisibility="Visible">
                                         <DataGrid.Columns>

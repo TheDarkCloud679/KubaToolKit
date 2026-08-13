@@ -15,6 +15,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace KubaToolKit.Shell;
 
@@ -685,10 +686,16 @@ MainWindow_PreviewMouseWheel(
                 break;
             }
 
+            // Text rendered via TextBlock.Inlines (e.g. the CloudWatch
+            // results' JSON-highlighted message cells) can hand the wheel
+            // event a Run as OriginalSource -- Run is a TextElement, not a
+            // Visual/Visual3D, and VisualTreeHelper.GetParent throws on
+            // it. Step up through the logical tree instead until back on
+            // a real Visual, then resume walking the visual tree as before.
             dependencyObject =
-                VisualTreeHelper
-                    .GetParent(
-                        dependencyObject);
+                dependencyObject is Visual or Visual3D
+                    ? VisualTreeHelper.GetParent(dependencyObject)
+                    : LogicalTreeHelper.GetParent(dependencyObject);
         }
 
         if (currentScroll == null)

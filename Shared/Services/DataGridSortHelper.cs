@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace KubaToolKit.Shared.Services;
 
@@ -89,7 +90,15 @@ public static class DataGridSortHelper
     {
         while (current != null && current is not T)
         {
-            current = VisualTreeHelper.GetParent(current);
+            // A click/event source inside text rendered via
+            // TextBlock.Inlines (e.g. Run elements) isn't a Visual/
+            // Visual3D, and VisualTreeHelper.GetParent throws on those --
+            // step up through the logical tree instead until back on a
+            // real Visual, then resume walking the visual tree.
+            current =
+                current is Visual or Visual3D
+                    ? VisualTreeHelper.GetParent(current)
+                    : LogicalTreeHelper.GetParent(current);
         }
 
         return current as T;
