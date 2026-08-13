@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ProjectInfo;
@@ -265,10 +266,17 @@ public partial class ProjectInfoWindow
             e.Handled = true;
         };
 
+        var toggleIcon = CreateIconPath("M0,0 L4,4 L8,0", size: 8, strokeThickness: 1.6);
+        toggleIcon.Margin = new Thickness(0);
+        toggleIcon.RenderTransformOrigin = new Point(0.5, 0.5);
+
+        var toggleIconRotate = new RotateTransform(isExpanded ? 90 : 0);
+        toggleIcon.RenderTransform = toggleIconRotate;
+
         var toggleButton = new Button
         {
-            Content = isExpanded ? "▼" : "▶",
-            Padding = new Thickness(6, 2, 6, 2),
+            Style = (Style)FindResource("IconChevronButtonStyle"),
+            Content = toggleIcon,
             Margin = new Thickness(0, 0, 6, 0),
             ToolTip = "Expand/collapse the section"
         };
@@ -278,7 +286,9 @@ public partial class ProjectInfoWindow
             isExpanded = !isExpanded;
             _sectionExpanded[section] = isExpanded;
 
-            toggleButton.Content = isExpanded ? "▼" : "▶";
+            toggleIconRotate.BeginAnimation(
+                RotateTransform.AngleProperty,
+                new DoubleAnimation(isExpanded ? 90 : 0, new Duration(TimeSpan.FromSeconds(0.16))));
 
             AnimateCardExpand(collapsibleContent, isExpanded);
         };
@@ -384,9 +394,9 @@ public partial class ProjectInfoWindow
 
         var addColumnButton = new Button
         {
-            Content = "+ Column",
-            Margin = new Thickness(6, 0, 0, 0),
-            Padding = new Thickness(10, 2, 10, 2)
+            Style = (Style)FindResource("SecondaryButtonStyle"),
+            Content = BuildIconTextContent("M7,2 L7,12 M2,7 L12,7", "Column"),
+            Margin = new Thickness(6, 0, 0, 0)
         };
         addColumnButton.Click += (_, __) =>
         {
@@ -411,9 +421,9 @@ public partial class ProjectInfoWindow
 
         var deleteSectionButton = new Button
         {
-            Content = "Delete section",
-            Margin = new Thickness(6, 0, 0, 0),
-            Padding = new Thickness(10, 2, 10, 2)
+            Style = (Style)FindResource("SecondaryDangerButtonStyle"),
+            Content = BuildIconTextContent(TrashIconData, "Delete section"),
+            Margin = new Thickness(6, 0, 0, 0)
         };
         deleteSectionButton.Click += (_, __) =>
         {
@@ -490,9 +500,9 @@ public partial class ProjectInfoWindow
 
         var renameColumnButton = new Button
         {
+            Style = (Style)FindResource("SecondaryButtonStyle"),
             Content = "Rename column",
-            Margin = new Thickness(6, 0, 0, 0),
-            Padding = new Thickness(10, 2, 10, 2)
+            Margin = new Thickness(6, 0, 0, 0)
         };
         renameColumnButton.Click += (_, __) =>
         {
@@ -535,9 +545,9 @@ public partial class ProjectInfoWindow
 
         var deleteColumnButton = new Button
         {
-            Content = "Delete column",
-            Margin = new Thickness(6, 0, 0, 0),
-            Padding = new Thickness(10, 2, 10, 2)
+            Style = (Style)FindResource("SecondaryDangerButtonStyle"),
+            Content = BuildIconTextContent(TrashIconData, "Delete column"),
+            Margin = new Thickness(6, 0, 0, 0)
         };
         deleteColumnButton.Click += (_, __) =>
         {
@@ -579,9 +589,9 @@ public partial class ProjectInfoWindow
 
         var exportToFileZillaButton = new Button
         {
+            Style = (Style)FindResource("SecondaryButtonStyle"),
             Content = "Export to FileZilla",
             Margin = new Thickness(16, 0, 0, 0),
-            Padding = new Thickness(10, 2, 10, 2),
             ToolTip = "Writes an SFTP entry per row into FileZilla's Site Manager (Name/Host columns you pick, shared login/port/key file)."
         };
         exportToFileZillaButton.Click += (_, __) =>
@@ -929,6 +939,57 @@ public partial class ProjectInfoWindow
         _sectionControls[section] = (card, grid, table);
 
         return card;
+    }
+
+    private const string TrashIconData =
+        "M2,4 L12,4 M5,4 L5,2 L9,2 L9,4 M3,4 L3.8,13 L10.2,13 L11,4 M6,6.5 L6,10.5 M8,6.5 L8,10.5";
+
+    // Stroke binds to the Button's own Foreground (like the main nav's
+    // icons), so it recolors automatically with whatever hover-state
+    // Foreground swap that button's style applies -- no per-trigger
+    // wiring needed here.
+    private static System.Windows.Shapes.Path
+    CreateIconPath(
+        string data,
+        double size = 14,
+        double strokeThickness = 1.4)
+    {
+        var path = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse(data),
+            StrokeThickness = strokeThickness,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            Width = size,
+            Height = size,
+            Stretch = Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 7, 0)
+        };
+
+        BindingOperations.SetBinding(
+            path,
+            Shape.StrokeProperty,
+            new Binding("Foreground")
+            {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Button), 1)
+            });
+
+        return path;
+    }
+
+    private static StackPanel
+    BuildIconTextContent(
+        string iconData,
+        string text)
+    {
+        var content = new StackPanel { Orientation = Orientation.Horizontal };
+
+        content.Children.Add(CreateIconPath(iconData));
+        content.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+
+        return content;
     }
 
     // Same principle as the Dashboard's RDS/EC2 sections: toggling

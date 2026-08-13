@@ -45,11 +45,20 @@
                 ToolTip="Prod/Preprod/Test profiles of the same project share this information automatically (the _prod/_preprod/_test suffix is detected and stripped). Override it here to force two profiles to share, or to split them."/>
 
             <Button
-                Content="📁 Files folder"
+                Style="{StaticResource SecondaryButtonStyle}"
                 Margin="16,0,0,0"
-                Padding="10,2"
                 Click="OpenProjectFolderButton_Click"
-                ToolTip="Opens (and creates if needed) a shared folder for this project, to drop files alongside this glossary."/>
+                ToolTip="Opens (and creates if needed) a shared folder for this project, to drop files alongside this glossary.">
+                <StackPanel Orientation="Horizontal">
+                    <Path
+                        Data="M1,3.5 L6,3.5 L7.5,5.5 L15,5.5 L15,13 L1,13 Z"
+                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                        StrokeThickness="1.4" StrokeLineJoin="Round"
+                        Width="14" Height="14" Stretch="Uniform"
+                        VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock Text="Files folder" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <StackPanel
@@ -72,20 +81,32 @@
                 ToolTip="Searches across all sections/columns of this project. Enter = next result, Shift+Enter = previous."/>
 
             <Button
-                Content="▲"
+                Style="{StaticResource SecondaryButtonStyle}"
                 Width="30"
                 Padding="0"
                 Margin="6,0,0,0"
                 Click="SearchPreviousButton_Click"
-                ToolTip="Previous result"/>
+                ToolTip="Previous result">
+                <Path
+                    Data="M1,7 L7,1 L13,7"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    Width="13" Height="13" Stretch="Uniform"/>
+            </Button>
 
             <Button
-                Content="▼"
+                Style="{StaticResource SecondaryButtonStyle}"
                 Width="30"
                 Padding="0"
                 Margin="4,0,0,0"
                 Click="SearchNextButton_Click"
-                ToolTip="Next result"/>
+                ToolTip="Next result">
+                <Path
+                    Data="M1,1 L7,7 L13,1"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    Width="13" Height="13" Stretch="Uniform"/>
+            </Button>
 
             <TextBlock
                 x:Name="SearchResultsText"

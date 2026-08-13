@@ -33,6 +33,7 @@
     <Color x:Key="SuccessColor">#1E9E6B</Color>
     <Color x:Key="DangerColor">#E5484D</Color>
     <Color x:Key="DangerHoverColor">#D33D42</Color>
+    <Color x:Key="DangerSoftColor">#FBEAEA</Color>
     <Color x:Key="WarningColor">#F2A93B</Color>
 
     <!-- Warm counterpoint to the teal accent, used sparingly (brand
@@ -66,6 +67,7 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
     <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoftColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
     <SolidColorBrush x:Key="AccentSecondaryBrush" Color="{StaticResource AccentSecondaryColor}"/>
 
