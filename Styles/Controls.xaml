@@ -1419,6 +1419,14 @@
         <Setter Property="Padding" Value="4,3"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Style.Triggers>
+            <!-- Plain opacity dim rather than trusting whatever the stock
+                 (non-retemplated) TreeViewItem template does internally
+                 for its own disabled-state background. -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- =====================================================

@@ -86,11 +86,16 @@
 
     <!-- Native selection colors (TreeView / ListBox / ComboBoxItem) recolored
          so the built-in highlight chrome matches the accent palette instead of
-         the harsh default system blue. -->
+         the harsh default system blue. ControlBrushKey/ControlTextBrushKey are
+         deliberately NOT overridden here even though they look related: that
+         key is reused by many stock (non-retemplated) WPF control templates
+         for general "control surface" chrome, not just selection, and recoloring
+         it here bled into unrelated things like a disabled TreeViewItem's
+         background (a solid accent-soft block instead of a subtle dimmed
+         look, e.g. the Log Groups tree while "Search in all log groups" is
+         checked and the whole tree is IsEnabled=False). -->
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{StaticResource AccentSoftColor}"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{StaticResource TextPrimaryColor}"/>
-    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="{StaticResource AccentSoftColor}"/>
-    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="{StaticResource TextPrimaryColor}"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{StaticResource AccentSoftColor}"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{StaticResource TextPrimaryColor}"/>
 
