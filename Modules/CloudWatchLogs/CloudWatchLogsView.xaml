@@ -2,7 +2,13 @@
     x:Class="KubaToolKit.Modules.CloudWatchLogs.CloudWatchLogsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit">
+    xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+    xmlns:local="clr-namespace:KubaToolKit.Modules.CloudWatchLogs">
+
+    <UserControl.Resources>
+        <local:LogGroupNameConverter x:Key="LogGroupNameConverter"/>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
 
@@ -228,23 +234,24 @@
                                     Margin="0,0,0,8">
                                     <Expander.Header>
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock
-                                                Text="{Binding LogGroup}"
-                                                FontWeight="Bold"
-                                                FontSize="13"
-                                                Foreground="{StaticResource AccentBrush}"/>
                                             <Border
-                                                Margin="8,0,0,0"
-                                                Padding="7,1"
-                                                CornerRadius="8"
+                                                Padding="7,2"
+                                                CornerRadius="{StaticResource RadiusMedium}"
                                                 Background="{StaticResource AccentSoftBrush}"
                                                 VerticalAlignment="Center">
                                                 <TextBlock
                                                     FontSize="11"
                                                     FontWeight="SemiBold"
-                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                    Text="{Binding Count, StringFormat=({0} logs)}"/>
+                                                    Foreground="{StaticResource AccentPressedBrush}"
+                                                    Text="{Binding Count, StringFormat={}{0} logs}"/>
                                             </Border>
+                                            <TextBlock
+                                                Margin="8,0,0,0"
+                                                Text="{Binding LogGroup, Converter={StaticResource LogGroupNameConverter}}"
+                                                FontWeight="Bold"
+                                                FontSize="13"
+                                                Foreground="{StaticResource AccentBrush}"
+                                                VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Expander.Header>
                                     <DataGrid
