@@ -27,7 +27,14 @@ public partial class DashboardView
     private string? _currentProfile;
     private CancellationTokenSource? _loadCancellation;
 
-    private GridLength _rdsExpandedHeight = new(280);
+    // Star weights used when RDS and EC2 are BOTH expanded, so they split
+    // the available height (50/50 by default) instead of one of them
+    // being pinned to a fixed pixel size. GridSplitter mutates these
+    // directly (dragging between two Star rows is a built-in WPF
+    // behavior), so they only need to be re-read from the rows on the
+    // next Expander toggle -- see CaptureStarWeights().
+    private double _rdsStarWeight = 1;
+    private double _ec2StarWeight = 1;
 
     private DataGridColumn? _rdsSortColumn;
     private ListSortDirection _rdsSortDirection = ListSortDirection.Ascending;
@@ -50,11 +57,7 @@ public partial class DashboardView
         object sender,
         RoutedEventArgs e)
     {
-        if (RdsRow.Height.IsAbsolute)
-        {
-            _rdsExpandedHeight = RdsRow.Height;
-        }
-
+        CaptureStarWeights();
         AnimateSectionRows();
     }
 
@@ -63,7 +66,23 @@ public partial class DashboardView
         object sender,
         RoutedEventArgs e)
     {
+        CaptureStarWeights();
         AnimateSectionRows();
+    }
+
+    // Reads back whatever ratio the two rows currently hold, but only
+    // while both are genuinely still Star/Star (i.e. both were expanded
+    // just before this toggle) -- otherwise one of them is the
+    // degenerate "single section, full height" Star(1) and would
+    // overwrite a real user-dragged ratio with junk.
+    private void
+    CaptureStarWeights()
+    {
+        if (RdsRow.Height.IsStar && Ec2Row.Height.IsStar)
+        {
+            _rdsStarWeight = RdsRow.Height.Value;
+            _ec2StarWeight = Ec2Row.Height.Value;
+        }
     }
 
     private void
@@ -81,15 +100,25 @@ public partial class DashboardView
         bool rdsExpanded = RdsExpander.IsExpanded;
         bool ec2Expanded = Ec2Expander.IsExpanded;
 
-        if (ec2Expanded)
+        if (rdsExpanded && ec2Expanded)
+        {
+            RdsRow.Height = new GridLength(_rdsStarWeight, GridUnitType.Star);
+            Ec2Row.Height = new GridLength(_ec2StarWeight, GridUnitType.Star);
+        }
+        else if (rdsExpanded)
+        {
+            RdsRow.Height = new GridLength(1, GridUnitType.Star);
+            Ec2Row.Height = GridLength.Auto;
+        }
+        else if (ec2Expanded)
         {
             Ec2Row.Height = new GridLength(1, GridUnitType.Star);
-            RdsRow.Height = rdsExpanded ? _rdsExpandedHeight : GridLength.Auto;
+            RdsRow.Height = GridLength.Auto;
         }
         else
         {
+            RdsRow.Height = GridLength.Auto;
             Ec2Row.Height = GridLength.Auto;
-            RdsRow.Height = rdsExpanded ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         }
 
         RdsEc2Splitter.IsEnabled = rdsExpanded && ec2Expanded;
