@@ -1,3 +1,4 @@
+using ICSharpCode.AvalonEdit.Editing;
 using KubaToolKit.Shared.Services;
 using System.Windows;
 
@@ -26,7 +27,28 @@ public partial class JsonViewerWindow
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
+        RemoveLineNumberSeparator();
+
         LoadJson();
+    }
+
+    // ShowLineNumbers="True" adds both a LineNumberMargin and a dotted
+    // vertical separator line next to it -- keep the numbers (asked for
+    // "prettier", not gone), drop the dotted-line-editor look that
+    // doesn't match anything else in the app.
+    private void
+    RemoveLineNumberSeparator()
+    {
+        var leftMargins =
+            JsonTextBox.TextArea.LeftMargins;
+
+        for (var i = leftMargins.Count - 1; i >= 0; i--)
+        {
+            if (DottedLineMargin.IsDottedLineMargin(leftMargins[i]))
+            {
+                leftMargins.RemoveAt(i);
+            }
+        }
     }
 
     private void

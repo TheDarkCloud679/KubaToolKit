@@ -22,56 +22,71 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <DockPanel Grid.Row="0"
-                   Margin="0,0,0,20">
-
-            <Border
-                DockPanel.Dock="Left"
-                Width="34"
-                Height="34"
-                Margin="0,0,12,0"
+        <!-- Header. Wrapped in its own card (not just floating text on the
+             window background) for the same reason the JSON pane needed
+             real background contrast: a region with no border of its own
+             gives the eye nothing to judge "is there margin here" against,
+             so it read as flush against the edges no matter how much
+             margin the numbers said it had. A crisp boundary makes the
+             spacing actually legible, and matches every other bounded
+             region in this app being a card. -->
+        <Border Grid.Row="0"
+                Margin="0,0,0,16"
+                Padding="{StaticResource CardPadding}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMedium}"
-                Background="{StaticResource AccentGradientBrush}">
-                <Path
-                    Data="M3,1 L9,1 L12,4 L12,13 L3,13 Z M9,1 L9,4 L12,4 M5,7.2 L10,7.2 M5,9.7 L10,9.7"
-                    Stroke="{StaticResource TextOnAccentBrush}"
-                    StrokeThickness="1.3" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                    Width="17" Height="17" Stretch="Uniform"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"/>
-            </Border>
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}">
+            <DockPanel>
 
-            <Button
-                x:Name="CopyButton"
-                DockPanel.Dock="Right"
-                Margin="12,0,0,0"
-                Style="{StaticResource AccentButtonStyle}"
-                Click="CopyButton_Click">
-                <StackPanel Orientation="Horizontal">
+                <Border
+                    DockPanel.Dock="Left"
+                    Width="34"
+                    Height="34"
+                    Margin="0,0,12,0"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Background="{StaticResource AccentGradientBrush}">
                     <Path
-                        Data="M8,8 L20,8 L20,20 L8,20 Z M16,8 L16,5 A2,2 0 0 0 14,3 L5,3 A2,2 0 0 0 3,5 L3,14 A2,2 0 0 0 5,16 L8,16"
-                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                        StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                        Width="14" Height="14" Stretch="Uniform"
-                        VerticalAlignment="Center" Margin="0,0,7,0"/>
-                    <TextBlock Text="Copy" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+                        Data="M3,1 L9,1 L12,4 L12,13 L3,13 Z M9,1 L9,4 L12,4 M5,7.2 L10,7.2 M5,9.7 L10,9.7"
+                        Stroke="{StaticResource TextOnAccentBrush}"
+                        StrokeThickness="1.3" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Width="17" Height="17" Stretch="Uniform"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+                </Border>
 
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock
-                    Text="Formatted Log Message"
-                    FontSize="15"
-                    FontWeight="Bold"
-                    Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock
-                    x:Name="SubtitleText"
-                    Margin="0,2,0,0"
-                    FontSize="12"
-                    Foreground="{StaticResource TextMutedBrush}"/>
-            </StackPanel>
-        </DockPanel>
+                <Button
+                    x:Name="CopyButton"
+                    DockPanel.Dock="Right"
+                    Margin="12,0,0,0"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="CopyButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path
+                            Data="M8,8 L20,8 L20,20 L8,20 Z M16,8 L16,5 A2,2 0 0 0 14,3 L5,3 A2,2 0 0 0 3,5 L3,14 A2,2 0 0 0 5,16 L8,16"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="14" Height="14" Stretch="Uniform"
+                            VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <TextBlock Text="Copy" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock
+                        Text="Formatted Log Message"
+                        FontSize="15"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock
+                        x:Name="SubtitleText"
+                        Margin="0,2,0,0"
+                        FontSize="12"
+                        Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
         <!-- JSON. A visibly stronger shadow than the standard CardShadowEffect
              on purpose: this card IS the window (everything else is just
