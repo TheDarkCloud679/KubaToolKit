@@ -9,7 +9,7 @@
         MinWidth="800"
         WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="22" Background="{StaticResource WindowBackgroundBrush}">
+    <Grid Margin="28" Background="{StaticResource WindowBackgroundBrush}">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -19,7 +19,7 @@
 
         <!-- Header -->
         <DockPanel Grid.Row="0"
-                   Margin="0,0,0,16">
+                   Margin="0,0,0,20">
 
             <Border
                 DockPanel.Dock="Left"
@@ -68,13 +68,24 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- JSON -->
+        <!-- JSON. A visibly stronger shadow than the standard CardShadowEffect
+             on purpose: this card IS the window (everything else is just
+             header/footer chrome around it), so it should read as clearly
+             "floating" rather than blending into the window background the
+             way a card among several siblings would. -->
         <Border Grid.Row="1"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMedium}"
-                Background="{StaticResource SurfaceBrush}"
-                Effect="{StaticResource CardShadowEffect}">
+                Background="{StaticResource SurfaceBrush}">
+            <Border.Effect>
+                <DropShadowEffect
+                    Color="{StaticResource TextPrimaryColor}"
+                    Direction="270"
+                    ShadowDepth="4"
+                    BlurRadius="26"
+                    Opacity="0.16"/>
+            </Border.Effect>
 
             <avalonedit:TextEditor
                 x:Name="JsonTextBox"
@@ -88,13 +99,13 @@
                 BorderThickness="0"
                 HorizontalScrollBarVisibility="Auto"
                 VerticalScrollBarVisibility="Auto"
-                Padding="12"/>
+                Padding="16"/>
         </Border>
 
         <!-- Footer -->
         <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
-                    Margin="2,10,0,0">
+                    Margin="2,14,0,0">
             <Path
                 Data="M3,1 L9,1 L12,4 L12,13 L3,13 Z"
                 Stroke="{StaticResource TextMutedBrush}"
