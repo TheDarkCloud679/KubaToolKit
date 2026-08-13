@@ -74,7 +74,7 @@ public class CloudTrailService
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var response =
-                    await client.LookupEventsAsync(request, cancellationToken);
+                    await LookupEventsWithRetry(client, request, cancellationToken);
 
                 page++;
 
@@ -138,6 +138,40 @@ public class CloudTrailService
         return (
             results.OrderByDescending(x => x.Timestamp).ToList(),
             truncated);
+    }
+
+    // LookupEvents is rate-limited by AWS (a couple of requests/second) and
+    // a wide search here can walk dozens of pages back to back, so it hits
+    // that ceiling well within the SDK's own default retry budget. Retry
+    // with backoff on top of that instead of surfacing "Rate exceeded" to
+    // the user.
+    private static async Task<LookupEventsResponse>
+    LookupEventsWithRetry(
+        AmazonCloudTrailClient client,
+        LookupEventsRequest request,
+        CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 6;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await client.LookupEventsAsync(request, cancellationToken);
+            }
+            catch (AmazonCloudTrailException ex) when (
+                attempt < maxAttempts
+                && (ex is ThrottlingException
+                    || (ex.Message?.Contains("Rate exceeded", StringComparison.OrdinalIgnoreCase) ?? false)))
+            {
+                var delay = TimeSpan.FromMilliseconds(500 * Math.Pow(2, attempt - 1));
+
+                Logger.Debug(
+                    $"CloudTrailService: throttled by AWS, retrying in {delay.TotalSeconds:0.#}s (attempt {attempt}/{maxAttempts}).");
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
     }
 
     private (DateTime StartUtc, DateTime EndUtc)
