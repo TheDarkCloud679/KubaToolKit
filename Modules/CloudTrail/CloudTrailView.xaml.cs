@@ -172,7 +172,7 @@ public partial class CloudTrailView
 
         EventsGroupedItemsControl.ItemsSource = groupedResults;
 
-        SearchProgressBar.Value = 100;
+        SearchProgressBar.Value = 0;
 
         ProgressTextBlock.Text =
             truncated
