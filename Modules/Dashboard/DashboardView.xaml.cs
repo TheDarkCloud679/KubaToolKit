@@ -5,6 +5,7 @@ using KubaToolKit.Modules.Wiki;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -294,7 +295,15 @@ public partial class DashboardView
                 _rdsMetrics.Add(metric);
             }
 
-            var ec2Instances = ec2Task.Result;
+            // Default view: running instances first (the ones someone's
+            // actually likely to be checking on), alphabetical within
+            // each state group. A column header click still re-sorts on
+            // top of this via the existing SortByColumn handler.
+            var ec2Instances =
+                ec2Task.Result
+                    .OrderBy(instance => instance.State != "running")
+                    .ThenBy(instance => instance.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
             // Scanning disk usage needs the instance list first (it has to
             // know which InstanceIds to look up), so it can't run alongside
