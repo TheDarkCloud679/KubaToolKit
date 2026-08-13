@@ -11,6 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace KubaToolKit.Modules.ProjectInfo;
@@ -231,6 +232,7 @@ public partial class ProjectInfoWindow
         Border card = null!;
         DataGrid grid = null!;
         StackPanel columnManageRow = null!;
+        StackPanel collapsibleContent = null!;
 
         var isExpanded =
             _sectionExpanded.TryGetValue(section, out var storedExpanded)
@@ -277,8 +279,8 @@ public partial class ProjectInfoWindow
             _sectionExpanded[section] = isExpanded;
 
             toggleButton.Content = isExpanded ? "▼" : "▶";
-            columnManageRow.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
-            grid.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
+
+            AnimateCardExpand(collapsibleContent, isExpanded);
         };
 
         var nameText = new TextBlock
@@ -444,11 +446,26 @@ public partial class ProjectInfoWindow
 
         outer.Children.Add(header);
 
+        // Holds everything the toggle button shows/hides (the column
+        // management row and the DataGrid). Kept as one element so its own
+        // Height can be animated directly on expand/collapse -- same
+        // principle as the Dashboard's RDS/EC2 sections, minus the
+        // MaxHeight workaround that needed there (RowDefinition.Height is
+        // a GridLength and isn't animatable; a plain FrameworkElement's
+        // Height is a double and is).
+        collapsibleContent = new StackPanel { ClipToBounds = true };
+
+        if (!isExpanded)
+        {
+            collapsibleContent.Visibility = Visibility.Collapsed;
+        }
+
+        outer.Children.Add(collapsibleContent);
+
         columnManageRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 0, 0, 8),
-            Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
+            Margin = new Thickness(0, 0, 0, 8)
         };
 
         var columnSelectCombo = new ComboBox
@@ -631,7 +648,7 @@ public partial class ProjectInfoWindow
         columnManageRow.Children.Add(deleteColumnButton);
         columnManageRow.Children.Add(exportToFileZillaButton);
 
-        outer.Children.Add(columnManageRow);
+        collapsibleContent.Children.Add(columnManageRow);
 
         var table = BuildDataTable(section);
 
@@ -650,8 +667,7 @@ public partial class ProjectInfoWindow
             // (row context menu, via SelectedItem) both need to work --
             // Cell alone throws on SelectedItem, FullRow alone throws on
             // SelectedCells. CellOrRowHeader supports both.
-            SelectionUnit = DataGridSelectionUnit.CellOrRowHeader,
-            Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed
+            SelectionUnit = DataGridSelectionUnit.CellOrRowHeader
         };
 
         grid.LoadingRow += (_, e) =>
@@ -852,7 +868,7 @@ public partial class ProjectInfoWindow
             }
         };
 
-        outer.Children.Add(grid);
+        collapsibleContent.Children.Add(grid);
 
         card = new Border
         {
@@ -913,6 +929,67 @@ public partial class ProjectInfoWindow
         _sectionControls[section] = (card, grid, table);
 
         return card;
+    }
+
+    // Same principle as the Dashboard's RDS/EC2 sections: toggling
+    // Visibility alone snaps the card to its new size instantly, with
+    // only whatever's newly revealed doing any visible easing. Height
+    // here is a plain FrameworkElement double (unlike RowDefinition's
+    // GridLength), so it can be animated directly -- measure the natural
+    // size without letting it paint, then animate real height from old
+    // to new.
+    private static void
+    AnimateCardExpand(
+        FrameworkElement wrapper,
+        bool expand)
+    {
+        var oldHeight = wrapper.ActualHeight;
+
+        if (expand)
+        {
+            wrapper.Visibility = Visibility.Visible;
+        }
+
+        wrapper.Height = double.NaN;
+        wrapper.UpdateLayout();
+
+        var naturalHeight = wrapper.ActualHeight;
+
+        wrapper.Height = oldHeight;
+
+        var targetHeight = expand ? naturalHeight : 0;
+
+        var heightAnimation =
+            new DoubleAnimation(oldHeight, targetHeight, new Duration(TimeSpan.FromSeconds(0.45)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+        heightAnimation.Completed += (_, _) =>
+        {
+            if (expand)
+            {
+                wrapper.Height = double.NaN;
+            }
+            else
+            {
+                wrapper.Visibility = Visibility.Collapsed;
+                wrapper.Height = double.NaN;
+            }
+        };
+
+        wrapper.BeginAnimation(FrameworkElement.HeightProperty, heightAnimation);
+
+        var opacityAnimation =
+            new DoubleAnimation(
+                expand ? 0 : 1,
+                expand ? 1 : 0,
+                new Duration(TimeSpan.FromSeconds(0.45)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+        wrapper.BeginAnimation(UIElement.OpacityProperty, opacityAnimation);
     }
 
     private void
@@ -1243,7 +1320,7 @@ public partial class ProjectInfoWindow
 
         var (card, grid, table) = controls;
 
-        if (grid.Visibility != Visibility.Visible)
+        if (!_sectionExpanded.TryGetValue(section, out var expanded) || !expanded)
         {
             _sectionExpanded[section] = true;
             ReplaceSectionCard(section, card);
