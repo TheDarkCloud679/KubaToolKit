@@ -1,14 +1,26 @@
 using ICSharpCode.AvalonEdit.Editing;
 using KubaToolKit.Shared.Services;
+using System;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Shared.Windows;
 
 public partial class JsonViewerWindow
     : Window
 {
+    private const string
+        CopyIconData = "M8,8 L20,8 L20,20 L8,20 Z M16,8 L16,5 A2,2 0 0 0 14,3 L5,3 A2,2 0 0 0 3,5 L3,14 A2,2 0 0 0 5,16 L8,16";
+
+    private const string
+        CheckIconData = "M4,12 L10,18 L20,6";
+
     private readonly string
         _rawMessage;
+
+    private DispatcherTimer?
+        _copyResetTimer;
 
     public JsonViewerWindow(
         string message,
@@ -107,5 +119,33 @@ public partial class JsonViewerWindow
     {
         Clipboard.SetText(
             JsonTextBox.Text);
+
+        CopyButtonIcon.Data =
+            Geometry.Parse(CheckIconData);
+
+        CopyButtonText.Text =
+            "Copied";
+
+        _copyResetTimer?.Stop();
+
+        _copyResetTimer =
+            new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(1600)
+            };
+
+        _copyResetTimer.Tick +=
+            (_, _) =>
+            {
+                CopyButtonIcon.Data =
+                    Geometry.Parse(CopyIconData);
+
+                CopyButtonText.Text =
+                    "Copy";
+
+                _copyResetTimer!.Stop();
+            };
+
+        _copyResetTimer.Start();
     }
 }
