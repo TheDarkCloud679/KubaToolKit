@@ -88,11 +88,13 @@ public partial class
             ViewModeRow.Visibility =
                 Visibility.Visible;
 
-            CardsScrollViewer.Visibility =
-                Visibility.Visible;
-
-            ContentEditor.Visibility =
-                Visibility.Collapsed;
+            // Setting IsChecked here (rather than via IsChecked="True" in
+            // XAML) fires ViewMode_Changed only now, after InitializeComponent
+            // has already wired up ContentEditor/CardsScrollViewer -- doing
+            // it from XAML fired the Checked event mid-parse, before those
+            // fields existed yet, and crashed with a NullReferenceException.
+            CardsViewRadio.IsChecked =
+                true;
         }
 
         PreviewKeyDown +=
