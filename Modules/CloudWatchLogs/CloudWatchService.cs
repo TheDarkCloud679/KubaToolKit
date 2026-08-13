@@ -4,6 +4,7 @@ using Amazon.CloudWatchLogs.Model;
 using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.CloudWatchLogs.Models;
 using KubaToolKit.Shared.Services;
+using System.Globalization;
 
 namespace KubaToolKit.Modules.CloudWatchLogs;
 
@@ -324,10 +325,11 @@ ExecuteQuery(
                 new LogEntry
                 {
                     Timestamp =
-                        row.FirstOrDefault(
-                            x =>
-                                x.Field == "@timestamp")
-                        ?.Value ?? "",
+                        ToLocalTimestamp(
+                            row.FirstOrDefault(
+                                x =>
+                                    x.Field == "@timestamp")
+                            ?.Value ?? ""),
 
                     LogGroup =
                         row.FirstOrDefault(
@@ -342,6 +344,36 @@ ExecuteQuery(
                         ?.Value ?? ""
                 })
             .ToList();
+    }
+
+    // CloudWatch Logs Insights' @timestamp comes back in UTC with no
+    // offset marker ("yyyy-MM-dd HH:mm:ss.fff"), and was being displayed
+    // as-is -- 2 hours behind actual French time in summer (CEST,
+    // UTC+2). Converts to the machine's local time zone, keeping the
+    // same zero-padded format so the existing string-based
+    // OrderByDescending(x => x.Timestamp) sorting still works correctly.
+    private static string
+    ToLocalTimestamp(
+        string utcTimestamp)
+    {
+        if (!DateTime.TryParseExact(
+                utcTimestamp,
+                "yyyy-MM-dd HH:mm:ss.fff",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var utcDateTime))
+        {
+            return utcTimestamp;
+        }
+
+        var localDateTime =
+            TimeZoneInfo.ConvertTimeFromUtc(
+                utcDateTime,
+                TimeZoneInfo.Local);
+
+        return localDateTime.ToString(
+            "yyyy-MM-dd HH:mm:ss.fff",
+            CultureInfo.InvariantCulture);
     }
 
     private string
