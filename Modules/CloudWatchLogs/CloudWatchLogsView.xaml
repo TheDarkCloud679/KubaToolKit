@@ -4,11 +4,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
     xmlns:local="clr-namespace:KubaToolKit.Modules.CloudWatchLogs"
-    xmlns:behaviors="clr-namespace:KubaToolKit.Shared.Behaviors">
+    xmlns:behaviors="clr-namespace:KubaToolKit.Shared.Behaviors"
+    xmlns:converters="clr-namespace:KubaToolKit.Shared.Converters">
 
     <UserControl.Resources>
         <local:LogGroupNameConverter x:Key="LogGroupNameConverter"/>
-        <local:TimestampPartConverter x:Key="TimestampPartConverter"/>
+        <converters:TimestampPartConverter x:Key="TimestampPartConverter"/>
     </UserControl.Resources>
 
     <Grid>

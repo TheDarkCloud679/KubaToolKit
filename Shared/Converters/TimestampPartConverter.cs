@@ -1,15 +1,23 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace KubaToolKit.Modules.CloudWatchLogs;
+namespace KubaToolKit.Shared.Converters;
 
-// Splits the "yyyy-MM-dd HH:mm:ss.fff" local timestamp (already converted
-// from UTC in CloudWatchService) into the two pieces the results grid
-// shows separately: ConverterParameter "date" for the small line above,
-// anything else for the bold time line.
+// Splits a local "yyyy-MM-dd HH:mm:ss[.fff]" timestamp into the two pieces
+// results grids show separately: ConverterParameter "date" for the small
+// line above, anything else for the bold time line. Tolerates both the
+// millisecond-precision format CloudWatch Logs Insights returns and the
+// second-precision format CloudTrail returns.
 public sealed class TimestampPartConverter
     : IValueConverter
 {
+    private static readonly string[]
+        Formats =
+        {
+            "yyyy-MM-dd HH:mm:ss.fff",
+            "yyyy-MM-dd HH:mm:ss"
+        };
+
     public object
     Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -17,7 +25,7 @@ public sealed class TimestampPartConverter
 
         if (!DateTime.TryParseExact(
                 raw,
-                "yyyy-MM-dd HH:mm:ss.fff",
+                Formats,
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out var parsed))
@@ -27,7 +35,7 @@ public sealed class TimestampPartConverter
 
         return parameter as string == "date"
             ? parsed.ToString("dd/MM", CultureInfo.InvariantCulture)
-            : parsed.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            : parsed.ToString(raw.Contains('.') ? "HH:mm:ss.fff" : "HH:mm:ss", CultureInfo.InvariantCulture);
     }
 
     public object

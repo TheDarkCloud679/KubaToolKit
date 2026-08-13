@@ -1,7 +1,13 @@
 <UserControl
     x:Class="KubaToolKit.Modules.CloudTrail.CloudTrailView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:KubaToolKit.Shared.Converters">
+
+    <UserControl.Resources>
+        <converters:TimestampPartConverter x:Key="TimestampPartConverter"/>
+    </UserControl.Resources>
+
     <Grid x:Name="ResultsPanel">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -59,23 +65,24 @@
                                 Margin="0,0,0,8">
                                 <Expander.Header>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock
-                                            Text="{Binding EventSource}"
-                                            FontWeight="Bold"
-                                            FontSize="13"
-                                            Foreground="{StaticResource AccentBrush}"/>
                                         <Border
-                                            Margin="8,0,0,0"
-                                            Padding="7,1"
-                                            CornerRadius="8"
+                                            Padding="7,2"
+                                            CornerRadius="{StaticResource RadiusMedium}"
                                             Background="{StaticResource AccentSoftBrush}"
                                             VerticalAlignment="Center">
                                             <TextBlock
                                                 FontSize="11"
                                                 FontWeight="SemiBold"
-                                                Foreground="{StaticResource TextSecondaryBrush}"
-                                                Text="{Binding Count, StringFormat=({0} events)}"/>
+                                                Foreground="{StaticResource AccentPressedBrush}"
+                                                Text="{Binding Count, StringFormat={}{0} events}"/>
                                         </Border>
+                                        <TextBlock
+                                            Margin="8,0,0,0"
+                                            Text="{Binding EventSource}"
+                                            FontWeight="Bold"
+                                            FontSize="13"
+                                            Foreground="{StaticResource AccentBrush}"
+                                            VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Expander.Header>
                                 <DataGrid
@@ -87,17 +94,34 @@
                                     CanUserDeleteRows="False"
                                     Margin="0,6,0,0"
                                     MaxHeight="350"
+                                    RowHeight="48"
                                     MouseDoubleClick="EventsDataGrid_DoubleClick"
                                     HorizontalScrollBarVisibility="Visible">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn
+                                        <DataGridTemplateColumn
                                             Header="Timestamp"
-                                            Binding="{Binding Timestamp}"
-                                            Width="Auto"/>
+                                            Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock
+                                                            Text="{Binding Timestamp, Converter={StaticResource TimestampPartConverter}, ConverterParameter=date}"
+                                                            FontSize="10.5"
+                                                            Foreground="{StaticResource TextMutedBrush}"/>
+                                                        <TextBlock
+                                                            Text="{Binding Timestamp, Converter={StaticResource TimestampPartConverter}}"
+                                                            FontSize="12.5"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                         <DataGridTextColumn
                                             Header="Event"
                                             Binding="{Binding EventName}"
-                                            Width="Auto"/>
+                                            Width="Auto"
+                                            FontWeight="SemiBold"/>
                                         <DataGridTextColumn
                                             Header="User"
                                             Binding="{Binding Username}"
@@ -107,12 +131,22 @@
                                             Width="*">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock
-                                                        Text="{Binding Resources}"
-                                                        TextWrapping="Wrap"
-                                                        TextTrimming="CharacterEllipsis"
-                                                        VerticalAlignment="Center"
-                                                        MaxHeight="42"/>
+                                                    <Border
+                                                        Background="{StaticResource SurfaceAltBrush}"
+                                                        BorderBrush="{StaticResource BorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="8,5"
+                                                        Margin="0,4"
+                                                        MaxHeight="42">
+                                                        <TextBlock
+                                                            Text="{Binding Resources}"
+                                                            FontFamily="Cascadia Code, Consolas"
+                                                            FontSize="12"
+                                                            TextWrapping="Wrap"
+                                                            TextTrimming="CharacterEllipsis"
+                                                            VerticalAlignment="Center"/>
+                                                    </Border>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
