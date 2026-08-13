@@ -545,6 +545,9 @@
                                 Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource BorderStrongBrush}"
                                 BorderThickness="1"
+                                CalendarItemStyle="{StaticResource CalendarItemStyle}"
+                                CalendarButtonStyle="{StaticResource CalendarButtonStyle}"
+                                CalendarDayButtonStyle="{StaticResource CalendarDayButtonStyle}"
                                 Effect="{StaticResource CardShadowEffect}"/>
                         </Popup>
                         <Popup
