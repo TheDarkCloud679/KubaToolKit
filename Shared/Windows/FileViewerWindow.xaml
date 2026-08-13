@@ -19,6 +19,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -63,9 +64,29 @@
             </DockPanel>
         </Border>
 
+        <!-- Cards / Raw toggle (only shown when the content parses as JSON) -->
+        <StackPanel x:Name="ViewModeRow"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    Margin="2,0,0,16"
+                    Visibility="Collapsed">
+            <RadioButton x:Name="CardsViewRadio"
+                         Content="Cards"
+                         GroupName="FileViewMode"
+                         IsChecked="True"
+                         Checked="ViewMode_Changed"
+                         VerticalAlignment="Center"
+                         Margin="0,0,16,0"/>
+            <RadioButton x:Name="RawViewRadio"
+                         Content="Raw"
+                         GroupName="FileViewMode"
+                         Checked="ViewMode_Changed"
+                         VerticalAlignment="Center"/>
+        </StackPanel>
+
         <!-- Search -->
         <Border x:Name="SearchPanel"
-                Grid.Row="1"
+                Grid.Row="2"
                 Visibility="Collapsed"
                 Margin="0,0,0,16"
                 Padding="{StaticResource CardPadding}"
@@ -95,7 +116,7 @@
         </Border>
 
         <!-- Content -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMedium}"
@@ -105,40 +126,51 @@
                                    ShadowDepth="4" BlurRadius="26" Opacity="0.16"/>
             </Border.Effect>
 
-            <avalonedit:TextEditor
-                x:Name="ContentEditor"
-                FontFamily="Cascadia Code, Consolas"
-                FontSize="14"
-                ShowLineNumbers="True"
-                LineNumbersForeground="{StaticResource TextMutedBrush}"
-                IsReadOnly="True"
-                WordWrap="False"
-                Background="Transparent"
-                BorderThickness="0"
-                HorizontalScrollBarVisibility="Auto"
-                VerticalScrollBarVisibility="Auto"
-                Padding="16"
-                ContextMenuOpening="ContentEditor_ContextMenuOpening">
+            <Grid>
+                <avalonedit:TextEditor
+                    x:Name="ContentEditor"
+                    FontFamily="Cascadia Code, Consolas"
+                    FontSize="14"
+                    ShowLineNumbers="True"
+                    LineNumbersForeground="{StaticResource TextMutedBrush}"
+                    IsReadOnly="True"
+                    WordWrap="False"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto"
+                    Padding="16"
+                    ContextMenuOpening="ContentEditor_ContextMenuOpening">
 
-                <avalonedit:TextEditor.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem
-                            x:Name="CopySelectedMenuItem"
-                            Header="Copy selected"
-                            Click="CopySelected_Click"/>
+                    <avalonedit:TextEditor.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem
+                                x:Name="CopySelectedMenuItem"
+                                Header="Copy selected"
+                                Click="CopySelected_Click"/>
 
-                        <Separator/>
+                            <Separator/>
 
-                        <MenuItem
-                            Header="Copy all"
-                            Click="CopyAll_Click"/>
-                    </ContextMenu>
-                </avalonedit:TextEditor.ContextMenu>
-            </avalonedit:TextEditor>
+                            <MenuItem
+                                Header="Copy all"
+                                Click="CopyAll_Click"/>
+                        </ContextMenu>
+                    </avalonedit:TextEditor.ContextMenu>
+                </avalonedit:TextEditor>
+
+                <ScrollViewer
+                    x:Name="CardsScrollViewer"
+                    Visibility="Collapsed"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto"
+                    Padding="16">
+                    <ContentControl x:Name="CardsContent"/>
+                </ScrollViewer>
+            </Grid>
         </Border>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="2,14,0,0">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="2,14,0,0">
             <Path Data="M3,1 L9,1 L12,4 L12,13 L3,13 Z" Stroke="{StaticResource TextMutedBrush}"
                   StrokeThickness="1.3" StrokeLineJoin="Round"
                   Width="11" Height="11" Stretch="Uniform"

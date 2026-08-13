@@ -1,5 +1,6 @@
 ﻿using ICSharpCode.AvalonEdit.Editing;
 using ICSharpCode.AvalonEdit.Highlighting;
+using KubaToolKit.Shared.Services;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -76,8 +77,44 @@ public partial class
         FileInfoText.Text =
             $"{ContentEditor.LineCount} lines • {formattedContent.Length:N0} chars";
 
+        _cardsView =
+            JsonCardViewBuilder.Build(formattedContent);
+
+        if (_cardsView != null)
+        {
+            CardsContent.Content =
+                _cardsView.Root;
+
+            ViewModeRow.Visibility =
+                Visibility.Visible;
+
+            CardsScrollViewer.Visibility =
+                Visibility.Visible;
+
+            ContentEditor.Visibility =
+                Visibility.Collapsed;
+        }
+
         PreviewKeyDown +=
         FileViewerWindow_PreviewKeyDown;
+    }
+
+    private JsonCardViewResult?
+        _cardsView;
+
+    private void
+    ViewMode_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var showCards =
+            CardsViewRadio.IsChecked == true;
+
+        CardsScrollViewer.Visibility =
+            showCards ? Visibility.Visible : Visibility.Collapsed;
+
+        ContentEditor.Visibility =
+            showCards ? Visibility.Collapsed : Visibility.Visible;
     }
 
     // Same fix as JsonViewerWindow: ShowLineNumbers="True" pairs the line
@@ -135,6 +172,14 @@ FileViewerWindow_PreviewKeyDown(
             Keyboard.Modifiers
                 == ModifierKeys.Control)
         {
+            // Search only operates on the raw text -- switch out of Cards
+            // view first so the highlighted match is actually visible.
+            if (_cardsView != null)
+            {
+                RawViewRadio.IsChecked =
+                    true;
+            }
+
             SearchPanel.Visibility =
                 Visibility.Visible;
 

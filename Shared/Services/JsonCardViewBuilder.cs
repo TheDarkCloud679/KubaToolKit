@@ -8,7 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace KubaToolKit.Modules.ApiClient;
+namespace KubaToolKit.Shared.Services;
 
 public sealed record JsonCardSearchEntry(
     string Text,
