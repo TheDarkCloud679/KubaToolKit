@@ -1,9 +1,12 @@
-﻿using ICSharpCode.AvalonEdit.Highlighting;
+﻿using ICSharpCode.AvalonEdit.Editing;
+using ICSharpCode.AvalonEdit.Highlighting;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Shared.Windows;
 
@@ -11,15 +14,25 @@ public partial class
     FileViewerWindow
     : Window
 {
+    private const string
+        CopyIconData = "M8,8 L20,8 L20,20 L8,20 Z M16,8 L16,5 A2,2 0 0 0 14,3 L5,3 A2,2 0 0 0 3,5 L3,14 A2,2 0 0 0 5,16 L8,16";
+
+    private const string
+        CheckIconData = "M4,12 L10,18 L20,6";
+
     private string _lastSearchText = string.Empty;
 
     private List<int> _searchMatches = new();
     private int _currentMatchIndex = -1;
 
+    private DispatcherTimer?
+        _copyResetTimer;
+
     public
     FileViewerWindow(
         string title,
-        string content)
+        string content,
+        string? subtitle = null)
     {
         InitializeComponent();
 
@@ -39,6 +52,16 @@ public partial class
         FileNameTextBlock.Text =
             title;
 
+        SubtitleText.Text =
+            subtitle ?? "";
+
+        SubtitleText.Visibility =
+            string.IsNullOrWhiteSpace(subtitle)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        ConfigureLineNumberMargin();
+
         var formattedContent =
             FormatContent(
                 content);
@@ -49,8 +72,39 @@ public partial class
         ApplySyntaxHighlighting(
             title,
             formattedContent);
+
+        FileInfoText.Text =
+            $"{ContentEditor.LineCount} lines • {formattedContent.Length:N0} chars";
+
         PreviewKeyDown +=
         FileViewerWindow_PreviewKeyDown;
+    }
+
+    // Same fix as JsonViewerWindow: ShowLineNumbers="True" pairs the line
+    // numbers with a dotted separator line that doesn't match anything
+    // else in the app -- drop the separator, give the numbers their own
+    // margin so they don't end up jammed against the card edge/text.
+    private void
+    ConfigureLineNumberMargin()
+    {
+        var leftMargins =
+            ContentEditor.TextArea.LeftMargins;
+
+        for (var i = leftMargins.Count - 1; i >= 0; i--)
+        {
+            if (DottedLineMargin.IsDottedLineMargin(leftMargins[i]))
+            {
+                leftMargins.RemoveAt(i);
+
+                continue;
+            }
+
+            if (leftMargins[i] is LineNumberMargin lineNumberMargin)
+            {
+                lineNumberMargin.Margin =
+                    new Thickness(4, 0, 14, 0);
+            }
+        }
     }
 
     private void
@@ -191,6 +245,34 @@ ApplySyntaxHighlighting(
         Clipboard.SetText(
         ContentEditor.Text);
         ContentEditor.Focus();
+
+        CopyButtonIcon.Data =
+            Geometry.Parse(CheckIconData);
+
+        CopyButtonText.Text =
+            "Copied";
+
+        _copyResetTimer?.Stop();
+
+        _copyResetTimer =
+            new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(1600)
+            };
+
+        _copyResetTimer.Tick +=
+            (_, _) =>
+            {
+                CopyButtonIcon.Data =
+                    Geometry.Parse(CopyIconData);
+
+                CopyButtonText.Text =
+                    "Copy";
+
+                _copyResetTimer!.Stop();
+            };
+
+        _copyResetTimer.Start();
     }
 
     private void

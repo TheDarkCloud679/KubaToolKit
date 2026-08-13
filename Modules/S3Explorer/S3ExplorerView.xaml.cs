@@ -829,7 +829,8 @@ OpenS3File(
             var viewer =
                 new FileViewerWindow(
                     file.Name,
-                    content);
+                    content,
+                    file.Key);
 
             viewer.Show();
         }
@@ -1009,12 +1010,12 @@ S3RenameFile_Click(object sender, RoutedEventArgs e)
             }
 
             var newName =
-                Microsoft.VisualBasic
-                    .Interaction
-                    .InputBox(
-                        "New file name",
-                        "Rename S3 file",
-                        file.Name);
+                InputDialogWindow.Show(
+                    Window.GetWindow(this),
+                    "Rename S3 file",
+                    "New file name",
+                    file.Name,
+                    "Rename");
 
             if (string.IsNullOrWhiteSpace(
                     newName))
