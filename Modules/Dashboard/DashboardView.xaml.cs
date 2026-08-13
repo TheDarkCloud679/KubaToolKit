@@ -124,12 +124,29 @@ public partial class DashboardView
         RdsEc2Splitter.IsEnabled = rdsExpanded && ec2Expanded;
     }
 
+    private bool _rowAnimationRunning;
+    private DateTime _rowAnimationStart;
+    private static readonly TimeSpan RowAnimationDuration = TimeSpan.FromSeconds(0.45);
+    private static readonly CubicEase RowAnimationEase = new() { EasingMode = EasingMode.EaseOut };
+    private double _rowAnimationFromRds;
+    private double _rowAnimationToRds;
+    private double _rowAnimationFromEc2;
+    private double _rowAnimationToEc2;
+
     // RowDefinition.Height (GridLength) isn't itself animatable, and with
     // RDS/EC2 sharing one Grid, toggling either one can change both rows'
     // target size at once (RDS reflows to fill whatever EC2 just gave up,
-    // or vice versa) -- so both get measured and animated together via
-    // MaxHeight (a plain double, and animatable) instead, rather than
-    // trying to predict star-sized target heights by hand.
+    // or vice versa). A first attempt animated each row's MaxHeight
+    // independently via BeginAnimation -- but with both rows Star-sized,
+    // there's a stretch near the end where both MaxHeight values are
+    // still below their true fair share at the same instant (each row's
+    // own animation hasn't individually reached "Completed" yet), and
+    // WPF's Grid Star solver doesn't hand the space one capped Star row
+    // is missing to another Star row that's also capped -- it's just
+    // left unused. That read as the section snapping back small instead
+    // of smoothly reaching full size. Driving both rows' Height directly
+    // in absolute pixels, one shared tick at a time, avoids the Star
+    // solver entirely for the duration of the transition.
     private void
     AnimateSectionRows()
     {
@@ -160,39 +177,59 @@ public partial class DashboardView
         var targetRdsHeight = RdsRow.ActualHeight;
         var targetEc2Height = Ec2Row.ActualHeight;
 
-        RdsRow.MaxHeight = oldRdsHeight;
-        Ec2Row.MaxHeight = oldEc2Height;
-
-        AnimateRowMaxHeight(RdsRow, oldRdsHeight, targetRdsHeight);
-        AnimateRowMaxHeight(Ec2Row, oldEc2Height, targetEc2Height);
-    }
-
-    private static void
-    AnimateRowMaxHeight(
-        RowDefinition row,
-        double from,
-        double to)
-    {
-        if (Math.Abs(from - to) < 0.5)
+        if (Math.Abs(oldRdsHeight - targetRdsHeight) < 0.5
+            && Math.Abs(oldEc2Height - targetEc2Height) < 0.5)
         {
-            row.MaxHeight = double.PositiveInfinity;
-
             return;
         }
 
-        var animation =
-            new DoubleAnimation(from, to, new Duration(TimeSpan.FromSeconds(0.45)))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
+        _rowAnimationFromRds = oldRdsHeight;
+        _rowAnimationToRds = targetRdsHeight;
+        _rowAnimationFromEc2 = oldEc2Height;
+        _rowAnimationToEc2 = targetEc2Height;
+        _rowAnimationStart = DateTime.UtcNow;
 
-        // Releases the cap once settled -- otherwise this row would stay
-        // artificially pinned at whatever pixel height it last animated
-        // to, instead of following Auto/Star sizing normally again (e.g.
-        // on a window resize).
-        animation.Completed += (_, _) => row.MaxHeight = double.PositiveInfinity;
+        RdsRow.Height = new GridLength(Math.Max(0, oldRdsHeight));
+        Ec2Row.Height = new GridLength(Math.Max(0, oldEc2Height));
 
-        row.BeginAnimation(RowDefinition.MaxHeightProperty, animation);
+        if (!_rowAnimationRunning)
+        {
+            _rowAnimationRunning = true;
+            CompositionTarget.Rendering += OnRowAnimationTick;
+        }
+    }
+
+    private void
+    OnRowAnimationTick(
+        object? sender,
+        EventArgs e)
+    {
+        var elapsed = (DateTime.UtcNow - _rowAnimationStart).TotalSeconds;
+        var t = Math.Clamp(elapsed / RowAnimationDuration.TotalSeconds, 0, 1);
+        var eased = RowAnimationEase.Ease(t);
+
+        var rdsHeight = _rowAnimationFromRds + (_rowAnimationToRds - _rowAnimationFromRds) * eased;
+        var ec2Height = _rowAnimationFromEc2 + (_rowAnimationToEc2 - _rowAnimationFromEc2) * eased;
+
+        RdsRow.Height = new GridLength(Math.Max(0, rdsHeight));
+        Ec2Row.Height = new GridLength(Math.Max(0, ec2Height));
+
+        if (t < 1)
+        {
+            return;
+        }
+
+        CompositionTarget.Rendering -= OnRowAnimationTick;
+        _rowAnimationRunning = false;
+
+        RdsRow.MaxHeight = double.PositiveInfinity;
+        Ec2Row.MaxHeight = double.PositiveInfinity;
+
+        // Swap back to the real declarative sizing (Star/Auto) now that
+        // the transition has settled, so window resizes and further
+        // splitter drags behave normally instead of staying pinned to
+        // this frame's absolute pixel snapshot.
+        UpdateSectionRows();
     }
 
     public async Task
