@@ -420,6 +420,7 @@
                             SelectionMode="Extended"
                             SelectionUnit="FullRow"
                             AllowDrop="True"
+                            RowHeight="48"
                             SelectionChanged="S3FilesGrid_SelectionChanged"
                             Drop="S3FilesGrid_Drop"
                             DragOver="S3FilesGrid_DragOver"
