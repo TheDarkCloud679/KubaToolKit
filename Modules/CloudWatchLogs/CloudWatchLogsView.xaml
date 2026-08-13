@@ -59,7 +59,7 @@
                     Padding="4">
                     <avalonedit:TextEditor
                         x:Name="QueryEditorTextBox"
-                        MinHeight="120"
+                        MinHeight="36"
                         FontFamily="Cascadia Code, Consolas"
                         FontSize="13"
                         ShowLineNumbers="True"

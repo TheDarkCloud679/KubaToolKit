@@ -25,10 +25,9 @@ public partial class CloudWatchLogsView
     private string? _currentProfile;
     private string _currentSearchText = "";
 
-    private const double QueryEditorBaseHeight = 120;
     private const double QueryEditorLineHeight = 20;
+    private const double QueryEditorMinHeight = 36;
     private const double QueryEditorMaxHeight = 420;
-    private double _queryEditorCurrentHeight = QueryEditorBaseHeight;
 
     // Star weights for LogGroups/Results when Log Groups is expanded, so
     // they split available height (50/50 by default, splitter-adjustable)
@@ -48,11 +47,19 @@ public partial class CloudWatchLogsView
 
     private bool _debugModeEnabled;
 
+    // Log Groups gets priority (fills the available height) while there's
+    // nothing to show in Results yet -- no point reserving half the
+    // window for an empty results list before a search has ever run.
+    private bool _hasResults;
+
     public CloudWatchLogsView()
     {
         InitializeComponent();
         LoadLogGroupCategories();
         UpdateSectionRows();
+
+        QueryEditorTextBox.TextChanged +=
+            (_, _) => ResizeQueryEditorToFitContent();
     }
 
     private void
@@ -92,18 +99,23 @@ public partial class CloudWatchLogsView
 
         bool logGroupsExpanded = LogGroupsExpander.IsExpanded;
 
-        if (logGroupsExpanded)
-        {
-            LogGroupsRow.Height = new GridLength(_logGroupsStarWeight, GridUnitType.Star);
-            ResultsRow.Height = new GridLength(_resultsStarWeight, GridUnitType.Star);
-        }
-        else
+        if (!logGroupsExpanded)
         {
             LogGroupsRow.Height = GridLength.Auto;
             ResultsRow.Height = new GridLength(1, GridUnitType.Star);
         }
+        else if (!_hasResults)
+        {
+            LogGroupsRow.Height = new GridLength(1, GridUnitType.Star);
+            ResultsRow.Height = GridLength.Auto;
+        }
+        else
+        {
+            LogGroupsRow.Height = new GridLength(_logGroupsStarWeight, GridUnitType.Star);
+            ResultsRow.Height = new GridLength(_resultsStarWeight, GridUnitType.Star);
+        }
 
-        LogGroupSplitter.IsEnabled = logGroupsExpanded;
+        LogGroupSplitter.IsEnabled = logGroupsExpanded && _hasResults;
     }
 
     // RowDefinition.Height (GridLength) isn't itself animatable, and with
@@ -203,12 +215,6 @@ public partial class CloudWatchLogsView
 
         if (!visible)
         {
-            QueryEditorTextBox.Height =
-                QueryEditorBaseHeight;
-
-            _queryEditorCurrentHeight =
-                QueryEditorBaseHeight;
-
             return;
         }
 
@@ -620,13 +626,10 @@ SearchAllLogsCheckBox_Changed(
         double desiredHeight =
             Math.Clamp(
                 lineCount * QueryEditorLineHeight + 16,
-                QueryEditorBaseHeight,
+                QueryEditorMinHeight,
                 QueryEditorMaxHeight);
 
         QueryEditorTextBox.Height =
-            desiredHeight;
-
-        _queryEditorCurrentHeight =
             desiredHeight;
     }
 
@@ -712,6 +715,12 @@ SearchAllLogsCheckBox_Changed(
 
         ProgressTextBlock.Text =
             $"Done ({results.Count} results)";
+
+        CaptureStarWeights();
+
+        _hasResults = groupedResults.Count > 0;
+
+        AnimateSectionRows();
     }
 
     public void
