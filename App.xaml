@@ -9,6 +9,7 @@
                 <ResourceDictionary Source="Styles/Colors.xaml"/>
                 <ResourceDictionary Source="Styles/Tokens.xaml"/>
                 <ResourceDictionary Source="Styles/Controls.xaml"/>
+                <ResourceDictionary Source="Styles/CalendarControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

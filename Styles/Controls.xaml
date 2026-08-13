@@ -425,6 +425,10 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
                             <Setter Property="Foreground" Value="{StaticResource AccentPressedBrush}"/>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
