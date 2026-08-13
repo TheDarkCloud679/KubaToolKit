@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace KubaToolKit.Modules.S3Explorer;
 
@@ -26,6 +27,8 @@ public partial class S3ExplorerView
     public S3ExplorerView()
     {
         InitializeComponent();
+
+        UpdateSelectionState();
     }
 
     public async Task
@@ -130,6 +133,18 @@ LoadS3RootFolders()
                 null;
 
             _s3Tree.Clear();
+
+            BreadcrumbItemsControl.Items.Clear();
+
+            SearchScopeChip.Visibility =
+                Visibility.Collapsed;
+
+            _s3SearchPrefix =
+                null;
+
+            _s3Files.Clear();
+
+            UpdateSelectionState();
 
             var folders =
                 await _s3Service
@@ -271,49 +286,130 @@ S3TreeView_SelectedItemChanged(
     object sender,
     RoutedPropertyChangedEventArgs<object> e)
     {
-        try
+        if (e.NewValue
+            is not S3Node node)
         {
-            if (e.NewValue
-                is not S3Node node)
+            return;
+        }
+
+        await NavigateToPrefix(
+            node.Prefix);
+    }
+
+    // The breadcrumb is a display + shortcut, not a synced view of the
+    // tree: clicking a crumb reloads the file list for that prefix
+    // directly instead of trying to locate/expand/select the matching
+    // TreeViewItem, which WPF doesn't expose a simple API for.
+    private void
+    UpdateBreadcrumb(
+        string prefix)
+    {
+        BreadcrumbItemsControl.Items.Clear();
+
+        var root =
+            new TextBlock
             {
-                return;
+                Text = "bucket",
+                Cursor = Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = (Brush)FindResource("TextSecondaryBrush")
+            };
+
+        root.MouseLeftButtonUp +=
+            (_, _) => _ = NavigateToPrefix("");
+
+        BreadcrumbItemsControl.Items.Add(
+            root);
+
+        var segments =
+            prefix
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        var accumulated =
+            "";
+
+        for (var i = 0; i < segments.Length; i++)
+        {
+            accumulated +=
+                segments[i] + "/";
+
+            var isLast =
+                i == segments.Length - 1;
+
+            var segmentPrefix =
+                accumulated;
+
+            BreadcrumbItemsControl.Items.Add(
+                new TextBlock
+                {
+                    Text = "/",
+                    Margin = new Thickness(6, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = (Brush)FindResource("TextMutedBrush")
+                });
+
+            var segmentBlock =
+                new TextBlock
+                {
+                    Text = segments[i],
+                    Cursor = isLast ? Cursors.Arrow : Cursors.Hand,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontWeight = isLast ? FontWeights.Bold : FontWeights.Normal,
+                    Foreground = (Brush)FindResource(isLast ? "TextPrimaryBrush" : "TextSecondaryBrush")
+                };
+
+            if (!isLast)
+            {
+                segmentBlock.MouseLeftButtonUp +=
+                    (_, _) => _ = NavigateToPrefix(segmentPrefix);
             }
 
-            _currentS3Prefix =
-    node.Prefix;
+            BreadcrumbItemsControl.Items.Add(
+                segmentBlock);
+        }
+    }
 
+    private async Task
+    NavigateToPrefix(
+        string prefix)
+    {
+        try
+        {
             var bucket =
                 BucketCombo
                     .SelectedItem?
                     .ToString();
 
-            if (string.IsNullOrWhiteSpace(
-                    _currentProfile)
-                ||
-                string.IsNullOrWhiteSpace(
-                    bucket))
+            if (string.IsNullOrWhiteSpace(_currentProfile)
+                || string.IsNullOrWhiteSpace(bucket))
             {
                 return;
             }
+
+            _currentS3Prefix =
+                prefix;
 
             var files =
                 await _s3Service
                     .GetFiles(
                         _currentProfile,
                         bucket,
-                        node.Prefix);
+                        prefix);
 
             _s3Files.Clear();
 
-            foreach (var file
-                     in files)
+            foreach (var file in files)
             {
-                _s3Files.Add(
-                    file);
+                _s3Files.Add(file);
             }
 
             S3FilesGrid.ItemsSource =
                 _s3Files;
+
+            UpdateBreadcrumb(
+                prefix);
+
+            UpdateSelectionState();
 
             Dispatcher.BeginInvoke(
                 new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
@@ -346,6 +442,12 @@ S3SearchFromHere_Click(
 
         _s3SearchPrefix =
             node.Prefix;
+
+        SearchScopeText.Text =
+            $"Search limited to {node.Name}/";
+
+        SearchScopeChip.Visibility =
+            Visibility.Visible;
     }
 
     private void
@@ -358,6 +460,9 @@ S3ClearSearchScope_Click(
 
         _s3SearchPrefix =
             null;
+
+        SearchScopeChip.Visibility =
+            Visibility.Collapsed;
     }
 
     private void
@@ -395,14 +500,14 @@ RunSearchAsync(
 
         try
         {
-            SearchProgressBar.Visibility =
+            S3ProgressCard.Visibility =
                 Visibility.Visible;
 
             SearchProgressBar.Value =
                 0;
 
-            S3QueueText.Visibility =
-                Visibility.Visible;
+            S3LoadingText.Visibility =
+                Visibility.Collapsed;
 
             var progress =
                 new Progress<int>(
@@ -414,8 +519,7 @@ RunSearchAsync(
                         S3QueueText.Text =
                             $"Searching S3... page {page}";
                     });
-            CancelDownloadButton.Visibility =
-             Visibility.Visible;
+
             _s3SearchCancellation =
             new CancellationTokenSource();
             var results =
@@ -445,6 +549,8 @@ RunSearchAsync(
             S3FilesGrid.ItemsSource =
                 _s3Files;
 
+            UpdateSelectionState();
+
             Logger.Info(
                 $"S3ExplorerView: search '{searchText}' completed, {results.Count} result(s).");
 
@@ -468,13 +574,7 @@ RunSearchAsync(
             SearchProgressBar.IsIndeterminate =
                 false;
 
-            SearchProgressBar.Visibility =
-                Visibility.Collapsed;
-
-            CancelDownloadButton.Visibility =
-             Visibility.Collapsed;
-
-            S3QueueText.Visibility =
+            S3ProgressCard.Visibility =
                 Visibility.Collapsed;
         }
     }
@@ -499,7 +599,7 @@ RunSearchAsync(
     {
         Dispatcher.Invoke(() =>
         {
-            SearchProgressBar.Visibility = Visibility.Visible;
+            S3ProgressCard.Visibility = Visibility.Visible;
             SearchProgressBar.Value = percent;
             S3LoadingText.Visibility = Visibility.Visible;
             S3LoadingText.Text = $"{percent}%";
@@ -509,7 +609,7 @@ RunSearchAsync(
     private void
     SetS3LoadingState(bool isLoading)
     {
-        SearchProgressBar.Visibility = isLoading
+        S3ProgressCard.Visibility = isLoading
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -523,6 +623,46 @@ RunSearchAsync(
         Cursor = isLoading
                 ? Cursors.Wait
                 : null;
+    }
+
+    private void
+    UpdateSelectionState()
+    {
+        var count =
+            S3FilesGrid.SelectedItems.Count;
+
+        S3SelectionCountText.Text =
+            count switch
+            {
+                0 => "",
+                1 => "1 file selected",
+                _ => $"{count} files selected"
+            };
+
+        S3DownloadButton.IsEnabled =
+            count > 0;
+
+        S3RenameButton.IsEnabled =
+            count > 0;
+
+        S3DeleteButton.IsEnabled =
+            count > 0;
+    }
+
+    private void
+    S3FilesGrid_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        UpdateSelectionState();
+    }
+
+    private async void
+    S3Refresh_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await RefreshCurrentFolder();
     }
 
     private S3ObjectItem?
@@ -568,6 +708,8 @@ RefreshCurrentFolder()
             _s3Files.Add(
                 file);
         }
+
+        UpdateSelectionState();
 
         Dispatcher.BeginInvoke(
             new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
@@ -702,9 +844,6 @@ OpenS3File(
             SetS3LoadingState(
                 false);
 
-            S3QueueText.Visibility =
-                Visibility.Collapsed;
-
             _isOpeningS3File =
                 false;
         }
@@ -798,12 +937,6 @@ S3FilesGrid_DoubleClick(
             SetS3LoadingState(
                 true);
 
-            CancelDownloadButton.Visibility =
-                Visibility.Visible;
-
-            S3QueueText.Visibility =
-                Visibility.Visible;
-
             int total =
                 files.Count;
 
@@ -857,18 +990,6 @@ S3FilesGrid_DoubleClick(
         }
         finally
         {
-            SearchProgressBar.Value =
-                0;
-
-            SearchProgressBar.Visibility =
-                Visibility.Collapsed;
-
-            S3QueueText.Visibility =
-                Visibility.Collapsed;
-
-            CancelDownloadButton.Visibility =
-                Visibility.Collapsed;
-
             SetS3LoadingState(
                 false);
         }
@@ -1064,6 +1185,11 @@ S3FilesGrid_Drop(
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             e.Effects = DragDropEffects.Copy;
+
+            S3DropDestinationText.Text =
+                string.IsNullOrEmpty(_currentS3Prefix)
+                    ? BucketCombo.SelectedItem?.ToString() ?? ""
+                    : _currentS3Prefix;
 
             S3DropOverlay.Visibility =
                 Visibility.Visible;
