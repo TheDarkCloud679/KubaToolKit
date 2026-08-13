@@ -821,6 +821,34 @@
         </Setter>
     </Style>
 
+    <!-- Calendar's own default ControlTemplate (from whichever OS theme
+         resolves at runtime: Aero2, Classic, Fluent...) is supposed to
+         host a CalendarItem with Style="{TemplateBinding CalendarItemStyle}"
+         (confirmed against the actual dotnet/wpf source for Aero2), so
+         setting Calendar.CalendarItemStyle directly on the element
+         should be enough on its own. It visibly wasn't, so this
+         retemplates Calendar too rather than trust whichever theme
+         template is actually active on a given machine to wire it up
+         the same way. -->
+    <Style TargetType="{x:Type Calendar}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Calendar}">
+                    <StackPanel
+                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <CalendarItem
+                            x:Name="PART_CalendarItem"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Style="{TemplateBinding CalendarItemStyle}"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- =====================================================
          TEXT INPUT
          ===================================================== -->
