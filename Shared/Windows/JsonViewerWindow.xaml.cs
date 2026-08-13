@@ -27,7 +27,7 @@ public partial class JsonViewerWindow
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
-        RemoveLineNumberSeparator();
+        ConfigureLineNumberMargin();
 
         LoadJson();
     }
@@ -35,9 +35,13 @@ public partial class JsonViewerWindow
     // ShowLineNumbers="True" adds both a LineNumberMargin and a dotted
     // vertical separator line next to it -- keep the numbers (asked for
     // "prettier", not gone), drop the dotted-line-editor look that
-    // doesn't match anything else in the app.
+    // doesn't match anything else in the app. That separator was also
+    // the only thing giving the numbers any breathing room on either
+    // side, though, so removing it left them jammed against the card's
+    // left edge and the code text with no gap -- give LineNumberMargin
+    // its own Margin instead now that it's the sole element there.
     private void
-    RemoveLineNumberSeparator()
+    ConfigureLineNumberMargin()
     {
         var leftMargins =
             JsonTextBox.TextArea.LeftMargins;
@@ -47,6 +51,14 @@ public partial class JsonViewerWindow
             if (DottedLineMargin.IsDottedLineMargin(leftMargins[i]))
             {
                 leftMargins.RemoveAt(i);
+
+                continue;
+            }
+
+            if (leftMargins[i] is LineNumberMargin lineNumberMargin)
+            {
+                lineNumberMargin.Margin =
+                    new Thickness(4, 0, 14, 0);
             }
         }
     }
