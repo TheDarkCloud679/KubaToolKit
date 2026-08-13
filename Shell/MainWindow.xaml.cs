@@ -202,6 +202,15 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         e.Handled = true;
     }
 
+    private void
+    CloudWatchDebugModeCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _cloudWatchView.SetDebugModeVisible(
+            CloudWatchDebugModeCheckBox.IsChecked == true);
+    }
+
     private void PatternCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         var selected = PatternCombo.SelectedItem?.ToString();
@@ -619,6 +628,9 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
         DateFieldsGroup.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
+
+        CloudWatchDebugToggle.Visibility =
+            isCloudWatch ? Visibility.Visible : Visibility.Collapsed;
 
         SearchButton.Visibility =
             isCloudWatch || isCloudTrail || isS3 ? Visibility.Visible : Visibility.Collapsed;

@@ -6,64 +6,134 @@
     <Grid>
         <Grid.RowDefinitions>
 
+            <!-- Debug panel (only takes space once the Debug mode toggle,
+                 now up in the shared date-range row, is checked) -->
+            <RowDefinition Height="Auto"/>
+
             <!-- Log groups -->
             <RowDefinition x:Name="LogGroupsRow"
-                   Height="300"
+                   Height="*"
                    MinHeight="80"/>
 
             <!-- Splitter -->
             <RowDefinition Height="6"/>
 
-            <!-- Debug -->
-            <RowDefinition Height="Auto"
-               MinHeight="80"/>
-
-            <!-- Splitter -->
-            <RowDefinition Height="6"/>
-
             <!-- Results -->
-            <RowDefinition Height="*"
+            <RowDefinition x:Name="ResultsRow"
+                   Height="*"
                    MinHeight="150"/>
         </Grid.RowDefinitions>
+
+        <!-- ===================================================== -->
+        <!-- DEBUG MODE -->
+        <!-- ===================================================== -->
+
+        <Border
+           x:Name="DebugModePanel"
+           Grid.Row="0"
+           Visibility="Collapsed"
+           Margin="0,0,0,8"
+           Padding="{StaticResource CardPadding}"
+           BorderBrush="{StaticResource BorderBrush}"
+           BorderThickness="1"
+           CornerRadius="{StaticResource RadiusMedium}"
+           Background="{StaticResource SurfaceBrush}"
+           Effect="{StaticResource CardShadowEffect}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock
+                    Grid.Row="0"
+                    Margin="0,0,0,6"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Text="CloudWatch Logs Insights Query"/>
+                <Border
+                    Grid.Row="1"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="4">
+                    <avalonedit:TextEditor
+                        x:Name="QueryEditorTextBox"
+                        MinHeight="120"
+                        FontFamily="Cascadia Code, Consolas"
+                        FontSize="13"
+                        ShowLineNumbers="True"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto"/>
+                </Border>
+                <Grid
+                  Grid.Row="2"
+                  Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        Grid.Column="0"
+                        Width="120"
+                        Content="Preview Query"
+                        Click="PreviewQuery_Click"/>
+                    <Button
+                        Grid.Column="2"
+                        Width="120"
+                        Content="Copy Query"
+                        Click="CopyQuery_Click"/>
+                    <Button
+                        Grid.Column="4"
+                        Width="150"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Content="Use Custom Query"
+                        Click="UseCustomQuery_Click"/>
+                </Grid>
+            </Grid>
+        </Border>
 
         <!-- ===================================================== -->
         <!-- LOG GROUPS -->
         <!-- ===================================================== -->
 
-        <Border
-            x:Name="LogGroupsPanel"
-            Grid.Row="0"
-            Padding="{StaticResource CardPadding}"
+        <Expander
+            x:Name="LogGroupsExpander"
+            Grid.Row="1"
+            IsExpanded="True"
             Margin="0,0,0,8"
-            BorderBrush="{StaticResource BorderBrush}"
-            BorderThickness="1"
-            CornerRadius="{StaticResource RadiusMedium}"
-            Background="{StaticResource SurfaceBrush}"
-            Effect="{StaticResource CardShadowEffect}">
+            Expanded="LogGroupsExpander_ExpandedCollapsed"
+            Collapsed="LogGroupsExpander_ExpandedCollapsed">
+            <Expander.Header>
+                <TextBlock
+                    Text="Log Groups"
+                    FontWeight="SemiBold"
+                    FontSize="13"
+                    Foreground="{StaticResource TextSecondaryBrush}"/>
+            </Expander.Header>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock
-                    Grid.Row="0"
-                    Margin="0,0,0,10"
-                    FontWeight="Bold"
-                    FontSize="13"
-                    Foreground="{StaticResource TextPrimaryBrush}"
-                    Text="Log Groups"/>
                 <CheckBox
                     x:Name="SearchAllLogsCheckBox"
-                    Margin="0,18,0,10"
+                    Grid.Row="0"
+                    Margin="0,0,0,10"
                     Content="Search in all log groups"
                     FontWeight="SemiBold"
                     Checked="SearchAllLogsCheckBox_Changed"
-                    Unchecked="SearchAllLogsCheckBox_Changed" Grid.RowSpan="2"/>
+                    Unchecked="SearchAllLogsCheckBox_Changed"/>
                 <TreeView
-    x:Name="LogGroupsTreeView"
-    Grid.Row="2"
-    PreviewMouseWheel="LogGroupsTreeView_PreviewMouseWheel">
+                    x:Name="LogGroupsTreeView"
+                    Grid.Row="1"
+                    PreviewMouseWheel="LogGroupsTreeView_PreviewMouseWheel">
 
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate
@@ -85,109 +155,10 @@
                     </TreeView.ItemTemplate>
                 </TreeView>
             </Grid>
-        </Border>
+        </Expander>
         <GridSplitter
                x:Name="LogGroupSplitter"
-               Grid.Row="1"
-               Height="6"
-               HorizontalAlignment="Stretch"
-               VerticalAlignment="Center"
-               ResizeBehavior="PreviousAndNext"
-               ResizeDirection="Rows"/>
-
-        <!-- ===================================================== -->
-        <!-- DEBUG MODE -->
-        <!-- ===================================================== -->
-
-        <Border
-           x:Name="DebugModePanel"
-           Grid.Row="2"
-           Margin="0,0,0,8"
-           Padding="{StaticResource CardPadding}"
-           BorderBrush="{StaticResource BorderBrush}"
-           BorderThickness="1"
-           CornerRadius="{StaticResource RadiusMedium}"
-           Background="{StaticResource SurfaceBrush}"
-           Effect="{StaticResource CardShadowEffect}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <CheckBox
-                    Grid.Row="0"
-                    x:Name="DebugModeCheckBox"
-                    Content="Debug mode"
-                    FontWeight="SemiBold"
-                    Checked="DebugModeCheckBox_Checked"
-                    Unchecked="DebugModeCheckBox_Unchecked"/>
-                <Grid
-                   Grid.Row="1"
-                   x:Name="DebugPanel"
-                   Visibility="Collapsed"
-                   Margin="0,10,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock
-                        Grid.Row="0"
-                        Margin="0,0,0,6"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Text="CloudWatch Logs Insights Query"/>
-                    <Border
-                        Grid.Row="1"
-                        BorderBrush="{StaticResource BorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        Padding="4">
-                        <avalonedit:TextEditor
-                            x:Name="QueryEditorTextBox"
-                            MinHeight="120"
-                            FontFamily="Cascadia Code, Consolas"
-                            FontSize="13"
-                            ShowLineNumbers="True"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            HorizontalScrollBarVisibility="Auto"
-                            VerticalScrollBarVisibility="Auto"/>
-                    </Border>
-                    <Grid
-                      Grid.Row="2"
-                      Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button
-                            Grid.Column="0"
-                            Width="120"
-                            Content="Preview Query"
-                            Click="PreviewQuery_Click"/>
-                        <Button
-                            Grid.Column="2"
-                            Width="120"
-                            Content="Copy Query"
-                            Click="CopyQuery_Click"/>
-                        <Button
-                            Grid.Column="4"
-                            Width="150"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Content="Use Custom Query"
-                            Click="UseCustomQuery_Click"/>
-                    </Grid>
-                </Grid>
-            </Grid>
-        </Border>
-        <GridSplitter
-               x:Name="DebugSplitter"
-               Grid.Row="3"
+               Grid.Row="2"
                Height="6"
                HorizontalAlignment="Stretch"
                VerticalAlignment="Center"
@@ -198,7 +169,7 @@
         <!-- RESULTS -->
         <!-- ===================================================== -->
 
-        <Grid Grid.Row="4"
+        <Grid Grid.Row="3"
             x:Name="ResultsPanel">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

@@ -425,6 +425,37 @@
                             HorizontalContentAlignment="Center"
                             behaviors:TimeEntryBehavior.Enabled="True"/>
                     </Grid>
+
+                    <!-- CloudWatch-only: toggles CloudWatchLogsView's debug
+                         query panel. Lives here (not in the module itself)
+                         because this whole row is Shell-owned and shared
+                         with CloudTrail, same as DateFieldsGroup above. -->
+                    <Border
+                        x:Name="CloudWatchDebugToggle"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Padding="10,5"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        BorderBrush="{StaticResource BorderStrongBrush}"
+                        BorderThickness="1"
+                        Cursor="Hand">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <CheckBox
+                            x:Name="CloudWatchDebugModeCheckBox"
+                            Content="Debug mode"
+                            FontWeight="SemiBold"
+                            Checked="CloudWatchDebugModeCheckBox_Changed"
+                            Unchecked="CloudWatchDebugModeCheckBox_Changed"/>
+                    </Border>
                 </Grid>
             </Grid>
         </Border>
