@@ -394,8 +394,7 @@
                             Grid.Column="1"
                             Width="85"
                             Tag="Start date"
-                            VerticalContentAlignment="Center"
-                            CalendarOpened="DatePicker_CalendarOpened"/>
+                            VerticalContentAlignment="Center"/>
                         <TextBox
                             x:Name="StartTimeTextBox"
                             Grid.Column="2"
@@ -416,8 +415,7 @@
                             Grid.Column="4"
                             Width="85"
                             Tag="End date"
-                            VerticalContentAlignment="Center"
-                            CalendarOpened="DatePicker_CalendarOpened"/>
+                            VerticalContentAlignment="Center"/>
                         <TextBox
                             x:Name="EndTimeTextBox"
                             Grid.Column="5"
