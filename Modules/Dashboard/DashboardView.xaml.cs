@@ -259,6 +259,13 @@ public partial class DashboardView
             RefreshButton.IsEnabled =
                 false;
 
+            RefreshIconRotate.BeginAnimation(
+                RotateTransform.AngleProperty,
+                new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(0.8)))
+                {
+                    RepeatBehavior = RepeatBehavior.Forever
+                });
+
             _loadCancellation?.Cancel();
 
             _loadCancellation =
@@ -359,6 +366,12 @@ public partial class DashboardView
 
             RefreshButton.IsEnabled =
                 true;
+
+            RefreshIconRotate.BeginAnimation(
+                RotateTransform.AngleProperty,
+                null);
+
+            RefreshIconRotate.Angle = 0;
         }
     }
 

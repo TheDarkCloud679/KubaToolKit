@@ -43,27 +43,72 @@
             <Button
                 x:Name="ProjectInfoButton"
                 Grid.Column="2"
-                Width="110"
+                Style="{StaticResource SecondaryButtonStyle}"
                 Margin="0,0,10,0"
-                Content="Project Info"
-                Click="ProjectInfoButton_Click"/>
+                Click="ProjectInfoButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Grid Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center">
+                        <Ellipse
+                            Width="12" Height="12" Margin="1"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.3"/>
+                        <Line
+                            X1="7" Y1="6.3" X2="7" Y2="10.3"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <Ellipse
+                            Width="1.6" Height="1.6" Margin="6.2,3.6,0,0"
+                            Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Grid>
+                    <TextBlock Text="Project Info" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
                 x:Name="WikiButton"
                 Grid.Column="3"
-                Width="36"
+                Width="32"
+                Style="{StaticResource SecondaryButtonStyle}"
                 Padding="0"
                 Margin="0,0,10,0"
-                Content="🌐"
                 ToolTip="Wiki"
-                Click="WikiButton_Click"/>
+                Click="WikiButton_Click">
+                <Grid Width="14" Height="14">
+                    <Ellipse
+                        Width="12" Height="12" Margin="1"
+                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                        StrokeThickness="1.3"/>
+                    <Ellipse
+                        Width="5" Height="12" Margin="4.5,1,4.5,1"
+                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                        StrokeThickness="1.1"/>
+                    <Line
+                        X1="1.3" Y1="7" X2="12.7" Y2="7"
+                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                        StrokeThickness="1.1"/>
+                </Grid>
+            </Button>
 
             <Button
                 x:Name="RefreshButton"
                 Grid.Column="4"
-                Width="100"
-                Content="Refresh"
-                Click="RefreshButton_Click"/>
+                Style="{StaticResource AccentButtonStyle}"
+                Click="RefreshButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path
+                        Data="M13.125,7.5 A5.625,5.625 0 1 1 11.475,3.525 M13.125,1.875 L13.125,5.625 L9.375,5.625"
+                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                        StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Width="15" Height="15" Stretch="Uniform"
+                        VerticalAlignment="Center" Margin="0,0,7,0"
+                        RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <RotateTransform x:Name="RefreshIconRotate" Angle="0"/>
+                        </Path.RenderTransform>
+                    </Path>
+                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
         <!-- Metric sections -->
