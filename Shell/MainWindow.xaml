@@ -442,8 +442,14 @@
         <!-- ACTIVE MODULE -->
         <!-- ===================================================== -->
 
+        <!-- The header Border above has its own Padding (16,14) giving it
+             breathing room; ModuleHost had none beyond the outer window
+             Margin, so every module's own top-right content (e.g. the
+             Dashboard's toolbar buttons) sat flush against the header/
+             splitter above and the window's right edge. -->
         <Grid
             x:Name="ModuleHost"
-            Grid.Row="2"/>
+            Grid.Row="2"
+            Margin="0,12,8,0"/>
     </Grid>
 </Window>
