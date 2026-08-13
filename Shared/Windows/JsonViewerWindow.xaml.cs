@@ -10,12 +10,21 @@ public partial class JsonViewerWindow
         _rawMessage;
 
     public JsonViewerWindow(
-        string message)
+        string message,
+        string? subtitle = null)
     {
         InitializeComponent();
 
         _rawMessage =
             message;
+
+        SubtitleText.Text =
+            subtitle ?? "";
+
+        SubtitleText.Visibility =
+            string.IsNullOrWhiteSpace(subtitle)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
 
         LoadJson();
     }

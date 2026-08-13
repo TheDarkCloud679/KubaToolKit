@@ -600,9 +600,18 @@ SearchAllLogsCheckBox_Changed(
                 DispatcherPriority.Input,
                 new Action(() =>
                 {
+                    var separatorIndex =
+                        selectedLog.LogGroup.IndexOf(':');
+
+                    var logGroupSubtitle =
+                        separatorIndex >= 0
+                            ? selectedLog.LogGroup[(separatorIndex + 1)..]
+                            : selectedLog.LogGroup;
+
                     var viewer =
                         new JsonViewerWindow(
-                            selectedLog.Message);
+                            selectedLog.Message,
+                            logGroupSubtitle);
 
                     viewer.Show();
                 }));
