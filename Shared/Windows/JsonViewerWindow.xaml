@@ -9,7 +9,12 @@
         MinWidth="800"
         WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="28" Background="{StaticResource WindowBackgroundBrush}">
+    <!-- Deliberately NOT the shared WindowBackgroundBrush (#F4F4F5): that's
+         only 4% darker than the card's SurfaceBrush (#FFFFFF), fine for a
+         screen with several cards but here the card IS the window, and a
+         4% difference doesn't read as a floating card once compressed
+         into a screenshot, so this needs real contrast, local to this window. -->
+    <Grid Margin="28" Background="#E9E9EB">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
