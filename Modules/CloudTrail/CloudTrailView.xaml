@@ -131,22 +131,50 @@
                                             Width="*">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <Border
-                                                        Background="{StaticResource SurfaceAltBrush}"
-                                                        BorderBrush="{StaticResource BorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="6"
-                                                        Padding="8,5"
-                                                        Margin="0,4"
-                                                        MaxHeight="42">
+                                                    <Grid>
+                                                        <Border
+                                                            Background="{StaticResource SurfaceAltBrush}"
+                                                            BorderBrush="{StaticResource BorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="6"
+                                                            Padding="8,5"
+                                                            Margin="0,4"
+                                                            MaxHeight="42">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Resources}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock
+                                                                Text="{Binding Resources}"
+                                                                FontFamily="Cascadia Code, Consolas"
+                                                                FontSize="12"
+                                                                TextWrapping="Wrap"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                VerticalAlignment="Center"/>
+                                                        </Border>
                                                         <TextBlock
-                                                            Text="{Binding Resources}"
-                                                            FontFamily="Cascadia Code, Consolas"
+                                                            Text="—"
                                                             FontSize="12"
-                                                            TextWrapping="Wrap"
-                                                            TextTrimming="CharacterEllipsis"
-                                                            VerticalAlignment="Center"/>
-                                                    </Border>
+                                                            Margin="8,0,0,0"
+                                                            Foreground="{StaticResource TextMutedBrush}"
+                                                            VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Resources}" Value="">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
