@@ -1,6 +1,7 @@
 using KubaToolKit.Modules.ProjectInfo.Models;
 using System.IO;
 using System.Windows;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
@@ -89,21 +90,21 @@ public partial class FileZillaExportWindow
         if (NameColumnCombo.SelectedItem is not string nameColumn
             || HostColumnCombo.SelectedItem is not string hostColumn)
         {
-            MessageBox.Show("Pick a column for the name and one for the host/IP.", "Export to FileZilla");
+            AppMessageBox.Show("Pick a column for the name and one for the host/IP.", "Export to FileZilla");
 
             return;
         }
 
         if (string.IsNullOrWhiteSpace(FolderNameTextBox.Text))
         {
-            MessageBox.Show("Enter a folder name.", "Export to FileZilla");
+            AppMessageBox.Show("Enter a folder name.", "Export to FileZilla");
 
             return;
         }
 
         if (!int.TryParse(PortTextBox.Text.Trim(), out _))
         {
-            MessageBox.Show("Port must be a number.", "Export to FileZilla");
+            AppMessageBox.Show("Port must be a number.", "Export to FileZilla");
 
             return;
         }

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -71,7 +72,7 @@ public partial class TextInputWindow
     {
         if (string.IsNullOrWhiteSpace(ValueTextBox.Text))
         {
-            MessageBox.Show("Enter a name.");
+            AppMessageBox.Show("Enter a name.");
             return;
         }
 

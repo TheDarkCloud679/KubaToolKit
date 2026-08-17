@@ -2,6 +2,7 @@
 using System.Data;
 using System.Windows;
 using KubaToolKit.Shared.Services;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit
 {
@@ -30,7 +31,7 @@ namespace KubaToolKit
         {
             Logger.Error("Unhandled exception.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"{ex}\n\nDetails logged in {Logger.LogsFolder}",
                 "KubaToolKit - Startup Error");
         }

@@ -388,7 +388,7 @@ FindNext_Click(
             SearchCountText.Text =
                 "0 / 0";
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Text not found.");
 
             return;

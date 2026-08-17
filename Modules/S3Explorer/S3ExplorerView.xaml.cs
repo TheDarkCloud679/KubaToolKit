@@ -73,7 +73,7 @@ public partial class S3ExplorerView
             {
                 Logger.Debug("S3ExplorerView: SSO session expired, attempting reconnection.");
 
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "AWS authentication required.\nYour browser will open.",
                     "AWS Login");
 
@@ -91,7 +91,7 @@ public partial class S3ExplorerView
                 $"S3ExplorerView: failed to load buckets (profile '{_currentProfile}').",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "S3 loading error");
         }
@@ -182,7 +182,7 @@ LoadS3RootFolders()
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "S3 folders error");
         }
@@ -254,7 +254,7 @@ LoadS3Children(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "S3 expand error");
         }
@@ -417,7 +417,7 @@ S3TreeView_SelectedItemChanged(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "S3 file loading error");
         }
@@ -534,7 +534,7 @@ RunSearchAsync(
             _s3Files.Clear();
             if (results.Count >= 100)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "More than 100 files were found.\nPlease refine your search.",
                     "Too many results",
                     MessageBoxButton.OK,
@@ -836,7 +836,7 @@ OpenS3File(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "S3 file open error");
         }
@@ -985,7 +985,7 @@ S3FilesGrid_DoubleClick(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Download error");
         }
@@ -1035,14 +1035,14 @@ S3RenameFile_Click(object sender, RoutedEventArgs e)
                     file.Key,
                     newName);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "File renamed.");
 
             await RefreshCurrentFolder();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Rename error");
         }
@@ -1059,7 +1059,7 @@ S3DeleteFile_Click(object sender, RoutedEventArgs e)
                 return;
             }
             var confirm =
-                MessageBox.Show(
+                AppMessageBox.Show(
                     $"Delete '{file.Name}' ?",
                     "Confirm delete",
                     MessageBoxButton.YesNo,
@@ -1074,7 +1074,7 @@ S3DeleteFile_Click(object sender, RoutedEventArgs e)
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), "Delete error");
+            AppMessageBox.Show(ex.ToString(), "Delete error");
         }
     }
 
@@ -1108,7 +1108,7 @@ S3FilesGrid_Drop(
 
             if (info.Length > maxSize)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     $"{info.Name} is larger than 100 MB.",
                     "Upload",
                     MessageBoxButton.OK,
@@ -1122,7 +1122,7 @@ S3FilesGrid_Drop(
 
         if (totalSize > maxSize)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Total upload size exceeds 100 MB.",
                 "Upload",
                 MessageBoxButton.OK,
@@ -1135,7 +1135,7 @@ S3FilesGrid_Drop(
             totalSize / 1024d / 1024d;
 
         var result =
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Upload {files.Length} file(s)\n\n" +
                 $"Total size : {sizeMb:F2} MB\n\n" +
                 $"Continue ?",
@@ -1154,7 +1154,7 @@ S3FilesGrid_Drop(
         if (string.IsNullOrWhiteSpace(_currentProfile)
             || string.IsNullOrWhiteSpace(bucket))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "No profile or bucket selected.");
 
             return;
@@ -1174,7 +1174,7 @@ S3FilesGrid_Drop(
 
         await RefreshCurrentFolder();
 
-        MessageBox.Show(
+        AppMessageBox.Show(
             "Upload completed.");
     }
 

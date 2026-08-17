@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -296,7 +297,7 @@ public partial class JiraPopoutWindow
         {
             Logger.Error($"JiraPopoutWindow: failed to open '{url}'.", ex);
 
-            MessageBox.Show(ex.ToString(), "Atlassian Search");
+            AppMessageBox.Show(ex.ToString(), "Atlassian Search");
         }
     }
 }

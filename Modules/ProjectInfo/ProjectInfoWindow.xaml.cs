@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
@@ -161,7 +162,7 @@ public partial class ProjectInfoWindow
         {
             Logger.Error("ProjectInfoWindow: failed to open files folder.", ex);
 
-            MessageBox.Show(ex.ToString(), "Project Info - files folder");
+            AppMessageBox.Show(ex.ToString(), "Project Info - files folder");
         }
     }
 
@@ -181,7 +182,7 @@ public partial class ProjectInfoWindow
         if (_project.Sections.Any(s =>
                 string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show($"A section \"{name}\" already exists.", "Project Info");
+            AppMessageBox.Show($"A section \"{name}\" already exists.", "Project Info");
 
             return;
         }
@@ -333,7 +334,7 @@ public partial class ProjectInfoWindow
             if (_project.Sections.Any(s =>
                     s != section && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
             {
-                MessageBox.Show($"A section \"{newName}\" already exists.", "Project Info");
+                AppMessageBox.Show($"A section \"{newName}\" already exists.", "Project Info");
 
                 nameEditBox.Text = section.Name;
 
@@ -427,7 +428,7 @@ public partial class ProjectInfoWindow
         };
         deleteSectionButton.Click += (_, __) =>
         {
-            if (MessageBox.Show(
+            if (AppMessageBox.Show(
                     $"Delete section \"{section.Name}\" and all its data?",
                     "Confirm",
                     MessageBoxButton.YesNo) != MessageBoxResult.Yes)
@@ -558,14 +559,14 @@ public partial class ProjectInfoWindow
 
             if (section.Columns.Count <= 1)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "A section must keep at least one column.",
                     "Project Info");
 
                 return;
             }
 
-            if (MessageBox.Show(
+            if (AppMessageBox.Show(
                     $"Delete column \"{columnName}\" and its data?",
                     "Confirm",
                     MessageBoxButton.YesNo) != MessageBoxResult.Yes)
@@ -624,7 +625,7 @@ public partial class ProjectInfoWindow
 
             if (entries.Count == 0)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     $"No row has a value in the \"{settings.HostColumn}\" column.",
                     "Export to FileZilla");
 
@@ -640,7 +641,7 @@ public partial class ProjectInfoWindow
                     settings.Port,
                     settings.KeyFilePath);
 
-                MessageBox.Show(
+                AppMessageBox.Show(
                     $"Exported {entries.Count} site(s) to the \"{settings.FolderName}\" folder in FileZilla's Site Manager.\n\nClose and reopen FileZilla to see them (if FileZilla was already running, it may overwrite this file when it closes -- re-run the export afterwards if so).",
                     "Export to FileZilla");
             }
@@ -648,7 +649,7 @@ public partial class ProjectInfoWindow
             {
                 Logger.Error("ProjectInfoWindow: FileZilla export failed.", ex);
 
-                MessageBox.Show(ex.ToString(), "Export to FileZilla - error");
+                AppMessageBox.Show(ex.ToString(), "Export to FileZilla - error");
             }
         };
 
@@ -1229,7 +1230,7 @@ public partial class ProjectInfoWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), "Project Info - save error");
+            AppMessageBox.Show(ex.ToString(), "Project Info - save error");
         }
     }
 

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.Sqs;
 
@@ -129,7 +130,7 @@ public partial class SqsView
                 $"SqsView: refresh failed (profile '{_currentProfile}').",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "SQS loading error");
         }
@@ -164,7 +165,7 @@ public partial class SqsView
 
         if (string.IsNullOrWhiteSpace(_currentProfile))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Select an AWS profile");
 
             return;

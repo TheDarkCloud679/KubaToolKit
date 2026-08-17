@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -637,7 +638,7 @@ public partial class ApiClientView
         {
             Logger.Error("ApiClientView: failed to load collections/environments.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.Message,
                 "Collections loading error");
         }
@@ -712,7 +713,7 @@ public partial class ApiClientView
         if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
             || string.IsNullOrEmpty(environment.FilePath))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Select an environment first (or add one via \"+\").",
                 "No environment selected");
 
@@ -1086,7 +1087,7 @@ public partial class ApiClientView
         SaveCollectionOf(target);
         RefreshAutoHeaders();
 
-        MessageBox.Show(
+        AppMessageBox.Show(
             $"{count} request(s) updated under \"{target.Name}\".",
             "Bearer Token applied");
     }
@@ -1143,7 +1144,7 @@ public partial class ApiClientView
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Collection creation error");
+            AppMessageBox.Show(ex.Message, "Collection creation error");
         }
     }
 
@@ -1332,7 +1333,7 @@ public partial class ApiClientView
 
         if (node.Parent == null)
         {
-            if (MessageBox.Show(
+            if (AppMessageBox.Show(
                     $"Permanently delete the collection \"{node.Name}\" (including its file)?",
                     "Delete collection",
                     MessageBoxButton.YesNo,
@@ -1348,7 +1349,7 @@ public partial class ApiClientView
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Delete error");
+                AppMessageBox.Show(ex.Message, "Delete error");
                 return;
             }
 
@@ -1356,7 +1357,7 @@ public partial class ApiClientView
             return;
         }
 
-        if (MessageBox.Show(
+        if (AppMessageBox.Show(
                 $"Delete \"{node.Name}\"?",
                 "Delete",
                 MessageBoxButton.YesNo,
@@ -1400,7 +1401,7 @@ public partial class ApiClientView
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Collection save error");
+            AppMessageBox.Show(ex.Message, "Collection save error");
         }
     }
 
@@ -1472,7 +1473,7 @@ public partial class ApiClientView
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Enter a URL");
 
             return;
@@ -1560,7 +1561,7 @@ public partial class ApiClientView
 
             ResponseHeadersTextBox.Text = "";
             ResponseBodyEditor.Text = "";
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.Message,
                 "Request error");
         }

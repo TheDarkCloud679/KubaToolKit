@@ -105,7 +105,7 @@ public partial class CloudTrailView
 
             Logger.Error("CloudTrailView: search failed.", ex);
 
-            MessageBox.Show(ex.ToString(), "Search error");
+            AppMessageBox.Show(ex.ToString(), "Search error");
         }
         finally
         {
@@ -145,7 +145,7 @@ public partial class CloudTrailView
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), "Viewer error");
+            AppMessageBox.Show(ex.ToString(), "Viewer error");
         }
     }
 

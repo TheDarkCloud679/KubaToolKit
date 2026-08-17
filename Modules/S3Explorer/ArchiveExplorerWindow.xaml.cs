@@ -112,7 +112,7 @@ _cachedContent =
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "ReadArchiveFile crash");
 

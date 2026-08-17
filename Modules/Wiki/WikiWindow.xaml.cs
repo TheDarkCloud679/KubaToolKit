@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.Wiki;
 
@@ -134,7 +135,7 @@ public partial class WikiWindow
 
         if (_project.Sections.Any(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show($"A section \"{name}\" already exists.", "Wiki");
+            AppMessageBox.Show($"A section \"{name}\" already exists.", "Wiki");
 
             return;
         }
@@ -173,7 +174,7 @@ public partial class WikiWindow
         if (_project.Sections.Any(s =>
                 s != section && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show($"A section \"{newName}\" already exists.", "Wiki");
+            AppMessageBox.Show($"A section \"{newName}\" already exists.", "Wiki");
 
             return;
         }
@@ -197,7 +198,7 @@ public partial class WikiWindow
             return;
         }
 
-        if (MessageBox.Show(
+        if (AppMessageBox.Show(
                 $"Delete section \"{section.Name}\" and its content? Attached files are kept on disk.",
                 "Confirm",
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes)
@@ -359,7 +360,7 @@ public partial class WikiWindow
         {
             Logger.Error("WikiWindow: failed to attach image.", ex);
 
-            MessageBox.Show(ex.ToString(), "Wiki - add image");
+            AppMessageBox.Show(ex.ToString(), "Wiki - add image");
         }
     }
 
@@ -705,7 +706,7 @@ public partial class WikiWindow
             {
                 Logger.Error("WikiWindow: failed to open attachment.", ex);
 
-                MessageBox.Show(ex.ToString(), "Wiki - open attachment");
+                AppMessageBox.Show(ex.ToString(), "Wiki - open attachment");
             }
         }
 
@@ -786,7 +787,7 @@ public partial class WikiWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), "Wiki - save error");
+            AppMessageBox.Show(ex.ToString(), "Wiki - save error");
         }
     }
 

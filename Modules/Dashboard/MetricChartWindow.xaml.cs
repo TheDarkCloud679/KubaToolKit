@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.Dashboard;
 
@@ -99,7 +100,7 @@ public partial class MetricChartWindow
 
             if (endLocal <= startLocal)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "The end date must be after the start date.",
                     "Invalid range");
 
@@ -161,7 +162,7 @@ public partial class MetricChartWindow
 
             Logger.Error("MetricChartWindow: failed to load metric.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Metric loading error");
         }

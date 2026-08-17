@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.Dashboard;
 
@@ -364,7 +365,7 @@ public partial class DashboardView
                 $"DashboardView: refresh failed (profile '{_currentProfile}').",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Dashboard loading error");
         }
@@ -399,7 +400,7 @@ public partial class DashboardView
     {
         if (string.IsNullOrWhiteSpace(_currentProfile))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Please select an AWS profile first.",
                 "Project Info");
 
@@ -418,7 +419,7 @@ public partial class DashboardView
     {
         if (string.IsNullOrWhiteSpace(_currentProfile))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Please select an AWS profile first.",
                 "Wiki");
 

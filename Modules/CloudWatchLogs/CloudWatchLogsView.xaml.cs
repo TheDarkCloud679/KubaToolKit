@@ -273,7 +273,7 @@ public partial class CloudWatchLogsView
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Category loading error");
         }
@@ -317,7 +317,7 @@ public partial class CloudWatchLogsView
                 $"CloudWatchLogsView: failed to load log groups (profile '{profile}').",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Log groups loading error");
         }
@@ -444,7 +444,7 @@ SearchAllLogsCheckBox_Changed(
 
             Logger.Error($"CloudWatchLogsView: search '{searchText}' failed.", ex);
 
-            MessageBox.Show(ex.ToString(), "Search error");
+            AppMessageBox.Show(ex.ToString(), "Search error");
         }
         finally
         {
@@ -489,7 +489,7 @@ SearchAllLogsCheckBox_Changed(
             if (string.IsNullOrWhiteSpace(
                     QueryEditorTextBox.Text))
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "No custom query.");
 
                 return;
@@ -498,7 +498,7 @@ SearchAllLogsCheckBox_Changed(
             if (string.IsNullOrWhiteSpace(
                     _currentProfile))
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Please select an AWS profile");
 
                 return;
@@ -559,7 +559,7 @@ SearchAllLogsCheckBox_Changed(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Custom query error");
         }
@@ -618,7 +618,7 @@ SearchAllLogsCheckBox_Changed(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Viewer error");
         }
@@ -662,7 +662,7 @@ SearchAllLogsCheckBox_Changed(
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Preview query error");
         }
@@ -678,12 +678,12 @@ SearchAllLogsCheckBox_Changed(
             Clipboard.SetText(
                 QueryEditorTextBox.Text);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Query copied.");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Copy error");
         }

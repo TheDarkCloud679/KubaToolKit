@@ -2,6 +2,7 @@ using KubaToolKit.Modules.ApiClient.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ApiClient;
 
@@ -48,7 +49,7 @@ public partial class EnvironmentEditorWindow
 
         if (string.IsNullOrWhiteSpace(NameTextBox.Text))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Enter an environment name");
 
             return;
@@ -63,7 +64,7 @@ public partial class EnvironmentEditorWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.Message,
                 "Environment save error");
 

@@ -91,7 +91,7 @@ public partial class ExecutionEventsWindow
         {
             Logger.Error("ExecutionEventsWindow: failed to load history.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Execution history loading error");
         }

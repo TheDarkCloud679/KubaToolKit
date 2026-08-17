@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.StepFunctions;
 
@@ -93,7 +94,7 @@ public partial class ExecutionsWindow
         {
             Logger.Debug($"ExecutionsWindow: {ex.Message}");
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.Message,
                 "Logging not configured");
 
@@ -103,7 +104,7 @@ public partial class ExecutionsWindow
         {
             Logger.Error("ExecutionsWindow: failed to load executions.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Executions loading error");
         }

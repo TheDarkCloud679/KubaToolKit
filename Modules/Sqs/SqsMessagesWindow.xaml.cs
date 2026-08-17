@@ -117,7 +117,7 @@ public partial class SqsMessagesWindow
                 $"SqsMessagesWindow: failed to search '{_queueUrl}'.",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "SQS search error");
         }

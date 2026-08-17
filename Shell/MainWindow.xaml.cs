@@ -16,6 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Shell;
 
@@ -141,7 +142,7 @@ MainWindow_Loaded(
         {
             Logger.Error("MainWindow: initial load failed.", ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Startup error");
         }
@@ -459,7 +460,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), "Search error");
+            AppMessageBox.Show(ex.ToString(), "Search error");
         }
     }
 
@@ -473,7 +474,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
         if (string.IsNullOrWhiteSpace(profile))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Please select an AWS profile");
 
             return false;
@@ -483,7 +484,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 StartTimeTextBox.Text,
                 out var startTime))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Invalid start time.\nExpected format: HH:mm",
                 "Time error");
 
@@ -494,7 +495,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 EndTimeTextBox.Text,
                 out var endTime))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Invalid end time.\nExpected format: HH:mm",
                 "Time error");
 
@@ -504,7 +505,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (startTime.TotalHours >= 24
             || endTime.TotalHours >= 24)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Hour must be between 00:00 and 23:59.",
                 "Time error");
 
@@ -514,7 +515,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         if (StartDatePicker.SelectedDate == null
             || EndDatePicker.SelectedDate == null)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Please select dates.",
                 "Date error");
 
@@ -529,7 +530,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
         if (endDateTime <= startDateTime)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "End date/time must be after start date/time.",
                 "Date error");
 

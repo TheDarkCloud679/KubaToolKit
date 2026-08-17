@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.StepFunctions;
 
@@ -98,7 +99,7 @@ public partial class StepFunctionsView
                 $"StepFunctionsView: refresh failed (profile '{_currentProfile}').",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 ex.ToString(),
                 "Step Functions loading error");
         }

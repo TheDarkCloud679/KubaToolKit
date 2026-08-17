@@ -2,6 +2,7 @@ using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Shared.Services;
 using System.Diagnostics;
 using System.Windows;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -141,7 +142,7 @@ public partial class ConfluencePageViewerWindow
         {
             Logger.Error($"ConfluencePageViewerWindow: failed to open '{_fallbackUrl}'.", ex);
 
-            MessageBox.Show(ex.ToString(), "Atlassian Search");
+            AppMessageBox.Show(ex.ToString(), "Atlassian Search");
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -889,7 +890,7 @@ public partial class AtlassianSearchView
 
         if (!_settings.IsComplete)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Set up the Jira/Confluence connection first (Settings).",
                 "Atlassian Search");
 
@@ -1113,7 +1114,7 @@ public partial class AtlassianSearchView
     {
         if (!_settings.IsComplete)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Set up the Jira/Confluence connection first (Settings).",
                 "Atlassian Search");
 
@@ -1208,7 +1209,7 @@ public partial class AtlassianSearchView
 
         if (!_settings.IsComplete)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Set up the Jira/Confluence connection first (Settings).",
                 "Atlassian Search");
 
@@ -1487,7 +1488,7 @@ public partial class AtlassianSearchView
         {
             Logger.Error($"AtlassianSearchView: failed to open '{url}'.", ex);
 
-            MessageBox.Show(ex.ToString(), "Atlassian Search");
+            AppMessageBox.Show(ex.ToString(), "Atlassian Search");
         }
     }
 
