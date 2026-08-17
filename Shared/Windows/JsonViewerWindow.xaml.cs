@@ -104,12 +104,52 @@ public partial class JsonViewerWindow
 
             JsonInfoText.Text =
                 $"{JsonTextBox.LineCount} lines • {JsonTextBox.Text.Length:N0} chars";
+
+            _cardsView =
+                JsonCardViewBuilder.Build(JsonTextBox.Text);
+
+            if (_cardsView != null)
+            {
+                CardsContent.Content =
+                    _cardsView.Root;
+
+                ViewModeRow.Visibility =
+                    Visibility.Visible;
+
+                // Setting IsChecked here (rather than via IsChecked="True"
+                // in XAML) fires ViewMode_Changed only now, after
+                // InitializeComponent has already wired up
+                // JsonTextBox/CardsScrollViewer -- doing it from XAML fires
+                // the Checked event mid-parse, before those fields exist
+                // yet, and crashes with a NullReferenceException (same bug
+                // as FileViewerWindow hit).
+                CardsViewRadio.IsChecked =
+                    true;
+            }
         }
         catch
         {
             JsonTextBox.Text =
                 _rawMessage;
         }
+    }
+
+    private JsonCardViewResult?
+        _cardsView;
+
+    private void
+    ViewMode_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var showCards =
+            CardsViewRadio.IsChecked == true;
+
+        CardsScrollViewer.Visibility =
+            showCards ? Visibility.Visible : Visibility.Collapsed;
+
+        JsonTextBox.Visibility =
+            showCards ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void
