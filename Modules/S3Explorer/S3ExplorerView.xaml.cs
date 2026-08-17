@@ -467,7 +467,10 @@ S3SearchFromHere_Click(
     object sender,
     RoutedEventArgs e)
     {
-        if (S3TreeView.SelectedItem
+        // The menu applies to whichever node was right-clicked, which
+        // isn't necessarily S3TreeView.SelectedItem (that's the last
+        // left-click) -- use the context menu's own target instead.
+        if (_contextMenuHighlightedBorder?.DataContext
             is not S3Node node)
         {
             return;
