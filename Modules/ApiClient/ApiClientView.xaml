@@ -37,7 +37,7 @@
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="{StaticResource RadiusPill}"
+                            CornerRadius="{StaticResource RadiusMedium}"
                             Padding="12,6">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock
@@ -574,7 +574,7 @@
                                 <TextBlock Text="Headers" Margin="0,0,6,0"/>
                                 <Border
                                     Background="{StaticResource AccentSoftBrush}"
-                                    CornerRadius="{StaticResource RadiusPill}"
+                                    CornerRadius="{StaticResource RadiusMedium}"
                                     Padding="6,0"
                                     VerticalAlignment="Center">
                                     <TextBlock
@@ -1377,7 +1377,7 @@
                                 x:Name="StatusBadge"
                                 Margin="10,0,0,0"
                                 Padding="9,3"
-                                CornerRadius="{StaticResource RadiusPill}"
+                                CornerRadius="{StaticResource RadiusMedium}"
                                 Background="{StaticResource SurfaceAltBrush}"
                                 VerticalAlignment="Center"
                                 Visibility="Collapsed">
@@ -1520,7 +1520,7 @@
                                 Background="{StaticResource SurfaceAltBrush}"
                                 BorderBrush="{StaticResource BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="{StaticResource RadiusPill}"
+                                CornerRadius="{StaticResource RadiusMedium}"
                                 Padding="2">
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton
