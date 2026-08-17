@@ -35,6 +35,8 @@
     <Color x:Key="DangerHoverColor">#D33D42</Color>
     <Color x:Key="DangerSoftColor">#FBEAEA</Color>
     <Color x:Key="WarningColor">#F2A93B</Color>
+    <Color x:Key="WarningSoftColor">#FDF1DC</Color>
+    <Color x:Key="WarningPressedColor">#8A5A0F</Color>
 
     <!-- Warm counterpoint to the teal accent, used sparingly (brand
          mark, occasional highlight), never for state/status so it can't
@@ -69,6 +71,8 @@
     <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
     <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoftColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="WarningSoftBrush" Color="{StaticResource WarningSoftColor}"/>
+    <SolidColorBrush x:Key="WarningPressedBrush" Color="{StaticResource WarningPressedColor}"/>
     <SolidColorBrush x:Key="AccentSecondaryBrush" Color="{StaticResource AccentSecondaryColor}"/>
 
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
