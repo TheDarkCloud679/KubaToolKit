@@ -31,6 +31,7 @@
     <Color x:Key="AccentSoftHoverColor">#CDEBEF</Color>
 
     <Color x:Key="SuccessColor">#1E9E6B</Color>
+    <Color x:Key="SuccessSoftColor">#E7F5EC</Color>
     <Color x:Key="DangerColor">#E5484D</Color>
     <Color x:Key="DangerHoverColor">#D33D42</Color>
     <Color x:Key="DangerSoftColor">#FBEAEA</Color>
@@ -67,6 +68,7 @@
     <SolidColorBrush x:Key="AccentSoftHoverBrush" Color="{StaticResource AccentSoftHoverColor}"/>
 
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="SuccessSoftBrush" Color="{StaticResource SuccessSoftColor}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
     <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
     <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoftColor}"/>

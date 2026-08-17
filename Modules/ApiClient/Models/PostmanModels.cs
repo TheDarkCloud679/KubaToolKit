@@ -133,6 +133,9 @@ public class PostmanEnvironment
 
     [JsonPropertyName("values")]
     public List<PostmanEnvironmentValue>? Values { get; set; }
+
+    [JsonPropertyName("_kubatoolkit_token_request")]
+    public PostmanRequest? TokenRequest { get; set; }
 }
 
 public class PostmanEnvironmentValue

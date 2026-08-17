@@ -290,6 +290,157 @@ public class CollectionStorageService
         };
     }
 
+    // Mirrors the request-parsing branch of BuildNodes, standalone (no
+    // enclosing PostmanItem / Parent / IsFavorite) since the "Get Token"
+    // request isn't part of any collection tree.
+    private CollectionNode?
+    ParseTokenRequest(
+        PostmanRequest? request)
+    {
+        if (request == null)
+        {
+            return null;
+        }
+
+        var body = request.Body;
+
+        var bodyMode =
+            body == null
+                ? "none"
+                : body.Mode switch
+                {
+                    "urlencoded" => "urlencoded",
+                    "formdata" => "formdata",
+                    _ => "raw"
+                };
+
+        var bodyFormData =
+            bodyMode switch
+            {
+                "urlencoded" =>
+                    body?.UrlEncoded?
+                        .Where(p => !p.Disabled)
+                        .Select(p => new HeaderItem
+                        {
+                            Enabled = true,
+                            Key = p.Key,
+                            Value = p.Value
+                        })
+                        .ToList()
+                    ?? new List<HeaderItem>(),
+
+                "formdata" =>
+                    body?.FormData?
+                        .Where(p => !p.Disabled)
+                        .Select(p => new HeaderItem
+                        {
+                            Enabled = true,
+                            Key = p.Key,
+                            Value = p.Value
+                        })
+                        .ToList()
+                    ?? new List<HeaderItem>(),
+
+                _ => new List<HeaderItem>()
+            };
+
+        return new CollectionNode
+        {
+            Name = "Token Request",
+            IsRequest = true,
+            Method = request.Method ?? "GET",
+            Url = ExtractUrl(request.Url),
+
+            Headers =
+                request.Header?
+                    .Where(h => !h.Disabled)
+                    .Select(h => new HeaderItem
+                    {
+                        Enabled = true,
+                        Key = h.Key,
+                        Value = h.Value
+                    })
+                    .ToList()
+                ?? new List<HeaderItem>(),
+
+            Body = body?.Raw ?? "",
+            BodyMode = bodyMode,
+            BodyFormData = bodyFormData,
+            Auth = ParseAuth(request.Auth),
+
+            PostResponseExtractions =
+                request.Extract?
+                    .Select(h => new HeaderItem
+                    {
+                        Enabled = !h.Disabled,
+                        Key = h.Key,
+                        Value = h.Value
+                    })
+                    .ToList()
+                ?? new List<HeaderItem>()
+        };
+    }
+
+    // Reverse of ParseTokenRequest -- mirrors the request-building branch
+    // of BuildItemArray, minus the favorite flag (not applicable here).
+    private static JsonObject
+    BuildTokenRequestNode(
+        CollectionNode node)
+    {
+        var request =
+            new JsonObject
+            {
+                ["method"] = node.Method,
+                ["url"] = node.Url,
+
+                ["header"] =
+                    new JsonArray(
+                        node.Headers
+                            .Select(h => (JsonNode)new JsonObject
+                            {
+                                ["key"] = h.Key,
+                                ["value"] = h.Value,
+                                ["disabled"] = !h.Enabled
+                            })
+                            .ToArray())
+            };
+
+        var bodyNode = BuildBodyNode(node);
+
+        if (bodyNode != null)
+        {
+            request["body"] = bodyNode;
+        }
+
+        var extractions =
+            node.PostResponseExtractions
+                .Where(h => !string.IsNullOrWhiteSpace(h.Key))
+                .ToList();
+
+        if (extractions.Count > 0)
+        {
+            request["_kubatoolkit_extract"] =
+                new JsonArray(
+                    extractions
+                        .Select(h => (JsonNode)new JsonObject
+                        {
+                            ["key"] = h.Key,
+                            ["value"] = h.Value,
+                            ["disabled"] = !h.Enabled
+                        })
+                        .ToArray());
+        }
+
+        var authNode = BuildAuthNode(node.Auth);
+
+        if (authNode != null)
+        {
+            request["auth"] = authNode;
+        }
+
+        return request;
+    }
+
     public List<EnvironmentSet>
     LoadEnvironments()
     {
@@ -332,7 +483,9 @@ public class CollectionStorageService
                                     Value = v.Value
                                 })
                                 .ToList()
-                            ?? new List<HeaderItem>()
+                            ?? new List<HeaderItem>(),
+
+                        TokenRequestConfig = ParseTokenRequest(env.TokenRequest)
                     });
             }
             catch (JsonException)
@@ -464,6 +617,16 @@ public class CollectionStorageService
         }
 
         root["values"] = values;
+
+        if (environment.TokenRequestConfig != null)
+        {
+            root["_kubatoolkit_token_request"] =
+                BuildTokenRequestNode(environment.TokenRequestConfig);
+        }
+        else
+        {
+            root.Remove("_kubatoolkit_token_request");
+        }
 
         File.WriteAllText(
             environment.FilePath,

@@ -33,6 +33,11 @@ public partial class ApiClientView
 
     private CollectionNode? _currentRequestNode;
 
+    // Runtime-only (not persisted): real token expiry per environment,
+    // keyed by EnvironmentSet.FilePath, computed from the "Get Token"
+    // response's expires_in/expiresIn field. Drives GetTokenButton's color.
+    private readonly Dictionary<string, DateTime?> _tokenExpiryUtc = new();
+
     public ApiClientView()
     {
         Logger.Debug("ApiClientView: InitializeComponent.");
@@ -666,6 +671,8 @@ public partial class ApiClientView
                     : null;
 
             EnvironmentCombo.SelectedItem = toReselect ?? environments[0];
+
+            UpdateGetTokenButtonState();
         }
         catch (Exception ex)
         {
@@ -675,6 +682,14 @@ public partial class ApiClientView
                 ex.Message,
                 "Collections loading error");
         }
+    }
+
+    private void
+    EnvironmentCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        UpdateGetTokenButtonState();
     }
 
     private void
@@ -1368,6 +1383,281 @@ public partial class ApiClientView
         RebuildFavoritesFolders();
 
         SaveCollectionOf(node);
+    }
+
+    // Mirrors UpdateRequestFromEditor_Click's field-by-field capture, but
+    // builds a fresh standalone node instead of mutating a selected tree
+    // node -- used by the "Get Token" configure button, since that request
+    // isn't part of any collection tree.
+    private CollectionNode
+    CaptureEditorAsNode()
+    {
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        SyncUrlFromParams();
+
+        var mode = GetSelectedBodyMode();
+
+        return new CollectionNode
+        {
+            Name = "Token Request",
+            IsRequest = true,
+            Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET",
+            Url = UrlTextBox.Text.Trim(),
+
+            Headers =
+                _headers
+                    .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                    .ToList(),
+
+            Body = BodyTextBox.Text,
+            BodyMode = mode,
+
+            BodyFormData =
+                (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                    .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                    .ToList(),
+
+            Auth = BuildAuthConfig(),
+
+            PostResponseExtractions =
+                _extractions
+                    .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
+                    .ToList()
+        };
+    }
+
+    private void
+    ConfigureTokenRequest_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment)
+        {
+            AppMessageBox.Show(
+                "Select an environment first.");
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(UrlTextBox.Text.Trim()))
+        {
+            AppMessageBox.Show(
+                "Load or enter a request in the editor first, then click this button to save it "
+                + "as the \"Get Token\" request for this environment.");
+
+            return;
+        }
+
+        environment.TokenRequestConfig = CaptureEditorAsNode();
+
+        _tokenExpiryUtc.Remove(environment.FilePath);
+
+        try
+        {
+            _collectionStorage.SaveEnvironment(environment);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(ex.Message, "Save error");
+
+            return;
+        }
+
+        UpdateGetTokenButtonState();
+
+        AppMessageBox.Show(
+            $"The request currently in the editor has been saved as the \"Get Token\" request "
+            + $"for environment \"{environment.Name}\".",
+            "Get Token configured");
+    }
+
+    private async void
+    GetToken_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment)
+        {
+            AppMessageBox.Show(
+                "Select an environment first.");
+
+            return;
+        }
+
+        var node = environment.TokenRequestConfig;
+
+        if (node == null)
+        {
+            AppMessageBox.Show(
+                "No \"Get Token\" request configured for this environment yet. Load a request in "
+                + "the editor and click the gear icon next to \"Get Token\" to configure it.",
+                "Get Token not configured");
+
+            return;
+        }
+
+        var auth =
+            node.Auth.Type != AuthType.Inherit
+                ? node.Auth
+                : new AuthConfig { Type = AuthType.None };
+
+        var requestBody =
+            new RequestBody
+            {
+                Mode = node.BodyMode,
+                Raw = node.Body,
+                FormData = node.BodyMode == "formdata" ? node.BodyFormData.ToList() : new List<HeaderItem>(),
+                UrlEncoded = node.BodyMode == "urlencoded" ? node.BodyFormData.ToList() : new List<HeaderItem>()
+            };
+
+        try
+        {
+            GetTokenButton.IsEnabled = false;
+
+            Logger.Debug($"ApiClientView: Get Token -- sending {node.Method} {node.Url} for environment '{environment.Name}'.");
+
+            var result =
+                await _apiClientService.SendAsync(
+                    node.Method,
+                    node.Url,
+                    node.Headers,
+                    requestBody,
+                    auth,
+                    environment.ToSubstitutionMap(),
+                    CancellationToken.None);
+
+            if (result.StatusCode is < 200 or >= 300)
+            {
+                Logger.Info($"ApiClientView: Get Token -- request failed ({result.StatusDisplay}).");
+
+                AppMessageBox.Show(
+                    $"The token request failed ({result.StatusDisplay}).",
+                    "Get Token failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            var rules =
+                node.PostResponseExtractions
+                    .Where(r => r.Enabled
+                        && !string.IsNullOrWhiteSpace(r.Key)
+                        && !string.IsNullOrWhiteSpace(r.Value))
+                    .ToList();
+
+            ApplyExtractionRules(rules, environment, result.Body);
+
+            _tokenExpiryUtc[environment.FilePath] = ParseExpiryUtc(result.Body);
+
+            Logger.Info(
+                $"ApiClientView: Get Token -- succeeded for environment '{environment.Name}', "
+                + $"expiry={_tokenExpiryUtc[environment.FilePath]?.ToString("O") ?? "(unknown)"}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ApiClientView: Get Token request failed.", ex);
+
+            AppMessageBox.Show(ex.Message, "Get Token error");
+        }
+        finally
+        {
+            GetTokenButton.IsEnabled = true;
+
+            UpdateGetTokenButtonState();
+        }
+    }
+
+    private void
+    UpdateGetTokenButtonState()
+    {
+        if (GetTokenButton == null)
+        {
+            return;
+        }
+
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || environment.TokenRequestConfig == null)
+        {
+            GetTokenButton.ClearValue(BackgroundProperty);
+            GetTokenButton.ClearValue(BorderBrushProperty);
+            GetTokenButton.ClearValue(ForegroundProperty);
+            GetTokenButton.ToolTip =
+                "No \"Get Token\" request configured for this environment yet "
+                + "(click the gear icon to save the current editor request as one).";
+
+            return;
+        }
+
+        var expiry = _tokenExpiryUtc.GetValueOrDefault(environment.FilePath);
+        var isValid = expiry.HasValue && expiry.Value > DateTime.UtcNow;
+
+        if (isValid)
+        {
+            GetTokenButton.Background = (Brush)FindResource("SuccessSoftBrush");
+            GetTokenButton.BorderBrush = (Brush)FindResource("SuccessBrush");
+            GetTokenButton.Foreground = (Brush)FindResource("SuccessBrush");
+            GetTokenButton.ToolTip =
+                $"Token valid until {expiry!.Value.ToLocalTime():HH:mm:ss} -- click to fetch a new one anyway.";
+        }
+        else
+        {
+            GetTokenButton.Background = (Brush)FindResource("DangerSoftBrush");
+            GetTokenButton.BorderBrush = (Brush)FindResource("DangerBrush");
+            GetTokenButton.Foreground = (Brush)FindResource("DangerBrush");
+            GetTokenButton.ToolTip =
+                expiry.HasValue
+                    ? "Token expired -- click to fetch a new one."
+                    : "Token not fetched yet, or its expiry could not be determined from the response "
+                        + "-- click to fetch.";
+        }
+    }
+
+    // Looks for a top-level expires_in/expiresIn field (case-insensitive,
+    // number or numeric string, in seconds) in a token response, per the
+    // OAuth2 client-credentials convention. Returns null if absent/unparsable.
+    private static DateTime?
+    ParseExpiryUtc(
+        string responseBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, "expires_in", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(property.Name, "expiresIn", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var seconds =
+                    property.Value.ValueKind switch
+                    {
+                        JsonValueKind.Number => property.Value.GetDouble(),
+                        JsonValueKind.String when double.TryParse(property.Value.GetString(), out var parsed) => parsed,
+                        _ => (double?)null
+                    };
+
+                if (seconds.HasValue)
+                {
+                    return DateTime.UtcNow.AddSeconds(seconds.Value);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return null;
     }
 
     private void
@@ -2287,6 +2577,18 @@ public partial class ApiClientView
             return;
         }
 
+        ApplyExtractionRules(rules, environment, responseBody);
+    }
+
+    // Factored out of ApplyPostResponseExtractions so the "Get Token" flow
+    // (which has no request node selected in the tree, just a saved
+    // environment.TokenRequestConfig) can apply extraction rules the same way.
+    private void
+    ApplyExtractionRules(
+        List<HeaderItem> rules,
+        EnvironmentSet environment,
+        string responseBody)
+    {
         JsonElement root;
 
         try
