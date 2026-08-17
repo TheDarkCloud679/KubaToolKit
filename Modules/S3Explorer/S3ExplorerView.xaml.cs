@@ -423,6 +423,45 @@ S3TreeView_SelectedItemChanged(
         }
     }
 
+    private Border?
+        _contextMenuHighlightedBorder;
+
+    // The tree's context menu is a single shared resource (StaticResource,
+    // reused by every node's Border), so there's no per-item way to know
+    // "the menu is open for me" via a binding/trigger -- track it here
+    // instead, off the menu's own PlacementTarget.
+    private void
+    S3FolderMenu_Opened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu { PlacementTarget: Border border })
+        {
+            return;
+        }
+
+        _contextMenuHighlightedBorder =
+            border;
+
+        border.Background =
+            (Brush)FindResource("AccentSoftHoverBrush");
+    }
+
+    private void
+    S3FolderMenu_Closed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        // Clears the local value set above so the Style's IsSearchRoot
+        // DataTrigger (or the default Transparent) takes back over,
+        // instead of leaving this override stuck on top of it.
+        _contextMenuHighlightedBorder?.ClearValue(
+            Border.BackgroundProperty);
+
+        _contextMenuHighlightedBorder =
+            null;
+    }
+
     private void
 S3SearchFromHere_Click(
     object sender,

@@ -260,7 +260,10 @@
                     x:Name="S3TreeView"
                     SelectedItemChanged="S3TreeView_SelectedItemChanged">
                     <TreeView.Resources>
-                        <ContextMenu x:Key="S3FolderMenu">
+                        <ContextMenu
+                            x:Key="S3FolderMenu"
+                            Opened="S3FolderMenu_Opened"
+                            Closed="S3FolderMenu_Closed">
                             <MenuItem
                                 Header="Search from here"
                                 Click="S3SearchFromHere_Click"/>
