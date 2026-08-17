@@ -46,18 +46,20 @@
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource RadiusMedium}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
-                <TextBox
-                    x:Name="MessageTextBox"
-                    IsReadOnly="True"
-                    IsReadOnlyCaretVisible="True"
-                    BorderThickness="0"
-                    Background="Transparent"
-                    TextWrapping="Wrap"
-                    Cursor="IBeam"
-                    Foreground="{StaticResource TextPrimaryBrush}"
-                    FontSize="13"/>
-            </ScrollViewer>
+            <TextBox
+                x:Name="MessageTextBox"
+                IsReadOnly="True"
+                IsReadOnlyCaretVisible="True"
+                AcceptsReturn="True"
+                BorderThickness="0"
+                Background="Transparent"
+                TextWrapping="Wrap"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="14"
+                Cursor="IBeam"
+                Foreground="{StaticResource TextPrimaryBrush}"
+                FontSize="13"/>
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
