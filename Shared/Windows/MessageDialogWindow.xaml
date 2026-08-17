@@ -51,6 +51,8 @@
                 IsReadOnly="True"
                 IsReadOnlyCaretVisible="True"
                 AcceptsReturn="True"
+                Height="Auto"
+                MaxHeight="378"
                 BorderThickness="0"
                 Background="Transparent"
                 TextWrapping="Wrap"
