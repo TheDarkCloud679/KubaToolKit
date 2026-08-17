@@ -10,37 +10,67 @@
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <Border
+            Grid.Row="0"
+            Margin="0,0,0,10"
+            Padding="{StaticResource CardPadding}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <TextBlock
-                    Text="Step Functions"
-                    FontWeight="Bold"
-                    FontSize="14"
-                    Foreground="{StaticResource TextPrimaryBrush}"
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Border
+                        Width="30" Height="30" Margin="0,0,10,0"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        Background="{StaticResource AccentGradientBrush}">
+                        <Path
+                            Data="M5,3.2 A1.8,1.8 0 1 0 5,6.8 A1.8,1.8 0 1 0 5,3.2 Z M19,3.2 A1.8,1.8 0 1 0 19,6.8 A1.8,1.8 0 1 0 19,3.2 Z M12,16.2 A1.8,1.8 0 1 0 12,19.8 A1.8,1.8 0 1 0 12,16.2 Z M5,6.8 L5,12 L19,12 L19,6.8 M12,12 L12,16.2"
+                            Stroke="{StaticResource TextOnAccentBrush}"
+                            StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="16" Height="16" Stretch="Uniform"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <TextBlock
+                        Text="Step Functions"
+                        FontWeight="Bold"
+                        FontSize="15"
+                        Foreground="{StaticResource TextPrimaryBrush}"
+                        VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <ProgressBar
+                    x:Name="LoadingProgressBar"
+                    Grid.Column="1"
+                    Margin="20,0"
+                    Visibility="Collapsed"
+                    IsIndeterminate="True"
                     VerticalAlignment="Center"/>
-            </StackPanel>
 
-            <ProgressBar
-                x:Name="LoadingProgressBar"
-                Grid.Column="1"
-                Margin="16,0"
-                Visibility="Collapsed"
-                IsIndeterminate="True"
-                VerticalAlignment="Center"/>
-
-            <Button
-                x:Name="RefreshButton"
-                Grid.Column="2"
-                Width="100"
-                Content="Refresh"
-                Click="RefreshButton_Click"/>
-        </Grid>
+                <Button
+                    x:Name="RefreshButton"
+                    Grid.Column="2"
+                    Click="RefreshButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path
+                            Data="M20,11 A8,8 0 1 0 18.5,15.5 M20,5 L20,11 L14,11"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="12" Height="12" Stretch="Uniform"
+                            VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
 
         <!-- State machines -->
         <Border
@@ -64,21 +94,55 @@
                 SelectionMode="Single"
                 SelectionUnit="FullRow"
                 VirtualizingPanel.ScrollUnit="Pixel"
-                RowHeight="36"
+                RowHeight="42"
                 MouseDoubleClick="StateMachinesGrid_MouseDoubleClick">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn
+                    <DataGridTemplateColumn
                         Header="State Machine"
-                        Binding="{Binding Name}"
                         SortMemberPath="Name"
-                        Width="Auto"/>
+                        Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path
+                                        Data="M5,3.2 A1.8,1.8 0 1 0 5,6.8 A1.8,1.8 0 1 0 5,3.2 Z M19,3.2 A1.8,1.8 0 1 0 19,6.8 A1.8,1.8 0 1 0 19,3.2 Z M12,16.2 A1.8,1.8 0 1 0 12,19.8 A1.8,1.8 0 1 0 12,16.2 Z M5,6.8 L5,12 L19,12 L19,6.8 M12,12 L12,16.2"
+                                        Stroke="{StaticResource TextMutedBrush}"
+                                        StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                        Width="14" Height="14" Stretch="Uniform"
+                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock
+                                        Text="{Binding Name}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn
+                    <DataGridTemplateColumn
                         Header="Type"
-                        Binding="{Binding Type}"
                         SortMemberPath="Type"
-                        Width="Auto"/>
+                        Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Padding="8,2"
+                                    CornerRadius="{StaticResource RadiusMedium}"
+                                    Background="{StaticResource SurfaceAltBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center">
+                                    <TextBlock
+                                        Text="{Binding Type}"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

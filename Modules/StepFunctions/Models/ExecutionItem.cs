@@ -24,4 +24,5 @@ public class ExecutionItem
             : "";
 
     public Brush? StatusBackground => MetricColorHelper.GetStatusBrush(Status);
+    public Brush? StatusAccentBrush => MetricColorHelper.GetStatusAccentBrush(Status);
 }
