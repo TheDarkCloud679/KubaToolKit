@@ -16,4 +16,7 @@ public class ApiResponseResult
 
     public Brush? StatusBackground =>
         MetricColorHelper.GetHttpStatusBrush(StatusCode);
+
+    public Brush? StatusAccentBrush =>
+        MetricColorHelper.GetHttpStatusAccentBrush(StatusCode);
 }

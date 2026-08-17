@@ -82,6 +82,39 @@ public partial class ApiClientView
             _ => "application/json"
         };
 
+    // ParamsTabRadio has IsChecked="True" in XAML so Params opens by
+    // default -- that fires this Checked handler once during
+    // InitializeComponent, before the *TabContent panels declared later in
+    // the same XAML are wired up yet. The null guard skips that first,
+    // premature call; the real initial state comes from the panels'
+    // own XAML-default Visibility instead (same fix as the
+    // FileViewerWindow/JsonViewerWindow Cards-view crash earlier).
+    private void
+    RequestConfigTab_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (ParamsTabContent == null)
+        {
+            return;
+        }
+
+        ParamsTabContent.Visibility =
+            ParamsTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        AuthTabContent.Visibility =
+            AuthTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        HeadersTabContent.Visibility =
+            HeadersTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        BodyTabContent.Visibility =
+            BodyTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        ExtractionTabContent.Visibility =
+            ExtractionTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void
     BodyMode_Checked(
         object sender,
@@ -252,8 +285,8 @@ public partial class ApiClientView
 
         ToggleAutoHeadersText.Text =
             _showAutoHeaders
-                ? "Hide automatically generated headers"
-                : "Show automatically generated headers";
+                ? "Hide"
+                : "Show";
     }
 
     private void
@@ -833,6 +866,52 @@ public partial class ApiClientView
             item.IsSelected = true;
             item.Focus();
         }
+    }
+
+    // Row-hover "Rename" icon: selects the row's TreeViewItem (Rename
+    // reads CollectionsTreeView.SelectedItem, same as the context menu
+    // path) then delegates to the exact same handler.
+    private void
+    TreeRowRename_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not DependencyObject fe
+            || DataGridSortHelper.FindAncestor<TreeViewItem>(fe) is not { } item)
+        {
+            return;
+        }
+
+        item.IsSelected = true;
+        item.Focus();
+
+        RenameNode_Click(sender, e);
+    }
+
+    // Row-hover "more actions" icon: same select-then-open-menu sequence
+    // as a real right-click, just triggered from a visible button instead
+    // of requiring the user to already know to right-click.
+    private void
+    TreeRowMoreActions_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement fe
+            || DataGridSortHelper.FindAncestor<TreeViewItem>(fe) is not { } item)
+        {
+            return;
+        }
+
+        item.IsSelected = true;
+        item.Focus();
+
+        if (CollectionsTreeView.ContextMenu is not { } menu)
+        {
+            return;
+        }
+
+        menu.PlacementTarget = fe;
+        menu.IsOpen = true;
     }
 
     private List<CollectionNode> _requestSearchMatches = new();
@@ -1538,7 +1617,9 @@ public partial class ApiClientView
             Logger.Info($"ApiClientView: {method} {url} -> {result.StatusDisplay} ({result.ElapsedMs} ms)");
 
             StatusTextBlock.Text = result.StatusDisplay;
-            StatusBadge.Background = result.StatusBackground;
+            StatusTextBlock.Foreground = result.StatusAccentBrush ?? (Brush)FindResource("TextSecondaryBrush");
+            StatusDot.Fill = result.StatusAccentBrush ?? (Brush)FindResource("TextSecondaryBrush");
+            StatusBadge.Background = result.StatusBackground ?? (Brush)FindResource("SurfaceAltBrush");
             StatusBadge.Visibility = Visibility.Visible;
             TimingTextBlock.Text = $"{result.ElapsedMs} ms • {result.Body.Length:N0} chars";
 

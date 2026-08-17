@@ -10,11 +10,70 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <local:HttpMethodBadgeBackgroundConverter x:Key="HttpMethodBadgeBackgroundConverter"/>
         <local:HttpMethodBadgeForegroundConverter x:Key="HttpMethodBadgeForegroundConverter"/>
+
+        <!-- Row-hover-reveal icon buttons in the collections tree (Rename,
+             more actions), borderless so they sit quietly next to the
+             row text until hovered. -->
+        <Style x:Key="TreeRowActionButtonStyle" TargetType="Button" BasedOn="{StaticResource IconChevronButtonStyle}">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+        </Style>
+
+        <!-- Body-mode chip: a friendly label on top, the real HTTP/technical
+             term underneath in smaller muted text, so the raw jargon
+             (form-data, x-www-form-urlencoded...) stays visible for anyone
+             who already knows it without being the only thing a newcomer
+             sees. Kept local to this view since the two-line content shape
+             is specific to this one usage. -->
+        <Style x:Key="BodyModeChipStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border
+                            x:Name="Bd"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusPill}"
+                            Padding="12,6">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock
+                                    x:Name="FriendlyText"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Text="{TemplateBinding Tag}"/>
+                                <ContentPresenter
+                                    HorizontalAlignment="Center"
+                                    TextElement.Foreground="{TemplateBinding Foreground}"
+                                    TextElement.FontSize="{TemplateBinding FontSize}"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="FriendlyText" Property="Foreground" Value="{StaticResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+            <Setter Property="FontSize" Value="9.5"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="270"/>
             <ColumnDefinition Width="6"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -24,19 +83,20 @@
             Grid.Column="0"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource RadiusMedium}"
             Background="{StaticResource SurfaceBrush}"
             Effect="{StaticResource CardShadowEffect}"
-            Padding="10">
+            Padding="{StaticResource CardPaddingCompact}">
 
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid Grid.Row="0" Margin="2,0,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -57,60 +117,100 @@
 
                     <Button
                         Grid.Column="1"
-                        Width="28"
-                        Height="28"
+                        Width="26"
+                        Height="26"
                         Padding="0"
                         Margin="4,0,0,0"
                         ToolTip="New collection"
-                        Content="+"
-                        Click="NewCollection_Click"/>
+                        Click="NewCollection_Click">
+                        <Path
+                            Data="M12,5 L12,19 M5,12 L19,12"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="12" Height="12" Stretch="Uniform"/>
+                    </Button>
 
                     <Button
                         Grid.Column="2"
-                        Width="28"
-                        Height="28"
+                        Width="26"
+                        Height="26"
                         Padding="0"
                         Margin="4,0,0,0"
                         ToolTip="Open the collections/environments folder"
-                        Content="📂"
-                        Click="OpenCollectionsFolder_Click"/>
+                        Click="OpenCollectionsFolder_Click">
+                        <Path
+                            Data="M3,6 L9,6 L11,8 L21,8 L21,18 L3,18 Z"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="13" Height="13" Stretch="Uniform"/>
+                    </Button>
 
                     <Button
                         Grid.Column="3"
-                        Width="28"
-                        Height="28"
+                        Width="26"
+                        Height="26"
                         Padding="0"
                         Margin="4,0,0,0"
                         ToolTip="Reload from disk"
-                        Content="⟳"
-                        Click="ReloadCollections_Click"/>
+                        Click="ReloadCollections_Click">
+                        <Path
+                            Data="M20,11 A8,8 0 1 0 18.5,15.5 M20,5 L20,11 L14,11"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="12" Height="12" Stretch="Uniform"/>
+                    </Button>
                 </Grid>
 
                 <Grid Grid.Row="1" Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox
-                        x:Name="RequestSearchBox"
-                        Grid.Column="0"
-                        Height="24"
-                        FontSize="11"
-                        Padding="6,0"
-                        VerticalContentAlignment="Center"
-                        ToolTip="Search for a request by name (Enter: next, Shift+Enter: previous, Esc: clear)"
-                        TextChanged="RequestSearchBox_TextChanged"
-                        PreviewKeyDown="RequestSearchBox_PreviewKeyDown"/>
+                    <Border
+                        Grid.ColumnSpan="3"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusSmall}"
+                        Background="{StaticResource SurfaceBrush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                    <TextBlock
-                        x:Name="RequestSearchCountText"
-                        Grid.Column="1"
-                        VerticalAlignment="Center"
-                        FontSize="11"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Margin="6,0,0,0"
-                        Visibility="Collapsed"/>
+                            <Path
+                                Grid.Column="0"
+                                Data="M11,4 A7,7 0 1 0 11,18 A7,7 0 1 0 11,4 Z M16,16 L21,21"
+                                Stroke="{StaticResource TextMutedBrush}"
+                                StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                Width="11" Height="11" Stretch="Uniform"
+                                VerticalAlignment="Center" Margin="7,0,0,0"/>
+
+                            <TextBox
+                                x:Name="RequestSearchBox"
+                                Grid.Column="1"
+                                Height="24"
+                                FontSize="11"
+                                Padding="6,0"
+                                BorderThickness="0"
+                                VerticalContentAlignment="Center"
+                                ToolTip="Search for a request by name (Enter: next, Shift+Enter: previous, Esc: clear)"
+                                TextChanged="RequestSearchBox_TextChanged"
+                                PreviewKeyDown="RequestSearchBox_PreviewKeyDown"/>
+
+                            <TextBlock
+                                x:Name="RequestSearchCountText"
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Margin="0,0,8,0"
+                                Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
                 </Grid>
 
                 <TreeView
@@ -122,33 +222,88 @@
                     PreviewMouseRightButtonDown="CollectionsTreeView_PreviewMouseRightButtonDown">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock
-                                    Text="⭐"
-                                    FontSize="11"
-                                    Margin="0,0,4,0"
-                                    VerticalAlignment="Center"
-                                    Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            <Border
+                                Padding="2,3"
+                                CornerRadius="4">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Border
-                                    Visibility="{Binding IsRequest, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    Background="{Binding Method, Converter={StaticResource HttpMethodBadgeBackgroundConverter}}"
-                                    CornerRadius="3"
-                                    Padding="4,1"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center">
-                                    <TextBlock
-                                        Text="{Binding Method}"
-                                        FontSize="10"
-                                        FontWeight="Bold"
-                                        Foreground="{Binding Method, Converter={StaticResource HttpMethodBadgeForegroundConverter}}"/>
-                                </Border>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <Path
+                                            Data="M12,2 L14.5,8.5 L21,9 L16,13.5 L17.5,20 L12,16.5 L6.5,20 L8,13.5 L3,9 L9.5,8.5 Z"
+                                            Fill="{StaticResource WarningBrush}"
+                                            Width="11" Height="11" Stretch="Uniform"
+                                            Margin="0,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
-                                <TextBlock
-                                    Text="{Binding Name}"
-                                    VerticalAlignment="Center"
-                                    TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
+                                        <Border
+                                            Visibility="{Binding IsRequest, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Background="{Binding Method, Converter={StaticResource HttpMethodBadgeBackgroundConverter}}"
+                                            CornerRadius="3"
+                                            Padding="4,1"
+                                            Margin="0,0,6,0"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{Binding Method}"
+                                                FontSize="10"
+                                                FontWeight="Bold"
+                                                Foreground="{Binding Method, Converter={StaticResource HttpMethodBadgeForegroundConverter}}"/>
+                                        </Border>
+
+                                        <TextBlock
+                                            Text="{Binding Name}"
+                                            VerticalAlignment="Center"
+                                            TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="4,0,0,0">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=IsMouseOver}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <Button
+                                            Style="{StaticResource TreeRowActionButtonStyle}"
+                                            ToolTip="Rename"
+                                            Click="TreeRowRename_Click">
+                                            <Path
+                                                Data="M4,20 L4,16 L15,5 A2,2 0 0 1 18,5 L19,6 A2,2 0 0 1 19,9 L8,20 Z"
+                                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                Width="11" Height="11" Stretch="Uniform"/>
+                                        </Button>
+                                        <Button
+                                            Style="{StaticResource TreeRowActionButtonStyle}"
+                                            ToolTip="More actions"
+                                            Click="TreeRowMoreActions_Click">
+                                            <Path
+                                                Data="M5,12 A1.4,1.4 0 1 0 5,12.01 M12,12 A1.4,1.4 0 1 0 12,12.01 M19,12 A1.4,1.4 0 1 0 19,12.01"
+                                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                Width="12" Height="12" Stretch="Uniform"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
                     <TreeView.ContextMenu>
@@ -190,6 +345,20 @@
                         </ContextMenu>
                     </TreeView.ContextMenu>
                 </TreeView>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="2,8,0,0">
+                    <Path
+                        Data="M12,3 A9,9 0 1 0 12,21 A9,9 0 1 0 12,3 Z M12,16 L12,11 M12,8 L12,8.2"
+                        Stroke="{StaticResource TextMutedBrush}"
+                        StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                        Width="11" Height="11" Stretch="Uniform"
+                        VerticalAlignment="Top" Margin="0,1,6,0"/>
+                    <TextBlock
+                        Text="Right-click an item for more actions (rename, duplicate, authentication, favorites...)."
+                        FontSize="10.5"
+                        TextWrapping="Wrap"
+                        Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -199,137 +368,249 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             ResizeBehavior="PreviousAndNext"
-            ResizeDirection="Columns"/>
+            ResizeDirection="Columns"
+            ToolTip="Drag to resize"/>
 
         <!-- Request / Response -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="RequestConfigRow" Height="280" MinHeight="60"/>
+                <RowDefinition x:Name="RequestConfigRow" Height="300" MinHeight="60"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="ResponseRow" Height="*" MinHeight="120"/>
             </Grid.RowDefinitions>
 
             <!-- Method / URL / Environment / Send -->
-            <Grid Grid.Row="0" Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="110"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="90"/>
-                </Grid.ColumnDefinitions>
+            <Border
+                Grid.Row="0"
+                Margin="0,0,0,10"
+                Padding="{StaticResource CardPadding}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}"
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                <ComboBox
-                    x:Name="MethodCombo"
-                    Grid.Column="0"
-                    Margin="0,0,8,0"
-                    SelectedIndex="0"
-                    SelectionChanged="MethodCombo_SelectionChanged">
-                    <ComboBoxItem Content="GET"/>
-                    <ComboBoxItem Content="POST"/>
-                    <ComboBoxItem Content="PUT"/>
-                    <ComboBoxItem Content="PATCH"/>
-                    <ComboBoxItem Content="DELETE"/>
-                    <ComboBoxItem Content="HEAD"/>
-                    <ComboBoxItem Content="OPTIONS"/>
-                </ComboBox>
+                        <ComboBox
+                            x:Name="MethodCombo"
+                            Grid.Column="0"
+                            Margin="0,0,8,0"
+                            SelectedIndex="0"
+                            SelectionChanged="MethodCombo_SelectionChanged">
+                            <ComboBoxItem Content="GET"/>
+                            <ComboBoxItem Content="POST"/>
+                            <ComboBoxItem Content="PUT"/>
+                            <ComboBoxItem Content="PATCH"/>
+                            <ComboBoxItem Content="DELETE"/>
+                            <ComboBoxItem Content="HEAD"/>
+                            <ComboBoxItem Content="OPTIONS"/>
+                        </ComboBox>
 
-                <TextBox
-                    x:Name="UrlTextBox"
-                    Grid.Column="1"
-                    VerticalContentAlignment="Center"
-                    Text="https://"
-                    KeyDown="UrlTextBox_KeyDown"/>
+                        <TextBox
+                            x:Name="UrlTextBox"
+                            Grid.Column="1"
+                            VerticalContentAlignment="Center"
+                            FontFamily="Cascadia Code, Consolas"
+                            FontSize="12.5"
+                            Text="https://"
+                            KeyDown="UrlTextBox_KeyDown"/>
 
-                <ComboBox
-                    x:Name="EnvironmentCombo"
-                    Grid.Column="2"
-                    Margin="8,0,0,0"
-                    DisplayMemberPath="Name"
-                    ToolTip="Environment (variables {{key}})"/>
+                        <ComboBox
+                            x:Name="EnvironmentCombo"
+                            Grid.Column="2"
+                            Margin="8,0,0,0"
+                            DisplayMemberPath="Name"
+                            ToolTip="Environment (variables {{key}})"/>
 
-                <Button
-                    Grid.Column="3"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Margin="6,0,0,0"
-                    ToolTip="Add an environment (opens the folder)"
-                    Content="+"
-                    Click="AddEnvironment_Click"/>
+                        <Button
+                            Grid.Column="3"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="6,0,0,0"
+                            ToolTip="Add an environment (opens the folder)"
+                            Click="AddEnvironment_Click">
+                            <Path
+                                Data="M12,5 L12,19 M5,12 L19,12"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"/>
+                        </Button>
 
-                <Button
-                    Grid.Column="4"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Margin="4,0,0,0"
-                    ToolTip="Edit the variables of the selected environment"
-                    Content="✎"
-                    Click="EditEnvironment_Click"/>
+                        <Button
+                            Grid.Column="4"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="4,0,0,0"
+                            ToolTip="Edit the variables of the selected environment"
+                            Click="EditEnvironment_Click">
+                            <Path
+                                Data="M4,20 L4,16 L15,5 A2,2 0 0 1 18,5 L19,6 A2,2 0 0 1 19,9 L8,20 Z"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"/>
+                        </Button>
 
-                <Button
-                    Grid.Column="5"
-                    Width="28"
-                    Height="28"
-                    Padding="0"
-                    Margin="4,0,0,0"
-                    ToolTip="Reload environments"
-                    Content="⟳"
-                    Click="ReloadEnvironments_Click"/>
+                        <Button
+                            Grid.Column="5"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="4,0,0,0"
+                            ToolTip="Reload environments"
+                            Click="ReloadEnvironments_Click">
+                            <Path
+                                Data="M20,11 A8,8 0 1 0 18.5,15.5 M20,5 L20,11 L14,11"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"/>
+                        </Button>
 
-                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button
-                        Width="28"
-                        Height="28"
-                        Padding="0"
-                        Margin="4,0,0,0"
-                        ToolTip="Open the technical code label file (ValueLabels.json) for the Cards view"
-                        Content="🏷"
-                        Click="OpenValueLabels_Click"/>
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <Button
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                ToolTip="Open the technical code label file (ValueLabels.json) for the Cards view"
+                                Click="OpenValueLabels_Click">
+                                <Path
+                                    Data="M3,12 L12,3 L19,3 L19,10 L10,19 L3,12 Z M15,7 A1.4,1.4 0 1 0 15,7.01"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                    StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="12" Height="12" Stretch="Uniform"/>
+                            </Button>
 
-                    <TextBlock
-                        x:Name="ValueLabelsWarningText"
-                        Text="⚠"
-                        FontSize="16"
-                        Foreground="{StaticResource DangerBrush}"
-                        VerticalAlignment="Center"
-                        Margin="4,0,0,0"
-                        Visibility="Collapsed"/>
+                            <Path
+                                x:Name="ValueLabelsWarningText"
+                                Data="M12,3 L22,20 L2,20 Z M12,9 L12,14 M12,17 L12,17.2"
+                                Stroke="{StaticResource DangerBrush}"
+                                StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                Width="15" Height="15" Stretch="Uniform"
+                                VerticalAlignment="Center"
+                                Margin="4,0,0,0"
+                                Visibility="Collapsed"/>
+                        </StackPanel>
+
+                        <Button
+                            x:Name="SendButton"
+                            Grid.Column="7"
+                            Margin="10,0,0,0"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="SendButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <Path
+                                    Data="M3,12 L21,3 L14,21 L11,13 Z"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                    StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="12" Height="12" Stretch="Uniform"
+                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="Send" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="2,8,0,0">
+                        <Path
+                            Data="M12,3 A9,9 0 1 0 12,21 A9,9 0 1 0 12,3 Z M12,16 L12,11 M12,8 L12,8.2"
+                            Stroke="{StaticResource TextMutedBrush}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                            Width="11" Height="11" Stretch="Uniform"
+                            VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock FontSize="10.5" Foreground="{StaticResource TextMutedBrush}">
+                            Type <Run FontFamily="Cascadia Code, Consolas" Text="{}{{variable_name}}"/> anywhere in the URL to use a value from the environment selected above.
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
+            </Border>
 
-                <Button
-                    x:Name="SendButton"
-                    Grid.Column="7"
-                    Margin="8,0,0,0"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Content="Send"
-                    Click="SendButton_Click"/>
-            </Grid>
-
-            <!-- Request config: Auth / Headers / Body -->
+            <!-- Request config: Params / Auth / Headers / Body / Extraction -->
             <Border
                 Grid.Row="1"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="{StaticResource RadiusMedium}"
                 Background="{StaticResource SurfaceBrush}"
-                Effect="{StaticResource CardShadowEffect}"
-                Padding="12">
+                Effect="{StaticResource CardShadowEffect}">
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                        <!-- Params -->
-                        <Expander
-                            Header="Params"
-                            IsExpanded="False"
-                            Margin="0,0,0,10">
-                            <StackPanel Margin="0,10,0,0">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,0,0">
+                        <RadioButton
+                            x:Name="ParamsTabRadio"
+                            Content="Params"
+                            GroupName="RequestConfigTab"
+                            IsChecked="True"
+                            Checked="RequestConfigTab_Changed"
+                            Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                        <RadioButton
+                            x:Name="AuthTabRadio"
+                            Content="Auth"
+                            GroupName="RequestConfigTab"
+                            Checked="RequestConfigTab_Changed"
+                            Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                        <RadioButton
+                            x:Name="HeadersTabRadio"
+                            GroupName="RequestConfigTab"
+                            Checked="RequestConfigTab_Changed"
+                            Style="{StaticResource RequestTabRadioButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Headers" Margin="0,0,6,0"/>
+                                <Border
+                                    Background="{StaticResource AccentSoftBrush}"
+                                    CornerRadius="{StaticResource RadiusPill}"
+                                    Padding="6,0"
+                                    VerticalAlignment="Center">
+                                    <TextBlock
+                                        Text="{Binding ItemsSource.Count, ElementName=HeadersGrid}"
+                                        FontSize="10"
+                                        FontWeight="Bold"
+                                        Foreground="{StaticResource AccentPressedBrush}"/>
+                                </Border>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton
+                            x:Name="BodyTabRadio"
+                            Content="Body"
+                            GroupName="RequestConfigTab"
+                            Checked="RequestConfigTab_Changed"
+                            Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                        <RadioButton
+                            x:Name="ExtractionTabRadio"
+                            Content="Extraction"
+                            GroupName="RequestConfigTab"
+                            Checked="RequestConfigTab_Changed"
+                            Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                    </StackPanel>
+                    <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{StaticResource BorderBrush}"/>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14,12">
+                        <Grid>
+
+                            <!-- Params -->
+                            <StackPanel x:Name="ParamsTabContent">
+                                <TextBlock
+                                    Text="Extra parameters appended to the end of the URL (after the ?)."
+                                    FontSize="11"
+                                    Margin="0,0,0,10"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
+
                                 <Button
                                     HorizontalAlignment="Right"
                                     Width="26"
@@ -416,14 +697,15 @@
                                         ToolTip="Drag to resize"/>
                                 </Grid>
                             </StackPanel>
-                        </Expander>
 
-                        <!-- Auth -->
-                        <Expander
-                            Header="Auth"
-                            IsExpanded="False"
-                            Margin="0,0,0,10">
-                            <StackPanel Margin="4,10,4,4">
+                            <!-- Auth -->
+                            <StackPanel x:Name="AuthTabContent" Visibility="Collapsed">
+                                <TextBlock
+                                    Text="How this request proves its identity to the server."
+                                    FontSize="11"
+                                    Margin="0,0,0,10"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
+
                                 <ComboBox
                                     x:Name="AuthTypeCombo"
                                     Width="220"
@@ -443,7 +725,7 @@
                                     TextWrapping="Wrap"
                                     FontSize="12"
                                     Foreground="{StaticResource TextSecondaryBrush}"
-                                    Text="The authorization header will be computed at send time from the authentication defined on the parent folder or collection (right-click it &#8594; &#171;Edit authentication&#187;)."/>
+                                    Text="The authorization header will be computed at send time from the authentication defined on the parent folder or collection (right-click it &#8594; «Edit authentication»)."/>
 
                                 <StackPanel
                                     x:Name="BearerAuthPanel"
@@ -497,14 +779,15 @@
                                     <TextBox x:Name="ApiKeyValueTextBox" TextChanged="AuthField_Changed"/>
                                 </StackPanel>
                             </StackPanel>
-                        </Expander>
 
-                        <!-- Headers -->
-                        <Expander
-                            Header="Headers"
-                            IsExpanded="False"
-                            Margin="0,0,0,10">
-                            <StackPanel Margin="0,10,0,0">
+                            <!-- Headers -->
+                            <StackPanel x:Name="HeadersTabContent" Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Extra metadata sent with the request (authentication tokens, content format, custom flags...)."
+                                    FontSize="11"
+                                    Margin="0,0,0,10"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
+
                                 <Button
                                     HorizontalAlignment="Right"
                                     Width="26"
@@ -591,127 +874,168 @@
                                         ToolTip="Drag to resize"/>
                                 </Grid>
 
-                                <TextBlock
-                                    x:Name="ToggleAutoHeadersText"
-                                    Margin="0,10,0,6"
-                                    FontSize="11"
-                                    FontWeight="SemiBold"
-                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                    Cursor="Hand"
-                                    Text="Hide automatically generated headers"
-                                    MouseLeftButtonDown="ToggleAutoHeaders_MouseLeftButtonDown"/>
+                                <Border
+                                    Margin="0,14,0,0"
+                                    Background="{StaticResource SurfaceAltBrush}"
+                                    BorderBrush="{StaticResource BorderStrongBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource RadiusMedium}"
+                                    Padding="12">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                <Path
+                                                    Data="M4,4 L20,4 L20,20 L4,20 Z M4,9 L20,9"
+                                                    Stroke="{StaticResource TextSecondaryBrush}"
+                                                    StrokeThickness="1.6" StrokeLineJoin="Round"
+                                                    Width="12" Height="12" Stretch="Uniform"
+                                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                <TextBlock
+                                                    Text="Headers added automatically"
+                                                    FontSize="11.5"
+                                                    FontWeight="Bold"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                    VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock
+                                                x:Name="ToggleAutoHeadersText"
+                                                Grid.Column="1"
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource AccentBrush}"
+                                                Cursor="Hand"
+                                                VerticalAlignment="Center"
+                                                Text="Hide"
+                                                MouseLeftButtonDown="ToggleAutoHeaders_MouseLeftButtonDown"/>
+                                        </Grid>
 
-                                <Grid x:Name="AutoHeadersGridContainer">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="200" MinHeight="60"/>
-                                        <RowDefinition Height="6"/>
-                                    </Grid.RowDefinitions>
+                                        <TextBlock
+                                            Margin="0,4,0,10"
+                                            FontSize="10.5"
+                                            TextWrapping="Wrap"
+                                            Foreground="{StaticResource TextMutedBrush}"
+                                            Text="KubaToolKit adds these technical headers automatically when sending — read-only, nothing to do here."/>
 
-                                    <DataGrid
-                                        x:Name="AutoHeadersGrid"
-                                        Grid.Row="0"
-                                        IsReadOnly="True"
-                                        AutoGenerateColumns="False"
-                                        CanUserAddRows="False"
-                                        CanUserDeleteRows="False"
-                                        HeadersVisibility="Column"
-                                        HorizontalScrollBarVisibility="Auto"
-                                        VerticalScrollBarVisibility="Auto"
-                                        RowHeight="34"
-                                        Opacity="0.7"
-                                        ToolTip="Headers automatically added by KubaToolKit when sending; not editable here.">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn
-                                                Header="Key"
-                                                Binding="{Binding Key}"
-                                                Width="2*"
-                                                MinWidth="160"/>
+                                        <Grid x:Name="AutoHeadersGridContainer">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="200" MinHeight="60"/>
+                                                <RowDefinition Height="6"/>
+                                            </Grid.RowDefinitions>
 
-                                            <DataGridTextColumn
-                                                Header="Value"
-                                                Binding="{Binding Value}"
-                                                Width="3*"
-                                                MinWidth="200"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
+                                            <DataGrid
+                                                x:Name="AutoHeadersGrid"
+                                                Grid.Row="0"
+                                                IsReadOnly="True"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                CanUserDeleteRows="False"
+                                                HeadersVisibility="Column"
+                                                HorizontalScrollBarVisibility="Auto"
+                                                VerticalScrollBarVisibility="Auto"
+                                                RowHeight="34"
+                                                Background="Transparent">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn
+                                                        Header="Key"
+                                                        Binding="{Binding Key}"
+                                                        Width="2*"
+                                                        MinWidth="160"/>
 
-                                    <GridSplitter
-                                        Grid.Row="1"
-                                        Height="6"
-                                        HorizontalAlignment="Stretch"
-                                        ResizeBehavior="PreviousAndCurrent"
-                                        ResizeDirection="Rows"
-                                        ToolTip="Drag to resize"/>
-                                </Grid>
+                                                    <DataGridTextColumn
+                                                        Header="Value"
+                                                        Binding="{Binding Value}"
+                                                        Width="3*"
+                                                        MinWidth="200"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+
+                                            <GridSplitter
+                                                Grid.Row="1"
+                                                Height="6"
+                                                HorizontalAlignment="Stretch"
+                                                ResizeBehavior="PreviousAndCurrent"
+                                                ResizeDirection="Rows"
+                                                ToolTip="Drag to resize"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </Expander>
 
-                        <!-- Body -->
-                        <Expander
-                            Header="Body"
-                            IsExpanded="False">
-                            <StackPanel Margin="0,10,0,0">
+                            <!-- Body -->
+                            <StackPanel x:Name="BodyTabContent" Visibility="Collapsed">
+                                <TextBlock
+                                    Text="The data sent with the request (mainly for POST/PUT/PATCH)."
+                                    FontSize="11"
+                                    Margin="0,0,0,10"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
                                     <RadioButton
                                         x:Name="BodyNoneRadio"
                                         Content="none"
+                                        Tag="None"
                                         GroupName="BodyMode"
                                         Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,16,0"/>
-
-                                    <RadioButton
-                                        x:Name="BodyFormDataRadio"
-                                        Content="form-data"
-                                        GroupName="BodyMode"
-                                        Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,16,0"/>
-
-                                    <RadioButton
-                                        x:Name="BodyUrlEncodedRadio"
-                                        Content="x-www-form-urlencoded"
-                                        GroupName="BodyMode"
-                                        Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,16,0"/>
+                                        Style="{StaticResource BodyModeChipStyle}"/>
 
                                     <RadioButton
                                         x:Name="BodyRawRadio"
                                         Content="raw"
+                                        Tag="Text / JSON"
                                         GroupName="BodyMode"
                                         IsChecked="True"
                                         Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,16,0"/>
+                                        Style="{StaticResource BodyModeChipStyle}"/>
+
+                                    <RadioButton
+                                        x:Name="BodyFormDataRadio"
+                                        Content="form-data"
+                                        Tag="Form fields"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        Style="{StaticResource BodyModeChipStyle}"/>
+
+                                    <RadioButton
+                                        x:Name="BodyUrlEncodedRadio"
+                                        Content="x-www-form-urlencoded"
+                                        Tag="URL-encoded form"
+                                        GroupName="BodyMode"
+                                        Checked="BodyMode_Checked"
+                                        Style="{StaticResource BodyModeChipStyle}"/>
 
                                     <RadioButton
                                         x:Name="BodyBinaryRadio"
                                         Content="binary"
+                                        Tag="File"
                                         GroupName="BodyMode"
                                         Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,16,0"/>
+                                        Style="{StaticResource BodyModeChipStyle}"/>
 
                                     <RadioButton
                                         x:Name="BodyGraphQlRadio"
                                         Content="GraphQL"
+                                        Tag="GraphQL"
                                         GroupName="BodyMode"
                                         Checked="BodyMode_Checked"
-                                        VerticalAlignment="Center"/>
-                                </StackPanel>
+                                        Style="{StaticResource BodyModeChipStyle}"/>
+                                </WrapPanel>
 
                                 <!-- none -->
                                 <TextBlock
                                     x:Name="BodyNonePanel"
                                     Text="This request has no body."
                                     FontStyle="Italic"
+                                    Margin="0,6,0,0"
                                     Foreground="{StaticResource TextSecondaryBrush}"
                                     Visibility="Collapsed"/>
 
                                 <StackPanel
                                     x:Name="BodyFormPanel"
+                                    Margin="0,6,0,0"
                                     Visibility="Collapsed">
                                     <Button
                                         HorizontalAlignment="Right"
@@ -800,7 +1124,7 @@
                                 </StackPanel>
 
                                 <!-- raw -->
-                                <StackPanel x:Name="BodyRawPanel">
+                                <StackPanel x:Name="BodyRawPanel" Margin="0,6,0,0">
                                     <ComboBox
                                         x:Name="RawContentTypeCombo"
                                         Width="140"
@@ -847,6 +1171,7 @@
                                 <StackPanel
                                     x:Name="BodyBinaryPanel"
                                     Orientation="Horizontal"
+                                    Margin="0,6,0,0"
                                     Visibility="Collapsed">
                                     <Button
                                         Padding="10,6"
@@ -865,6 +1190,7 @@
                                 <!-- GraphQL -->
                                 <StackPanel
                                     x:Name="BodyGraphQlPanel"
+                                    Margin="0,6,0,0"
                                     Visibility="Collapsed">
                                     <TextBlock
                                         Text="Query"
@@ -906,19 +1232,14 @@
                                 </StackPanel>
 
                             </StackPanel>
-                        </Expander>
 
-                        <!-- Extraction to Environment -->
-                        <Expander
-                            Header="Extraction → Environment"
-                            IsExpanded="False"
-                            Margin="0,10,0,0">
-                            <StackPanel Margin="0,10,0,0">
+                            <!-- Extraction to Environment -->
+                            <StackPanel x:Name="ExtractionTabContent" Visibility="Collapsed">
                                 <TextBlock
-                                    Margin="0,0,0,6"
+                                    Margin="0,0,0,10"
                                     FontSize="11"
                                     TextWrapping="Wrap"
-                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Foreground="{StaticResource TextMutedBrush}"
                                     Text="After a successful send, copies a top-level field of the JSON response into a variable of the selected environment (creates it if needed)."/>
 
                                 <Button
@@ -1006,10 +1327,10 @@
                                         ToolTip="Drag to resize"/>
                                 </Grid>
                             </StackPanel>
-                        </Expander>
 
-                    </StackPanel>
-                </ScrollViewer>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
             </Border>
 
             <GridSplitter
@@ -1018,17 +1339,18 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Center"
                 ResizeBehavior="PreviousAndNext"
-                ResizeDirection="Rows"/>
+                ResizeDirection="Rows"
+                ToolTip="Drag to resize"/>
 
             <!-- Response -->
             <Border
                 Grid.Row="3"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="{StaticResource RadiusMedium}"
                 Background="{StaticResource SurfaceBrush}"
                 Effect="{StaticResource CardShadowEffect}"
-                Padding="12">
+                Padding="{StaticResource CardPadding}">
 
                 <Grid>
                     <Grid.RowDefinitions>
@@ -1054,15 +1376,24 @@
                             <Border
                                 x:Name="StatusBadge"
                                 Margin="10,0,0,0"
-                                Padding="8,3"
-                                CornerRadius="4"
-                                Background="{StaticResource BorderBrush}"
+                                Padding="9,3"
+                                CornerRadius="{StaticResource RadiusPill}"
+                                Background="{StaticResource SurfaceAltBrush}"
                                 VerticalAlignment="Center"
                                 Visibility="Collapsed">
-                                <TextBlock
-                                    x:Name="StatusTextBlock"
-                                    FontWeight="SemiBold"
-                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse
+                                        x:Name="StatusDot"
+                                        Width="6" Height="6"
+                                        Margin="0,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Fill="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock
+                                        x:Name="StatusTextBlock"
+                                        FontWeight="Bold"
+                                        FontSize="11"
+                                        Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
                             </Border>
 
                             <TextBlock
@@ -1185,21 +1516,33 @@
                                 Margin="0,0,16,0"
                                 Visibility="Collapsed"/>
 
-                            <RadioButton
-                                x:Name="ResponseViewCardsRadio"
-                                Content="Cards"
-                                GroupName="ResponseView"
-                                IsChecked="True"
-                                Checked="ResponseViewMode_Changed"
-                                VerticalAlignment="Center"
-                                Margin="0,0,12,0"/>
+                            <Border
+                                Background="{StaticResource SurfaceAltBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource RadiusPill}"
+                                Padding="2">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton
+                                        x:Name="ResponseViewCardsRadio"
+                                        Content="Cards"
+                                        GroupName="ResponseView"
+                                        IsChecked="True"
+                                        Checked="ResponseViewMode_Changed"
+                                        Style="{StaticResource NavPillRadioButtonStyle}"
+                                        FontSize="11"
+                                        Padding="12,4"/>
 
-                            <RadioButton
-                                x:Name="ResponseViewRawRadio"
-                                Content="Raw"
-                                GroupName="ResponseView"
-                                Checked="ResponseViewMode_Changed"
-                                VerticalAlignment="Center"/>
+                                    <RadioButton
+                                        x:Name="ResponseViewRawRadio"
+                                        Content="Raw"
+                                        GroupName="ResponseView"
+                                        Checked="ResponseViewMode_Changed"
+                                        Style="{StaticResource NavPillRadioButtonStyle}"
+                                        FontSize="11"
+                                        Padding="12,4"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Grid>
 

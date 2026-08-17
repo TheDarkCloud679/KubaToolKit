@@ -198,12 +198,10 @@ public static class MetricColorHelper
         return brush;
     }
 
-    public static Brush?
-    GetHttpStatusBrush(
-        int statusCode,
-        double opacity = 0.20)
-    {
-        Color? color = statusCode switch
+    private static Color?
+    GetHttpStatusColor(
+        int statusCode) =>
+        statusCode switch
         {
             >= 200 and < 300 => SuccessColor,
             >= 300 and < 400 => WarningColor,
@@ -211,16 +209,36 @@ public static class MetricColorHelper
             _ => null
         };
 
-        if (color == null)
+    public static Brush?
+    GetHttpStatusBrush(
+        int statusCode,
+        double opacity = 0.20)
+    {
+        var color = GetHttpStatusColor(statusCode);
+
+        return color.HasValue
+            ? ToBrush(color.Value.R, color.Value.G, color.Value.B, opacity)
+            : null;
+    }
+
+    // Solid dot/text color to pair with GetHttpStatusBrush's soft
+    // background, same pill-with-dot pattern as GetStatusAccentBrush.
+    public static Brush?
+    GetHttpStatusAccentBrush(
+        int statusCode)
+    {
+        var color = GetHttpStatusColor(statusCode);
+
+        if (!color.HasValue)
         {
             return null;
         }
 
-        return ToBrush(
-            color.Value.R,
-            color.Value.G,
-            color.Value.B,
-            opacity);
+        var brush = new SolidColorBrush(color.Value);
+
+        brush.Freeze();
+
+        return brush;
     }
 
     private static Brush
