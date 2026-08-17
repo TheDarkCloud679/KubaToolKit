@@ -1,3 +1,6 @@
+using KubaToolKit.Shared.Services;
+using System.Windows.Media;
+
 namespace KubaToolKit.Modules.StepFunctions.Models;
 
 public class HistoryEventItem
@@ -14,4 +17,7 @@ public class HistoryEventItem
         Timestamp.HasValue
             ? Timestamp.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")
             : "";
+
+    public Brush? TypeBackground => MetricColorHelper.GetStepFunctionsEventBrush(Type);
+    public Brush? TypeAccentBrush => MetricColorHelper.GetStepFunctionsEventAccentBrush(Type);
 }

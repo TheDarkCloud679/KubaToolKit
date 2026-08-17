@@ -137,6 +137,67 @@ public static class MetricColorHelper
         return brush;
     }
 
+    // Step Functions history event types are compound PascalCase names
+    // (TaskFailed, ExecutionSucceeded, MapStateEntered...), not the single
+    // words GetStatusColor matches, so this checks suffixes/substrings
+    // instead of the whole normalized string. Only flags the outcomes
+    // worth a glance (succeeded / failed / aborted / timed out) -- the
+    // many Entered/Exited/Scheduled/Started housekeeping events stay
+    // neutral rather than forcing every event into a color.
+    private static Color?
+    GetStepFunctionsEventColor(
+        string? eventType)
+    {
+        if (string.IsNullOrEmpty(eventType))
+        {
+            return null;
+        }
+
+        if (eventType.EndsWith("Succeeded", StringComparison.OrdinalIgnoreCase))
+        {
+            return SuccessColor;
+        }
+
+        if (eventType.EndsWith("Failed", StringComparison.OrdinalIgnoreCase)
+            || eventType.Contains("Aborted", StringComparison.OrdinalIgnoreCase)
+            || eventType.Contains("TimedOut", StringComparison.OrdinalIgnoreCase))
+        {
+            return DangerColor;
+        }
+
+        return null;
+    }
+
+    public static Brush?
+    GetStepFunctionsEventBrush(
+        string? eventType,
+        double opacity = 0.20)
+    {
+        var color = GetStepFunctionsEventColor(eventType);
+
+        return color.HasValue
+            ? ToBrush(color.Value.R, color.Value.G, color.Value.B, opacity)
+            : null;
+    }
+
+    public static Brush?
+    GetStepFunctionsEventAccentBrush(
+        string? eventType)
+    {
+        var color = GetStepFunctionsEventColor(eventType);
+
+        if (!color.HasValue)
+        {
+            return null;
+        }
+
+        var brush = new SolidColorBrush(color.Value);
+
+        brush.Freeze();
+
+        return brush;
+    }
+
     public static Brush?
     GetHttpStatusBrush(
         int statusCode,
