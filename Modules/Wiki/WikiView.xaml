@@ -304,7 +304,7 @@
                                 x:Name="FeaturedImageScrollViewer"
                                 HorizontalScrollBarVisibility="Auto"
                                 VerticalScrollBarVisibility="Auto"
-                                PreviewMouseWheel="FeaturedImageScrollViewer_PreviewMouseWheel">
+                                ZoomWheel="FeaturedImageScrollViewer_ZoomWheel">
                                 <Image
                                     x:Name="FeaturedImage"
                                     Stretch="Uniform"
@@ -313,7 +313,7 @@
                                     MouseLeftButtonDown="FeaturedImage_MouseLeftButtonDown"
                                     MouseMove="FeaturedImage_MouseMove"
                                     MouseLeftButtonUp="FeaturedImage_MouseLeftButtonUp"
-                                    ToolTip="Scroll to zoom, drag to pan, double-click to reset">
+                                    ToolTip="Scroll to zoom (Ctrl+Scroll to pan up/down), drag to pan, double-click to reset">
                                     <Image.LayoutTransform>
                                         <ScaleTransform x:Name="FeaturedImageScale" ScaleX="1" ScaleY="1"/>
                                     </Image.LayoutTransform>

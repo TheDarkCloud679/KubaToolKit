@@ -46,11 +46,6 @@ public partial class WikiView
 
         RefreshSectionsList();
 
-        if (_library.Sections.Count > 0)
-        {
-            SelectSection(_library.Sections[0]);
-        }
-
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
@@ -681,12 +676,10 @@ public partial class WikiView
     }
 
     private void
-    FeaturedImageScrollViewer_PreviewMouseWheel(
+    FeaturedImageScrollViewer_ZoomWheel(
         object sender,
         MouseWheelEventArgs e)
     {
-        e.Handled = true;
-
         var oldScale = FeaturedImageScale.ScaleX;
         var zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
         var newScale = Math.Clamp(oldScale * zoomFactor, 0.2, 8.0);
