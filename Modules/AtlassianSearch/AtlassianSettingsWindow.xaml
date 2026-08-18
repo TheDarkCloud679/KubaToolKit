@@ -9,23 +9,20 @@
     WindowStartupLocation="CenterOwner">
     <StackPanel Margin="20">
 
-        <TextBlock
-            Text="Cloud only (yourcompany.atlassian.net). Generate an API token at id.atlassian.com/manage-profile/security/api-tokens -- it's tied to your account, kept only on this machine, never committed."
-            TextWrapping="Wrap"
-            FontSize="11"
-            Foreground="{StaticResource TextSecondaryBrush}"
-            Margin="0,0,0,14"/>
-
         <TextBlock Text="Base URL" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <TextBox
             x:Name="BaseUrlTextBox"
             Margin="0,0,0,10"
-            ToolTip="e.g. https://yourcompany.atlassian.net"/>
+            ToolTip="e.g. https://yourcompany.atlassian.net (cloud only)"/>
 
         <TextBlock Text="Email" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <TextBox x:Name="EmailTextBox" Margin="0,0,0,10"/>
 
-        <TextBlock Text="API token" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock
+            Text="API token"
+            FontWeight="SemiBold"
+            Margin="0,0,0,4"
+            ToolTip="Generate one at id.atlassian.com/manage-profile/security/api-tokens — tied to your account, kept only on this machine, never committed."/>
         <TextBox x:Name="ApiTokenTextBox" Margin="0,0,0,10"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">

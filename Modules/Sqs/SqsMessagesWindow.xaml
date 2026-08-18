@@ -52,10 +52,11 @@
                         FontSize="15"
                         Foreground="{StaticResource TextPrimaryBrush}"/>
                     <TextBlock
-                        Text="Read only: messages are never deleted from the queue."
+                        Text="Read only"
                         FontSize="12"
                         Foreground="{StaticResource TextMutedBrush}"
-                        Margin="0,2,0,0"/>
+                        Margin="0,2,0,0"
+                        ToolTip="Messages are never deleted from the queue."/>
                 </StackPanel>
             </StackPanel>
         </Border>

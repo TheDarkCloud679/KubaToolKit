@@ -107,12 +107,6 @@
 
                         <!-- Auth -->
                         <StackPanel x:Name="AuthTabContent">
-                            <TextBlock
-                                Text="How this request proves its identity to the server."
-                                FontSize="11"
-                                Margin="0,0,0,10"
-                                Foreground="{StaticResource TextMutedBrush}"/>
-
                             <ComboBox
                                 x:Name="AuthTypeCombo"
                                 Width="220"
@@ -356,13 +350,6 @@
 
                         <!-- Extraction -->
                         <StackPanel x:Name="ExtractionTabContent" Visibility="Collapsed">
-                            <TextBlock
-                                Margin="0,0,0,10"
-                                FontSize="11"
-                                TextWrapping="Wrap"
-                                Foreground="{StaticResource TextMutedBrush}"
-                                Text="After a successful Get Token, copies a top-level field of the JSON response into a variable of this environment (creates it if needed) — typically the access token itself."/>
-
                             <Button
                                 HorizontalAlignment="Right"
                                 Width="26"

@@ -60,12 +60,13 @@
 
                         <TextBlock
                             x:Name="ExpressHintTextBlock"
-                            Text="EXPRESS: list rebuilt from CloudWatch Logs (last 7 days, requires logging to be enabled)"
+                            Text="EXPRESS"
                             FontSize="11"
                             FontStyle="Italic"
                             Foreground="{StaticResource TextMutedBrush}"
                             Margin="0,2,0,0"
-                            Visibility="Collapsed"/>
+                            Visibility="Collapsed"
+                            ToolTip="List rebuilt from CloudWatch Logs (last 7 days, requires logging to be enabled)."/>
                     </StackPanel>
                 </StackPanel>
 

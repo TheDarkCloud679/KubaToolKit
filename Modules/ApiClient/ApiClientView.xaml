@@ -44,7 +44,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="2,0,0,8">
@@ -416,20 +415,6 @@
                         </ContextMenu>
                     </TreeView.ContextMenu>
                 </TreeView>
-
-                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="2,8,0,0">
-                    <Path
-                        Data="M12,3 A9,9 0 1 0 12,21 A9,9 0 1 0 12,3 Z M12,16 L12,11 M12,8 L12,8.2"
-                        Stroke="{StaticResource TextMutedBrush}"
-                        StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                        Width="11" Height="11" Stretch="Uniform"
-                        VerticalAlignment="Top" Margin="0,1,6,0"/>
-                    <TextBlock
-                        Text="Right-click an item for more actions (rename, duplicate, authentication, favorites...)."
-                        FontSize="10.5"
-                        TextWrapping="Wrap"
-                        Foreground="{StaticResource TextMutedBrush}"/>
-                </StackPanel>
             </Grid>
         </Border>
 
@@ -630,18 +615,6 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-
-                    <StackPanel Orientation="Horizontal" Margin="2,8,0,0">
-                        <Path
-                            Data="M12,3 A9,9 0 1 0 12,21 A9,9 0 1 0 12,3 Z M12,16 L12,11 M12,8 L12,8.2"
-                            Stroke="{StaticResource TextMutedBrush}"
-                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                            Width="11" Height="11" Stretch="Uniform"
-                            VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock FontSize="10.5" Foreground="{StaticResource TextMutedBrush}">
-                            Type <Run FontFamily="Cascadia Code, Consolas" Text="{}{{variable_name}}"/> anywhere in the URL to use a value from the environment selected above.
-                        </TextBlock>
-                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -714,12 +687,6 @@
 
                             <!-- Params -->
                             <StackPanel x:Name="ParamsTabContent">
-                                <TextBlock
-                                    Text="Extra parameters appended to the end of the URL (after the ?)."
-                                    FontSize="11"
-                                    Margin="0,0,0,10"
-                                    Foreground="{StaticResource TextMutedBrush}"/>
-
                                 <Button
                                     HorizontalAlignment="Right"
                                     Width="26"
@@ -809,12 +776,6 @@
 
                             <!-- Auth -->
                             <StackPanel x:Name="AuthTabContent" Visibility="Collapsed">
-                                <TextBlock
-                                    Text="How this request proves its identity to the server."
-                                    FontSize="11"
-                                    Margin="0,0,0,10"
-                                    Foreground="{StaticResource TextMutedBrush}"/>
-
                                 <ComboBox
                                     x:Name="AuthTypeCombo"
                                     Width="220"
@@ -891,12 +852,6 @@
 
                             <!-- Headers -->
                             <StackPanel x:Name="HeadersTabContent" Visibility="Collapsed">
-                                <TextBlock
-                                    Text="Extra metadata sent with the request (authentication tokens, content format, custom flags...)."
-                                    FontSize="11"
-                                    Margin="0,0,0,10"
-                                    Foreground="{StaticResource TextMutedBrush}"/>
-
                                 <Button
                                     HorizontalAlignment="Right"
                                     Width="26"
@@ -1022,14 +977,7 @@
                                                 MouseLeftButtonDown="ToggleAutoHeaders_MouseLeftButtonDown"/>
                                         </Grid>
 
-                                        <TextBlock
-                                            Margin="0,4,0,10"
-                                            FontSize="10.5"
-                                            TextWrapping="Wrap"
-                                            Foreground="{StaticResource TextMutedBrush}"
-                                            Text="KubaToolKit adds these technical headers automatically when sending — read-only, nothing to do here."/>
-
-                                        <Grid x:Name="AutoHeadersGridContainer">
+                                        <Grid x:Name="AutoHeadersGridContainer" Margin="0,10,0,0">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="200" MinHeight="60"/>
                                                 <RowDefinition Height="6"/>
@@ -1076,12 +1024,6 @@
 
                             <!-- Body -->
                             <StackPanel x:Name="BodyTabContent" Visibility="Collapsed">
-                                <TextBlock
-                                    Text="The data sent with the request (mainly for POST/PUT/PATCH)."
-                                    FontSize="11"
-                                    Margin="0,0,0,10"
-                                    Foreground="{StaticResource TextMutedBrush}"/>
-
                                 <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
                                     <RadioButton
                                         x:Name="BodyNoneRadio"
@@ -1344,13 +1286,6 @@
 
                             <!-- Extraction to Environment -->
                             <StackPanel x:Name="ExtractionTabContent" Visibility="Collapsed">
-                                <TextBlock
-                                    Margin="0,0,0,10"
-                                    FontSize="11"
-                                    TextWrapping="Wrap"
-                                    Foreground="{StaticResource TextMutedBrush}"
-                                    Text="After a successful send, copies a top-level field of the JSON response into a variable of the selected environment (creates it if needed)."/>
-
                                 <Button
                                     HorizontalAlignment="Right"
                                     Width="26"
