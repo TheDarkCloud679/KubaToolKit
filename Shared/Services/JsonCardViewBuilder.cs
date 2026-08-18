@@ -611,36 +611,21 @@ public static class JsonCardViewBuilder
             Margin = new Thickness(0, 0, 0, 8)
         };
 
-        if (depth >= AccentBarMaxDepth)
+        // The default (implicit) Expander style paints a left accent bar
+        // when expanded, meant to flag a single level of results. Cards
+        // nest much deeper than that, so past the first couple of levels
+        // the bars just pile up next to each other -- past that depth, use
+        // the same chrome minus the accent bar (Styles/Controls.xaml).
+        if (depth >= AccentBarMaxDepth
+            && Application.Current?.TryFindResource("ExpanderNoAccentBarStyle") is Style flatStyle)
         {
-            expander.Loaded += SuppressAccentBar;
+            expander.Style = flatStyle;
         }
 
         return expander;
     }
 
-    // The shared Expander style (Styles/Controls.xaml) paints a left accent
-    // bar when expanded, meant to flag a single level of results. Cards
-    // nest much deeper than that, so past the first couple of levels the
-    // bars just pile up next to each other. Muting it on the template part
-    // once it's built (a local value beats a ControlTemplate trigger) avoids
-    // duplicating that ~100-line shared template just to drop two lines.
     private const int AccentBarMaxDepth = 2;
-
-    private static void
-    SuppressAccentBar(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var expander = (Expander)sender;
-
-        expander.Loaded -= SuppressAccentBar;
-
-        if (expander.Template?.FindName("AccentBar", expander) is Border accentBar)
-        {
-            accentBar.Opacity = 0;
-        }
-    }
 
     private static TextBlock
     MutedText(
