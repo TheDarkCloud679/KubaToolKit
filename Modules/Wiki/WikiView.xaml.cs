@@ -575,6 +575,12 @@ public partial class WikiView
         ContentTextBox.Visibility = imageOnly ? Visibility.Collapsed : Visibility.Visible;
         FeaturedImageBorder.Visibility = imageOnly ? Visibility.Visible : Visibility.Collapsed;
 
+        // Image only mode is about seeing the image as large as possible --
+        // the attachments row (checkbox + thumbnails) still needs to be
+        // reachable to add/manage files, but doesn't need anywhere near as
+        // much of the window as it gets in the normal notes view.
+        ImagesRowDefinition.Height = new GridLength(imageOnly ? 44 : 160);
+
         if (!imageOnly)
         {
             return;
