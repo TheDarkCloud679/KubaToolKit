@@ -676,10 +676,18 @@ public partial class WikiView
     }
 
     private void
-    FeaturedImageScrollViewer_ZoomWheel(
+    FeaturedImageOverlay_MouseWheel(
         object sender,
         MouseWheelEventArgs e)
     {
+        if (Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            FeaturedImageScrollViewer.ScrollToVerticalOffset(
+                FeaturedImageScrollViewer.VerticalOffset - e.Delta);
+
+            return;
+        }
+
         var oldScale = FeaturedImageScale.ScaleX;
         var zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
         var newScale = Math.Clamp(oldScale * zoomFactor, 0.2, 8.0);
@@ -720,7 +728,7 @@ public partial class WikiView
     }
 
     private void
-    FeaturedImage_MouseLeftButtonDown(
+    FeaturedImageOverlay_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e)
     {
@@ -735,11 +743,11 @@ public partial class WikiView
         _featuredImagePanStartHorizontalOffset = FeaturedImageScrollViewer.HorizontalOffset;
         _featuredImagePanStartVerticalOffset = FeaturedImageScrollViewer.VerticalOffset;
 
-        FeaturedImage.CaptureMouse();
+        ((UIElement)sender).CaptureMouse();
     }
 
     private void
-    FeaturedImage_MouseMove(
+    FeaturedImageOverlay_MouseMove(
         object sender,
         MouseEventArgs e)
     {
@@ -756,13 +764,13 @@ public partial class WikiView
     }
 
     private void
-    FeaturedImage_MouseLeftButtonUp(
+    FeaturedImageOverlay_MouseLeftButtonUp(
         object sender,
         MouseButtonEventArgs e)
     {
         _featuredImagePanStart = null;
 
-        FeaturedImage.ReleaseMouseCapture();
+        ((UIElement)sender).ReleaseMouseCapture();
     }
 
     private FrameworkElement
