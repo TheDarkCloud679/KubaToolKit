@@ -137,18 +137,20 @@
 
                             <Button
                                 Grid.Column="1"
-                                Content="A→Z"
-                                Padding="6,0"
+                                Content="▲"
+                                Width="26"
+                                Padding="0"
                                 Margin="0,0,4,0"
-                                FontSize="11"
+                                FontSize="10"
                                 Click="SortSectionsAscendingButton_Click"
                                 ToolTip="Sort pages A to Z"/>
 
                             <Button
                                 Grid.Column="2"
-                                Content="Z→A"
-                                Padding="6,0"
-                                FontSize="11"
+                                Content="▼"
+                                Width="26"
+                                Padding="0"
+                                FontSize="10"
                                 Click="SortSectionsDescendingButton_Click"
                                 ToolTip="Sort pages Z to A"/>
                         </Grid>
