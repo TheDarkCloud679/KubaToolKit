@@ -689,17 +689,17 @@ public partial class WikiView
             return;
         }
 
-        // Whatever was at the viewport's center stays at its center after
-        // the zoom, instead of the content's top-left corner staying
-        // pinned (which visually drags the zoom toward that corner).
-        var viewportCenterX =
-            FeaturedImageScrollViewer.HorizontalOffset + FeaturedImageScrollViewer.ViewportWidth / 2;
+        // Whatever's directly under the cursor stays under the cursor
+        // after the zoom. Anchoring on the viewport's center instead reads
+        // as the image also drifting/scrolling on every tick unless the
+        // cursor happens to be exactly centered, which it usually isn't.
+        var cursorPosition = e.GetPosition(FeaturedImageScrollViewer);
 
-        var viewportCenterY =
-            FeaturedImageScrollViewer.VerticalOffset + FeaturedImageScrollViewer.ViewportHeight / 2;
+        var pointerX = FeaturedImageScrollViewer.HorizontalOffset + cursorPosition.X;
+        var pointerY = FeaturedImageScrollViewer.VerticalOffset + cursorPosition.Y;
 
-        var unscaledCenterX = viewportCenterX / oldScale;
-        var unscaledCenterY = viewportCenterY / oldScale;
+        var unscaledPointerX = pointerX / oldScale;
+        var unscaledPointerY = pointerY / oldScale;
 
         FeaturedImageScale.ScaleX = newScale;
         FeaturedImageScale.ScaleY = newScale;
@@ -712,10 +712,10 @@ public partial class WikiView
             new Action(() =>
             {
                 FeaturedImageScrollViewer.ScrollToHorizontalOffset(
-                    unscaledCenterX * newScale - FeaturedImageScrollViewer.ViewportWidth / 2);
+                    unscaledPointerX * newScale - cursorPosition.X);
 
                 FeaturedImageScrollViewer.ScrollToVerticalOffset(
-                    unscaledCenterY * newScale - FeaturedImageScrollViewer.ViewportHeight / 2);
+                    unscaledPointerY * newScale - cursorPosition.Y);
             }));
     }
 
