@@ -243,6 +243,7 @@
                             x:Name="SectionFolderCombo"
                             Width="220"
                             IsEditable="True"
+                            Style="{StaticResource EditableComboBoxStyle}"
                             ToolTip="Group this page under a folder -- pick an existing one or type a new name, leave empty for no folder"
                             SelectionChanged="SectionFolderCombo_SelectionChanged"
                             LostFocus="SectionFolderCombo_LostFocus"/>
