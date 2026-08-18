@@ -6,6 +6,10 @@ public class WikiSection
 
     public string Text { get; set; } = "";
 
+    // Empty means ungrouped. Purely a display grouping -- Sections stays a
+    // single flat list either way.
+    public string Folder { get; set; } = "";
+
     // File names only, resolved against WikiService.GetImagesFolderPath at
     // read time -- the actual image files live in the shared project files
     // folder, not inline in this JSON.

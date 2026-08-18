@@ -1,4 +1,3 @@
-using KubaToolKit.Modules.ProjectInfo;
 using KubaToolKit.Modules.Wiki.Models;
 using KubaToolKit.Shared.Services;
 using System.IO;
@@ -6,41 +5,44 @@ using System.Text.Json;
 
 namespace KubaToolKit.Modules.Wiki;
 
+// The wiki used to be split per AWS-profile/project, each with its own
+// wiki.json under Config/ProjectFiles/{key}/. It's now a single library
+// shared across the whole app, with folders (WikiSection.Folder) taking
+// over the "keep related pages together" job project-scoping used to do.
+// The first time this runs after that change, every project's old
+// wiki.json (and its WikiImages) is folded in as one folder named after
+// that project, so nothing already written is lost.
 public class WikiService
 {
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
-    // Legacy global file every project used to share; migrated out into
-    // each project's own folder the first time it's still found to exist.
     private static string
-    GetLegacyFilePath() =>
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "wiki.json");
+    GetLibraryFolderPath() =>
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Wiki");
 
-    public static string
-    GetProjectFilePath(
-        string projectKey) =>
-        Path.Combine(ProjectInfoService.GetProjectFolderPath(projectKey), "wiki.json");
+    private static string
+    GetLibraryFilePath() =>
+        Path.Combine(GetLibraryFolderPath(), "wiki.json");
 
-    // Images live inside the same shared project files folder used by
-    // Project Info's "Files folder" button, so both features point at one
-    // shared location per project instead of two.
+    // Images live alongside the library file itself now, rather than
+    // inside a per-project shared folder.
     public static string
-    GetImagesFolderPath(
-        string projectKey) =>
-        Path.Combine(ProjectInfoService.GetProjectFolderPath(projectKey), "WikiImages");
+    GetImagesFolderPath() =>
+        Path.Combine(GetLibraryFolderPath(), "WikiImages");
 
-    /// Creates the images folder (and the shared project folder above it,
-    /// with its own README) if needed, dropping a short note the first
-    /// time explaining what these files are for someone who lands
-    /// straight in this subfolder without seeing the parent one.
+    private static string
+    GetProjectFilesRootPath() =>
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "ProjectFiles");
+
+    /// Creates the images folder (and the library folder above it) if
+    /// needed, dropping a short note the first time explaining what these
+    /// files are for someone who lands straight in this subfolder without
+    /// seeing the parent one.
     public static string
-    EnsureImagesFolder(
-        string projectKey)
+    EnsureImagesFolder()
     {
-        ProjectInfoService.EnsureProjectFolder(projectKey);
-
-        var imagesFolder = GetImagesFolderPath(projectKey);
+        var imagesFolder = GetImagesFolderPath();
         var isFirstRun = !Directory.Exists(imagesFolder);
 
         Directory.CreateDirectory(imagesFolder);
@@ -66,34 +68,38 @@ public class WikiService
         return imagesFolder;
     }
 
-    public WikiProject
-    LoadProject(
-        string projectKey)
+    public WikiLibrary
+    LoadLibrary()
     {
-        MigrateLegacyFileIfPresent();
-
-        var filePath = GetProjectFilePath(projectKey);
+        var filePath = GetLibraryFilePath();
 
         if (!File.Exists(filePath))
         {
-            Logger.Debug($"WikiService: {filePath} missing, starting empty for '{projectKey}'.");
+            var migrated = MigratePerProjectWikisIfPresent();
 
-            return new WikiProject { Key = projectKey };
+            if (migrated != null)
+            {
+                SaveLibrary(migrated);
+
+                return migrated;
+            }
+
+            Logger.Debug($"WikiService: {filePath} missing, starting empty.");
+
+            return new WikiLibrary();
         }
 
         try
         {
             var json = File.ReadAllText(filePath);
 
-            var project =
-                JsonSerializer.Deserialize<WikiProject>(json, SerializerOptions)
-                ?? new WikiProject { Key = projectKey };
+            var library =
+                JsonSerializer.Deserialize<WikiLibrary>(json, SerializerOptions)
+                ?? new WikiLibrary();
 
-            project.Key = projectKey;
+            Logger.Debug($"WikiService: loaded the library from {filePath}.");
 
-            Logger.Debug($"WikiService: loaded '{projectKey}' from {filePath}.");
-
-            return project;
+            return library;
         }
         catch (Exception ex)
         {
@@ -104,20 +110,20 @@ public class WikiService
     }
 
     public void
-    SaveProject(
-        WikiProject project)
+    SaveLibrary(
+        WikiLibrary library)
     {
-        ProjectInfoService.EnsureProjectFolder(project.Key);
+        Directory.CreateDirectory(GetLibraryFolderPath());
 
-        var filePath = GetProjectFilePath(project.Key);
+        var filePath = GetLibraryFilePath();
 
         try
         {
             File.WriteAllText(
                 filePath,
-                JsonSerializer.Serialize(project, SerializerOptions));
+                JsonSerializer.Serialize(library, SerializerOptions));
 
-            Logger.Debug($"WikiService: saved '{project.Key}' to {filePath}.");
+            Logger.Debug($"WikiService: saved the library to {filePath}.");
         }
         catch (Exception ex)
         {
@@ -127,46 +133,112 @@ public class WikiService
         }
     }
 
-    /// One-time move of every project out of the old shared
-    /// Config/wiki.json into its own Config/ProjectFiles/{key}/wiki.json,
-    /// alongside that project's WikiImages and Project Info data. Renames
-    /// the legacy file once done so this never runs again.
-    private void
-    MigrateLegacyFileIfPresent()
+    // One-time consolidation of every project's old wiki.json (and its
+    // WikiImages) into the new shared library, each project's pages
+    // becoming a folder named after that project. Returns null if there
+    // was nothing to migrate (a genuinely fresh install), in which case
+    // the caller just starts empty without writing a file yet.
+    private WikiLibrary?
+    MigratePerProjectWikisIfPresent()
     {
-        var legacyPath = GetLegacyFilePath();
+        var projectFilesRoot = GetProjectFilesRootPath();
 
-        if (!File.Exists(legacyPath))
+        if (!Directory.Exists(projectFilesRoot))
         {
-            return;
+            return null;
         }
 
-        try
+        var library = new WikiLibrary();
+        var migratedAny = false;
+
+        foreach (var projectFolder in Directory.GetDirectories(projectFilesRoot))
         {
-            var json = File.ReadAllText(legacyPath);
+            var oldWikiPath = Path.Combine(projectFolder, "wiki.json");
 
-            var legacyRoot =
-                JsonSerializer.Deserialize<WikiRoot>(json, SerializerOptions)
-                ?? new WikiRoot();
-
-            foreach (var project in legacyRoot.Projects)
+            if (!File.Exists(oldWikiPath))
             {
-                if (File.Exists(GetProjectFilePath(project.Key)))
+                continue;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(oldWikiPath);
+
+                var oldProject = JsonSerializer.Deserialize<WikiProject>(json, SerializerOptions);
+
+                if (oldProject == null || oldProject.Sections.Count == 0)
                 {
                     continue;
                 }
 
-                SaveProject(project);
+                // The directory name is the authoritative sanitized project
+                // key -- the JSON's own Key field was always overwritten by
+                // the caller on load in the old per-project WikiService, so
+                // it can't be trusted to still be accurate here.
+                var folderName = Path.GetFileName(projectFolder);
+
+                var oldImagesFolder = Path.Combine(projectFolder, "WikiImages");
+                var newImagesFolder = EnsureImagesFolder();
+
+                foreach (var section in oldProject.Sections)
+                {
+                    section.Folder = folderName;
+
+                    for (var i = 0; i < section.ImageFileNames.Count; i++)
+                    {
+                        var fileName = section.ImageFileNames[i];
+                        var sourcePath = Path.Combine(oldImagesFolder, fileName);
+
+                        if (!File.Exists(sourcePath))
+                        {
+                            continue;
+                        }
+
+                        section.ImageFileNames[i] = CopyImageWithUniqueName(sourcePath, newImagesFolder);
+                    }
+
+                    library.Sections.Add(section);
+                }
+
+                migratedAny = true;
+
+                Logger.Info(
+                    $"WikiService: migrated {oldProject.Sections.Count} page(s) from project "
+                    + $"'{folderName}' into the shared wiki, as folder '{folderName}'.");
             }
-
-            var backupPath = legacyPath + $".migrated-{DateTime.Now:yyyyMMdd-HHmmss}";
-            File.Move(legacyPath, backupPath);
-
-            Logger.Debug($"WikiService: migrated {legacyRoot.Projects.Count} project(s) out of the legacy {legacyPath}, backed up to {backupPath}.");
+            catch (Exception ex)
+            {
+                Logger.Error($"WikiService: failed to migrate {oldWikiPath}.", ex);
+            }
         }
-        catch (Exception ex)
+
+        return migratedAny ? library : null;
+    }
+
+    // Shared with WikiWindow's "Add image" flow -- same collision handling
+    // either way, so a page migrated from a project that happened to reuse
+    // a file name (e.g. "diagram.png") another project also used doesn't
+    // silently overwrite one of them.
+    public static string
+    CopyImageWithUniqueName(
+        string sourcePath,
+        string imagesFolder)
+    {
+        var fileName = Path.GetFileName(sourcePath);
+        var targetPath = Path.Combine(imagesFolder, fileName);
+        var counter = 1;
+
+        while (File.Exists(targetPath))
         {
-            Logger.Error($"WikiService: failed to migrate the legacy {legacyPath}.", ex);
+            fileName =
+                $"{Path.GetFileNameWithoutExtension(sourcePath)}_{counter}{Path.GetExtension(sourcePath)}";
+
+            targetPath = Path.Combine(imagesFolder, fileName);
+            counter++;
         }
+
+        File.Copy(sourcePath, targetPath);
+
+        return fileName;
     }
 }

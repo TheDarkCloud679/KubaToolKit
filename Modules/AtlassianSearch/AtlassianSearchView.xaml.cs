@@ -1,5 +1,8 @@
+using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.ApiClient;
 using KubaToolKit.Modules.AtlassianSearch.Models;
+using KubaToolKit.Modules.ProjectInfo;
+using KubaToolKit.Modules.Wiki;
 using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -48,6 +51,9 @@ public partial class AtlassianSearchView
     private List<IncidentEntry> _incidents = new();
     private IncidentEntry? _selectedIncident;
 
+    private WikiView? _wikiView;
+    private ProjectInfoView? _projectInfoView;
+
     public AtlassianSearchView()
     {
         InitializeComponent();
@@ -76,6 +82,56 @@ public partial class AtlassianSearchView
         }
 
         LoadIncidents();
+
+        PopulateProjectInfoProfileCombo();
+    }
+
+    // Project Info stays scoped per AWS profile (unlike the Wiki, which
+    // went generic) -- the main nav's profile picker is deliberately hidden
+    // in Atlassian mode, so this tab needs its own.
+    private void
+    PopulateProjectInfoProfileCombo()
+    {
+        try
+        {
+            var chain = new CredentialProfileStoreChain();
+
+            var profiles =
+                chain.ListProfiles()
+                    .Select(x => x.Name)
+                    .Where(x => x != "default")
+                    .OrderBy(x => x)
+                    .ToList();
+
+            ProjectInfoProfileCombo.ItemsSource = profiles;
+
+            if (profiles.Count > 0)
+            {
+                ProjectInfoProfileCombo.SelectedIndex = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: failed to load AWS profiles for Project Info.", ex);
+        }
+    }
+
+    private void
+    ProjectInfoProfileCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (ProjectInfoProfileCombo.SelectedItem is not string profileName)
+        {
+            return;
+        }
+
+        if (_projectInfoView == null)
+        {
+            return;
+        }
+
+        _projectInfoView.ChangeProfile(profileName);
     }
 
     private static readonly NameValue AnyOption = new("", "(Any)");
@@ -92,16 +148,44 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
-        if (StatsTabContent == null)
+        if (StatsTabContent == null || WikiTabContent == null || ProjectInfoTabContent == null)
         {
             return;
         }
+
+        // Flush whichever tab is being left, so a debounced save isn't lost
+        // to a tab switch happening before its 800ms timer fires.
+        _wikiView?.FlushPendingSave();
+        _projectInfoView?.FlushPendingSave();
 
         LibraryTabContent.Visibility =
             LibraryTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
         StatsTabContent.Visibility =
             StatsTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        WikiTabContent.Visibility =
+            WikiTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        ProjectInfoTabContent.Visibility =
+            ProjectInfoTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        ProfilePickerPanel.Visibility =
+            ProjectInfoTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        if (WikiTabRadio.IsChecked == true && _wikiView == null)
+        {
+            _wikiView = new WikiView();
+            WikiTabContent.Content = _wikiView;
+        }
+
+        if (ProjectInfoTabRadio.IsChecked == true && _projectInfoView == null)
+        {
+            var profileName = ProjectInfoProfileCombo.SelectedItem as string ?? "";
+
+            _projectInfoView = new ProjectInfoView(profileName);
+            ProjectInfoTabContent.Content = _projectInfoView;
+        }
     }
 
     // ===================================================================

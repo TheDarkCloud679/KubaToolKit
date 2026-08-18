@@ -1,5 +1,4 @@
 using KubaToolKit.Modules.ApiClient;
-using KubaToolKit.Modules.ProjectInfo;
 using KubaToolKit.Modules.Wiki.Models;
 using KubaToolKit.Shared.Services;
 using System.Diagnostics;
@@ -14,20 +13,18 @@ using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.Wiki;
 
-public partial class WikiWindow
-    : Window
+public partial class WikiView
+    : UserControl
 {
     private readonly WikiService _wikiService = new();
-    private readonly string _profileName;
-    private readonly WikiProject _project;
+    private readonly WikiLibrary _library;
 
     private WikiSection? _currentSection;
     private bool _loadingSection;
 
     private readonly DispatcherTimer _saveDebounceTimer;
 
-    public WikiWindow(
-        string profileName)
+    public WikiView()
     {
         InitializeComponent();
 
@@ -40,34 +37,13 @@ public partial class WikiWindow
             Save();
         };
 
-        Closing += (_, __) =>
+        _library = _wikiService.LoadLibrary();
+
+        RefreshSectionsList();
+
+        if (_library.Sections.Count > 0)
         {
-            if (_saveDebounceTimer.IsEnabled)
-            {
-                _saveDebounceTimer.Stop();
-                Save();
-            }
-        };
-
-        _profileName = profileName;
-
-        // Same project key as Project Info (Prod/Preprod/Test sharing and
-        // its migration both already live there), so the wiki lines up
-        // with whatever project the user already set/uses there.
-        var projectInfoService = new ProjectInfoService();
-        var projectInfoRoot = projectInfoService.Load();
-        var projectKey = projectInfoService.ResolveProjectKey(projectInfoRoot, profileName);
-
-        _project = _wikiService.LoadProject(projectKey);
-
-        Title = $"Wiki - {_project.Key} (profile: {_profileName})";
-        TitleTextBlock.Text = Title;
-
-        SectionsListBox.ItemsSource = _project.Sections;
-
-        if (_project.Sections.Count > 0)
-        {
-            SectionsListBox.SelectedIndex = 0;
+            SelectSection(_library.Sections[0]);
         }
 
         PreviewKeyDown += (_, e) =>
@@ -81,11 +57,38 @@ public partial class WikiWindow
         };
     }
 
+    // Called before switching away from this tab, or before the app
+    // closes -- a UserControl has no Closing event to flush a pending
+    // debounced save from the way the old standalone window did.
+    public void
+    FlushPendingSave()
+    {
+        if (_saveDebounceTimer.IsEnabled)
+        {
+            _saveDebounceTimer.Stop();
+            Save();
+        }
+    }
+
+    private class SectionGroup
+    {
+        public string FolderName { get; set; } = "";
+        public Visibility HeaderVisibility { get; set; } = Visibility.Visible;
+        public List<SectionRow> Rows { get; set; } = new();
+    }
+
+    private class SectionRow
+    {
+        public WikiSection Section { get; set; } = null!;
+        public string Name { get; set; } = "";
+        public Brush RowBackground { get; set; } = Brushes.Transparent;
+    }
+
     private void
     AddSectionButton_Click(
         object sender,
         RoutedEventArgs e) =>
-        AddSection(_project.Sections.Count);
+        AddSection(_library.Sections.Count);
 
     private void
     NewSectionNameTextBox_KeyDown(
@@ -94,7 +97,7 @@ public partial class WikiWindow
     {
         if (e.Key == Key.Enter)
         {
-            AddSection(_project.Sections.Count);
+            AddSection(_library.Sections.Count);
         }
     }
 
@@ -103,9 +106,9 @@ public partial class WikiWindow
         object sender,
         RoutedEventArgs e)
     {
-        var index = SectionsListBox.SelectedItem is WikiSection s
-            ? _project.Sections.IndexOf(s)
-            : _project.Sections.Count;
+        var index = _currentSection != null
+            ? _library.Sections.IndexOf(_currentSection)
+            : _library.Sections.Count;
 
         AddSection(Math.Max(0, index));
     }
@@ -115,9 +118,9 @@ public partial class WikiWindow
         object sender,
         RoutedEventArgs e)
     {
-        var index = SectionsListBox.SelectedItem is WikiSection s
-            ? _project.Sections.IndexOf(s) + 1
-            : _project.Sections.Count;
+        var index = _currentSection != null
+            ? _library.Sections.IndexOf(_currentSection) + 1
+            : _library.Sections.Count;
 
         AddSection(index);
     }
@@ -130,24 +133,26 @@ public partial class WikiWindow
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            name = $"Section {_project.Sections.Count + 1}";
+            name = $"Page {_library.Sections.Count + 1}";
         }
 
-        if (_project.Sections.Any(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
+        if (_library.Sections.Any(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            AppMessageBox.Show($"A section \"{name}\" already exists.", "Wiki");
+            AppMessageBox.Show($"A page \"{name}\" already exists.", "Wiki");
 
             return;
         }
 
-        var section = new WikiSection { Name = name };
+        // A newly added page defaults to the same folder as whatever's
+        // currently selected -- adding a related page from within a folder
+        // shouldn't drop it back to ungrouped.
+        var section = new WikiSection { Name = name, Folder = _currentSection?.Folder ?? "" };
 
-        _project.Sections.Insert(Math.Clamp(index, 0, _project.Sections.Count), section);
+        _library.Sections.Insert(Math.Clamp(index, 0, _library.Sections.Count), section);
 
         NewSectionNameTextBox.Text = "";
 
-        RefreshSectionsList();
-        SectionsListBox.SelectedItem = section;
+        SelectSection(section);
 
         Save();
     }
@@ -157,33 +162,31 @@ public partial class WikiWindow
         object sender,
         RoutedEventArgs e)
     {
-        if (SectionsListBox.SelectedItem is not WikiSection section)
+        if (_currentSection == null)
         {
             return;
         }
 
         var newName =
-            TextInputWindow.Prompt(this, "Rename section", "New name:", section.Name);
+            TextInputWindow.Prompt(Window.GetWindow(this), "Rename page", "New name:", _currentSection.Name);
 
         if (string.IsNullOrWhiteSpace(newName)
-            || string.Equals(newName, section.Name, StringComparison.Ordinal))
+            || string.Equals(newName, _currentSection.Name, StringComparison.Ordinal))
         {
             return;
         }
 
-        if (_project.Sections.Any(s =>
-                s != section && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
+        if (_library.Sections.Any(s =>
+                s != _currentSection && string.Equals(s.Name, newName, StringComparison.OrdinalIgnoreCase)))
         {
-            AppMessageBox.Show($"A section \"{newName}\" already exists.", "Wiki");
+            AppMessageBox.Show($"A page \"{newName}\" already exists.", "Wiki");
 
             return;
         }
 
-        section.Name = newName;
+        _currentSection.Name = newName;
 
         RefreshSectionsList();
-        SectionsListBox.SelectedItem = section;
-        TitleTextBlock.Text = Title;
 
         Save();
     }
@@ -193,22 +196,22 @@ public partial class WikiWindow
         object sender,
         RoutedEventArgs e)
     {
-        if (SectionsListBox.SelectedItem is not WikiSection section)
+        if (_currentSection == null)
         {
             return;
         }
 
         if (AppMessageBox.Show(
-                $"Delete section \"{section.Name}\" and its content? Attached files are kept on disk.",
+                $"Delete page \"{_currentSection.Name}\" and its content? Attached files are kept on disk.",
                 "Confirm",
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes)
         {
             return;
         }
 
-        _project.Sections.Remove(section);
+        _library.Sections.Remove(_currentSection);
 
-        RefreshSectionsList();
+        SelectSection(null);
 
         Save();
     }
@@ -229,55 +232,129 @@ public partial class WikiWindow
     SortSections(
         bool ascending)
     {
-        var selected = _currentSection;
-
         var sorted =
             ascending
-                ? _project.Sections.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList()
-                : _project.Sections.OrderByDescending(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                ? _library.Sections.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                : _library.Sections.OrderByDescending(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
-        _project.Sections.Clear();
-        _project.Sections.AddRange(sorted);
+        _library.Sections.Clear();
+        _library.Sections.AddRange(sorted);
 
         RefreshSectionsList();
-
-        SectionsListBox.SelectedItem = selected;
 
         Save();
     }
 
+    // RenameMenuItem/DeleteMenuItem live inside UserControl.Resources, so
+    // (unlike elements in the main visual tree) they don't get their own
+    // InitializeComponent-wired fields -- found by name on the sender
+    // ContextMenu itself instead.
     private void
     SectionsContextMenu_Opened(
         object sender,
         RoutedEventArgs e)
     {
-        var hasSelection = SectionsListBox.SelectedItem is WikiSection;
+        if (sender is not ContextMenu menu)
+        {
+            return;
+        }
 
-        RenameMenuItem.IsEnabled = hasSelection;
-        DeleteMenuItem.IsEnabled = hasSelection;
+        var hasSelection = _currentSection != null;
+
+        if (menu.FindName("RenameMenuItem") is MenuItem renameItem)
+        {
+            renameItem.IsEnabled = hasSelection;
+        }
+
+        if (menu.FindName("DeleteMenuItem") is MenuItem deleteItem)
+        {
+            deleteItem.IsEnabled = hasSelection;
+        }
     }
 
     private void
     RefreshSectionsList()
     {
-        SectionsListBox.ItemsSource = null;
-        SectionsListBox.ItemsSource = _project.Sections;
+        var folders =
+            _library.Sections
+                .Where(s => !string.IsNullOrWhiteSpace(s.Folder))
+                .Select(s => s.Folder)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-        // A stale match could point at a section that no longer exists
-        // (or no longer matches after a rename), or would jump to the
-        // wrong position after other sections got added/removed.
+        var groups = new List<SectionGroup>();
+
+        foreach (var folder in folders)
+        {
+            groups.Add(
+                BuildGroup(
+                    folder,
+                    _library.Sections.Where(s => string.Equals(s.Folder, folder, StringComparison.OrdinalIgnoreCase))));
+        }
+
+        var ungrouped = _library.Sections.Where(s => string.IsNullOrWhiteSpace(s.Folder)).ToList();
+
+        if (ungrouped.Count > 0)
+        {
+            groups.Add(BuildGroup(folders.Count > 0 ? "(No folder)" : "", ungrouped));
+        }
+
+        SectionGroupsItemsControl.ItemsSource = groups;
+
+        SectionFolderCombo.ItemsSource = folders;
+
+        // A stale match could point at a page that no longer exists (or no
+        // longer matches after a rename), or would jump to the wrong
+        // position after other pages got added/removed/reordered.
         _searchMatches.Clear();
         _currentMatchIndex = -1;
         _lastSearchQuery = "";
         SearchResultsText.Text = "";
     }
 
+    private SectionGroup
+    BuildGroup(
+        string folderName,
+        IEnumerable<WikiSection> sections) =>
+        new()
+        {
+            FolderName = folderName,
+            HeaderVisibility = string.IsNullOrEmpty(folderName) ? Visibility.Collapsed : Visibility.Visible,
+            Rows =
+                sections
+                    .Select(s => new SectionRow
+                    {
+                        Section = s,
+                        Name = s.Name,
+                        RowBackground =
+                            ReferenceEquals(s, _currentSection)
+                                ? (Brush)FindResource("AccentSoftBrush")
+                                : Brushes.Transparent
+                    })
+                    .ToList()
+        };
+
     private void
-    SectionsListBox_SelectionChanged(
+    SectionRow_Click(
         object sender,
-        SelectionChangedEventArgs e)
+        MouseButtonEventArgs e)
     {
-        _currentSection = SectionsListBox.SelectedItem as WikiSection;
+        if (sender is not FrameworkElement { Tag: SectionRow row })
+        {
+            return;
+        }
+
+        SelectSection(row.Section);
+    }
+
+    private void
+    SelectSection(
+        WikiSection? section)
+    {
+        _currentSection = section;
+
+        RefreshSectionsList();
 
         if (_currentSection == null)
         {
@@ -296,6 +373,7 @@ public partial class WikiWindow
         {
             ContentTextBox.Text = _currentSection.Text;
             ImageOnlyCheckBox.IsChecked = _currentSection.ImageOnlyMode;
+            SectionFolderCombo.Text = _currentSection.Folder;
         }
         finally
         {
@@ -321,6 +399,39 @@ public partial class WikiWindow
     }
 
     private void
+    SectionFolderCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        CommitFolderChange();
+
+    private void
+    SectionFolderCombo_LostFocus(
+        object sender,
+        RoutedEventArgs e) =>
+        CommitFolderChange();
+
+    private void
+    CommitFolderChange()
+    {
+        if (_loadingSection || _currentSection == null)
+        {
+            return;
+        }
+
+        var folder = SectionFolderCombo.Text.Trim();
+
+        if (folder == _currentSection.Folder)
+        {
+            return;
+        }
+
+        _currentSection.Folder = folder;
+
+        RefreshSectionsList();
+        Save();
+    }
+
+    private void
     AddImageButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -337,18 +448,18 @@ public partial class WikiWindow
             Multiselect = true
         };
 
-        if (dialog.ShowDialog(this) != true)
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
         {
             return;
         }
 
         try
         {
-            var imagesFolder = WikiService.EnsureImagesFolder(_project.Key);
+            var imagesFolder = WikiService.EnsureImagesFolder();
 
             foreach (var sourcePath in dialog.FileNames)
             {
-                var fileName = CopyImageWithUniqueName(sourcePath, imagesFolder);
+                var fileName = WikiService.CopyImageWithUniqueName(sourcePath, imagesFolder);
 
                 _currentSection.ImageFileNames.Add(fileName);
             }
@@ -358,33 +469,10 @@ public partial class WikiWindow
         }
         catch (Exception ex)
         {
-            Logger.Error("WikiWindow: failed to attach image.", ex);
+            Logger.Error("WikiView: failed to attach image.", ex);
 
             AppMessageBox.Show(ex.ToString(), "Wiki - add image");
         }
-    }
-
-    private static string
-    CopyImageWithUniqueName(
-        string sourcePath,
-        string imagesFolder)
-    {
-        var fileName = Path.GetFileName(sourcePath);
-        var targetPath = Path.Combine(imagesFolder, fileName);
-        var counter = 1;
-
-        while (File.Exists(targetPath))
-        {
-            fileName =
-                $"{Path.GetFileNameWithoutExtension(sourcePath)}_{counter}{Path.GetExtension(sourcePath)}";
-
-            targetPath = Path.Combine(imagesFolder, fileName);
-            counter++;
-        }
-
-        File.Copy(sourcePath, targetPath);
-
-        return fileName;
     }
 
     private void
@@ -397,7 +485,7 @@ public partial class WikiWindow
             return;
         }
 
-        var imagesFolder = WikiService.GetImagesFolderPath(_project.Key);
+        var imagesFolder = WikiService.GetImagesFolderPath();
 
         foreach (var fileName in _currentSection.ImageFileNames)
         {
@@ -455,7 +543,7 @@ public partial class WikiWindow
             return;
         }
 
-        var fullPath = Path.Combine(WikiService.GetImagesFolderPath(_project.Key), firstImage);
+        var fullPath = Path.Combine(WikiService.GetImagesFolderPath(), firstImage);
 
         if (!File.Exists(fullPath))
         {
@@ -478,9 +566,9 @@ public partial class WikiWindow
 
         FeaturedImage.Source = bitmap;
 
-        // A newly loaded image (new section, or attachments changed)
-        // starts fresh rather than keeping whatever zoom/pan was left
-        // over from a previous one.
+        // A newly loaded image (new page, or attachments changed) starts
+        // fresh rather than keeping whatever zoom/pan was left over from a
+        // previous one.
         ResetFeaturedImageZoom();
     }
 
@@ -489,9 +577,9 @@ public partial class WikiWindow
     private double _featuredImagePanStartVerticalOffset;
 
     // Default to fitting the whole image in the window instead of its
-    // native pixel size (which is usually bigger than the window and
-    // needs a manual zoom-out first) -- zooming in from a fully visible
-    // image beats zooming out then back in to the spot you wanted.
+    // native pixel size (which is usually bigger than the window and needs
+    // a manual zoom-out first) -- zooming in from a fully visible image
+    // beats zooming out then back in to the spot you wanted.
     private void
     ResetFeaturedImageZoom()
     {
@@ -568,8 +656,8 @@ public partial class WikiWindow
         FeaturedImageScale.ScaleY = newScale;
 
         // The ScrollViewer's extent only reflects the new scale after a
-        // layout pass -- adjusting offsets before that would clamp
-        // against the still-stale (pre-zoom) scrollable range.
+        // layout pass -- adjusting offsets before that would clamp against
+        // the still-stale (pre-zoom) scrollable range.
         FeaturedImageScrollViewer.Dispatcher.BeginInvoke(
             DispatcherPriority.Loaded,
             new Action(() =>
@@ -643,7 +731,7 @@ public partial class WikiWindow
         {
             Width = 100,
             Height = 80,
-            BorderBrush = (System.Windows.Media.Brush)FindResource("BorderBrush"),
+            BorderBrush = (Brush)FindResource("BorderBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
             Cursor = Cursors.Hand,
@@ -660,22 +748,22 @@ public partial class WikiWindow
                 FontSize = 10,
                 FontStyle = FontStyles.Italic,
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = (System.Windows.Media.Brush)FindResource("TextMutedBrush"),
+                Foreground = (Brush)FindResource("TextMutedBrush"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
         }
         else if (isPdf)
         {
-            // WPF can't render a PDF preview without an extra library --
-            // a plain icon still supports the same double-click-to-link/
+            // WPF can't render a PDF preview without an extra library -- a
+            // plain icon still supports the same double-click-to-link/
             // right-click-to-open/remove behavior as an actual image.
             imageBorder.Child = new TextBlock
             {
                 Text = "📄 PDF",
                 FontSize = 13,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
+                Foreground = (Brush)FindResource("TextSecondaryBrush"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -704,7 +792,7 @@ public partial class WikiWindow
             }
             catch (Exception ex)
             {
-                Logger.Error("WikiWindow: failed to open attachment.", ex);
+                Logger.Error("WikiView: failed to open attachment.", ex);
 
                 AppMessageBox.Show(ex.ToString(), "Wiki - open attachment");
             }
@@ -783,7 +871,7 @@ public partial class WikiWindow
     {
         try
         {
-            _wikiService.SaveProject(_project);
+            _wikiService.SaveLibrary(_library);
         }
         catch (Exception ex)
         {
@@ -791,8 +879,8 @@ public partial class WikiWindow
         }
     }
 
-    // Offset == -1 for a section-name match (just select the section);
-    // >= 0 for a match inside that section's text, at that character index.
+    // Offset == -1 for a page-name match (just select the page); >= 0 for
+    // a match inside that page's text, at that character index.
     private readonly List<(WikiSection Section, int Offset)> _searchMatches = new();
     private int _currentMatchIndex = -1;
     private string _lastSearchQuery = "";
@@ -875,7 +963,7 @@ public partial class WikiWindow
             return;
         }
 
-        foreach (var section in _project.Sections)
+        foreach (var section in _library.Sections)
         {
             if (section.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
             {
@@ -941,14 +1029,14 @@ public partial class WikiWindow
     {
         var (section, offset) = _searchMatches[index];
 
-        if (!ReferenceEquals(SectionsListBox.SelectedItem, section))
+        if (!ReferenceEquals(_currentSection, section))
         {
-            SectionsListBox.SelectedItem = section;
+            SelectSection(section);
         }
 
         if (offset >= 0)
         {
-            // Deferred: switching sections just above reloads
+            // Deferred: switching pages just above reloads
             // ContentTextBox.Text, and GetLineIndexFromCharacterIndex needs
             // a layout pass over the new text before it answers correctly.
             ContentTextBox.Dispatcher.BeginInvoke(

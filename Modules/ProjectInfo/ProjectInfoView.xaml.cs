@@ -18,13 +18,13 @@ using KubaToolKit.Shared.Windows;
 
 namespace KubaToolKit.Modules.ProjectInfo;
 
-public partial class ProjectInfoWindow
-    : Window
+public partial class ProjectInfoView
+    : UserControl
 {
     private readonly ProjectInfoService _projectInfoService = new();
-    private readonly ProjectInfoRoot _root;
-    private readonly string _profileName;
-    private ProjectInfoProject _project;
+    private ProjectInfoRoot _root = null!;
+    private string _profileName = "";
+    private ProjectInfoProject _project = null!;
 
     private readonly Dictionary<ProjectInfoSection, (Border Card, DataGrid Grid, DataTable Table)>
         _sectionControls = new();
@@ -40,7 +40,7 @@ public partial class ProjectInfoWindow
     private readonly DispatcherTimer _saveDebounceTimer;
     private bool _isSyncing;
 
-    public ProjectInfoWindow(
+    public ProjectInfoView(
         string profileName)
     {
         InitializeComponent();
@@ -53,24 +53,6 @@ public partial class ProjectInfoWindow
             _saveDebounceTimer.Stop();
             Save();
         };
-
-        Closing += (_, __) =>
-        {
-            if (_saveDebounceTimer.IsEnabled)
-            {
-                _saveDebounceTimer.Stop();
-                Save();
-            }
-        };
-
-        _profileName = profileName;
-        _root = _projectInfoService.Load();
-
-        var projectKey = _projectInfoService.ResolveProjectKey(_root, profileName);
-
-        ProjectKeyTextBox.Text = projectKey;
-
-        _project = _projectInfoService.LoadProject(projectKey);
 
         SectionPresetCombo.ItemsSource = ProjectInfoService.SectionPresets.Keys.ToList();
         SectionPresetCombo.SelectedIndex = 0;
@@ -100,17 +82,59 @@ public partial class ProjectInfoWindow
             }
         };
 
+        LoadProfile(profileName);
+    }
+
+    // Called both from the constructor and whenever the Atlassian module's
+    // profile picker selection changes -- flushes whatever the previous
+    // profile had pending, then swaps in the new profile's project.
+    public void
+    ChangeProfile(
+        string profileName)
+    {
+        if (string.Equals(profileName, _profileName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        FlushPendingSave();
+        LoadProfile(profileName);
+    }
+
+    private void
+    LoadProfile(
+        string profileName)
+    {
+        _profileName = profileName;
+        _root = _projectInfoService.Load();
+
+        var projectKey = _projectInfoService.ResolveProjectKey(_root, profileName);
+
+        ProjectKeyTextBox.Text = projectKey;
+
+        _project = _projectInfoService.LoadProject(projectKey);
+
         UpdateTitle();
         RenderSections();
+    }
+
+    // UserControl has no Closing event -- the host (AtlassianSearchView)
+    // calls this before switching the profile picker or leaving the tab,
+    // so a pending debounced save isn't lost.
+    public void
+    FlushPendingSave()
+    {
+        if (_saveDebounceTimer.IsEnabled)
+        {
+            _saveDebounceTimer.Stop();
+            Save();
+        }
     }
 
     private void
     UpdateTitle()
     {
-        var text = $"Project Info - {_project.Key} (profile: {_profileName})";
-
-        Title = text;
-        TitleTextBlock.Text = text;
+        TitleTextBlock.Text = $"Project Info - {_project.Key} (profile: {_profileName})";
     }
 
     private void
@@ -150,7 +174,7 @@ public partial class ProjectInfoWindow
         {
             var folderPath = ProjectInfoService.EnsureProjectFolder(_project.Key);
 
-            Logger.Debug($"ProjectInfoWindow: opening files folder '{folderPath}'.");
+            Logger.Debug($"ProjectInfoView: opening files folder '{folderPath}'.");
 
             Process.Start(new ProcessStartInfo
             {
@@ -160,7 +184,7 @@ public partial class ProjectInfoWindow
         }
         catch (Exception ex)
         {
-            Logger.Error("ProjectInfoWindow: failed to open files folder.", ex);
+            Logger.Error("ProjectInfoView: failed to open files folder.", ex);
 
             AppMessageBox.Show(ex.ToString(), "Project Info - files folder");
         }
@@ -600,7 +624,7 @@ public partial class ProjectInfoWindow
             TryCommitEdit(grid);
 
             var settings = FileZillaExportWindow.Prompt(
-                this,
+                Window.GetWindow(this),
                 section.Columns.ToList(),
                 section.FileZillaExport,
                 $"{_project.Key} - {section.Name}",
@@ -647,7 +671,7 @@ public partial class ProjectInfoWindow
             }
             catch (Exception ex)
             {
-                Logger.Error("ProjectInfoWindow: FileZilla export failed.", ex);
+                Logger.Error("ProjectInfoView: FileZilla export failed.", ex);
 
                 AppMessageBox.Show(ex.ToString(), "Export to FileZilla - error");
             }
