@@ -327,14 +327,12 @@ public partial class WikiView
     {
         var hasHeader = !string.IsNullOrEmpty(folderName);
 
-        // Collapsed unless explicitly toggled open, or it's the folder the
-        // currently-selected page lives in -- so selecting a page (or
-        // adding one, which inherits its folder) never hides the very row
-        // being edited.
-        var isExpanded =
-            !hasHeader
-            || _expandedFolders.Contains(folderName)
-            || (_currentSection != null && FolderMatches(_currentSection.Folder, folderName));
+        // Driven entirely by _expandedFolders -- whoever puts a page into a
+        // folder (SelectSection, CommitFolderChange) is responsible for
+        // calling EnsureFolderExpanded first so it doesn't vanish from
+        // view, but past that a folder stays exactly as collapsed/expanded
+        // as it was last explicitly toggled, current selection or not.
+        var isExpanded = !hasHeader || _expandedFolders.Contains(folderName);
 
         return new SectionGroup
         {
@@ -359,13 +357,10 @@ public partial class WikiView
 
     // The "(No folder)" group is a display-only placeholder -- real pages
     // in it have Folder == "", never the literal string "(No folder)".
-    private static bool
-    FolderMatches(
-        string sectionFolder,
-        string groupFolderName) =>
-        string.IsNullOrWhiteSpace(sectionFolder)
-            ? groupFolderName == "(No folder)"
-            : string.Equals(sectionFolder, groupFolderName, StringComparison.OrdinalIgnoreCase);
+    private void
+    EnsureFolderExpanded(
+        WikiSection section) =>
+        _expandedFolders.Add(string.IsNullOrWhiteSpace(section.Folder) ? "(No folder)" : section.Folder);
 
     private void
     FolderHeader_Click(
@@ -407,6 +402,11 @@ public partial class WikiView
         WikiSection? section)
     {
         _currentSection = section;
+
+        if (section != null)
+        {
+            EnsureFolderExpanded(section);
+        }
 
         RefreshSectionsList();
 
@@ -480,6 +480,8 @@ public partial class WikiView
         }
 
         _currentSection.Folder = folder;
+
+        EnsureFolderExpanded(_currentSection);
 
         RefreshSectionsList();
         Save();
