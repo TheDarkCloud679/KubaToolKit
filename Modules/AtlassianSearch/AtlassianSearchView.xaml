@@ -17,55 +17,84 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBlock
-                Grid.Column="0"
-                Text="Atlassian"
-                FontWeight="Bold"
-                FontSize="14"
-                Foreground="{StaticResource TextPrimaryBrush}"
-                VerticalAlignment="Center"/>
-
-            <Button
-                x:Name="PopoutJiraButton"
-                Grid.Column="2"
-                Width="80"
-                Content="Pop out"
-                ToolTip="Pop out a Jira queue into its own auto-refreshing window"
-                Click="PopoutJiraButton_Click"/>
-
-            <Button
-                x:Name="SettingsButton"
-                Grid.Column="3"
-                Width="90"
-                Margin="8,0,0,0"
-                Content="Settings"
-                Click="SettingsButton_Click"/>
-        </Grid>
-
-        <TextBlock
-            x:Name="StatusText"
-            Grid.Row="1"
-            FontSize="11"
+        <Border
+            Grid.Row="0"
             Margin="0,0,0,10"
-            Visibility="Collapsed"
-            Foreground="{StaticResource TextSecondaryBrush}"
-            TextWrapping="Wrap"/>
+            Padding="{StaticResource CardPadding}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Border
+                        Width="30" Height="30" Margin="0,0,10,0"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        Background="{StaticResource AccentGradientBrush}">
+                        <Path
+                            Data="M4,5 C4,4.4 4.4,4 5,4 L11,4 L11,20 L5,20 C4.4,20 4,19.6 4,19 Z M20,5 C20,4.4 19.6,4 19,4 L13,4 L13,20 L19,20 C19.6,20 20,19.6 20,19 Z"
+                            Stroke="{StaticResource TextOnAccentBrush}"
+                            StrokeThickness="1.4" StrokeLineJoin="Round"
+                            Width="15" Height="15" Stretch="Uniform"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            Text="Atlassian"
+                            FontWeight="Bold"
+                            FontSize="15"
+                            Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock
+                            Text="Knowledge base for Jira &amp; Confluence"
+                            FontSize="11"
+                            Foreground="{StaticResource TextMutedBrush}"
+                            Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock
+                    x:Name="StatusText"
+                    Grid.Column="1"
+                    Margin="20,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Visibility="Collapsed"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    TextWrapping="Wrap"/>
+
+                <Button
+                    x:Name="PopoutJiraButton"
+                    Grid.Column="2"
+                    Width="80"
+                    Content="Pop out"
+                    ToolTip="Pop out a Jira queue into its own auto-refreshing window"
+                    Click="PopoutJiraButton_Click"/>
+
+                <Button
+                    x:Name="SettingsButton"
+                    Grid.Column="3"
+                    Width="90"
+                    Margin="8,0,0,0"
+                    Content="Settings"
+                    Click="SettingsButton_Click"/>
+            </Grid>
+        </Border>
 
         <!-- Tab strip -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <RadioButton
                 x:Name="LibraryTabRadio"
                 Content="Library"
@@ -84,7 +113,7 @@
         <!-- ===================================================== -->
         <!-- LIBRARY TAB -->
         <!-- ===================================================== -->
-        <Grid x:Name="LibraryTabContent" Grid.Row="3">
+        <Grid x:Name="LibraryTabContent" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="290"/>
                 <ColumnDefinition Width="6"/>
@@ -441,7 +470,7 @@
         <!-- ===================================================== -->
         <Border
             x:Name="StatsTabContent"
-            Grid.Row="3"
+            Grid.Row="2"
             Visibility="Collapsed"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
