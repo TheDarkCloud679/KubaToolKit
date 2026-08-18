@@ -20,55 +20,6 @@
             <Setter Property="Margin" Value="2,0,0,0"/>
         </Style>
 
-        <!-- Body-mode chip: a friendly label on top, the real HTTP/technical
-             term underneath in smaller muted text, so the raw jargon
-             (form-data, x-www-form-urlencoded...) stays visible for anyone
-             who already knows it without being the only thing a newcomer
-             sees. Kept local to this view since the two-line content shape
-             is specific to this one usage. -->
-        <Style x:Key="BodyModeChipStyle" TargetType="RadioButton">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,0,8,8"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border
-                            x:Name="Bd"
-                            Background="{StaticResource SurfaceBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="{StaticResource RadiusMedium}"
-                            Padding="12,6">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock
-                                    x:Name="FriendlyText"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    HorizontalAlignment="Center"
-                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                    Text="{TemplateBinding Tag}"/>
-                                <ContentPresenter
-                                    HorizontalAlignment="Center"
-                                    TextElement.Foreground="{TemplateBinding Foreground}"
-                                    TextElement.FontSize="{TemplateBinding FontSize}"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="FriendlyText" Property="Foreground" Value="{StaticResource AccentPressedBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
-            <Setter Property="FontSize" Value="9.5"/>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -489,7 +440,7 @@
                             Height="28"
                             Padding="0"
                             Margin="6,0,0,0"
-                            ToolTip="Save the request currently loaded in the editor as this environment's Get Token request"
+                            ToolTip="Configure this environment's Get Token request"
                             Click="ConfigureTokenRequest_Click">
                             <Path
                                 Data="M12,8.5 A3.5,3.5 0 1 0 12,15.5 A3.5,3.5 0 1 0 12,8.5 Z M12,2 L12,4.5 M12,19.5 L12,22 M4.9,4.9 L6.7,6.7 M17.3,17.3 L19.1,19.1 M2,12 L4.5,12 M19.5,12 L22,12 M4.9,19.1 L6.7,17.3 M17.3,6.7 L19.1,4.9"

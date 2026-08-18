@@ -1,0 +1,447 @@
+<Window
+    x:Class="KubaToolKit.Modules.ApiClient.TokenRequestEditorWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Get Token Request"
+    Width="760"
+    Height="680"
+    MinWidth="620"
+    MinHeight="480"
+    WindowStartupLocation="CenterOwner"
+    Background="{StaticResource WindowBackgroundBrush}">
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock
+                Text="Get Token Request"
+                FontWeight="Bold"
+                FontSize="15"
+                Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock
+                x:Name="SubtitleText"
+                FontSize="11.5"
+                Margin="0,2,0,0"
+                Foreground="{StaticResource TextMutedBrush}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox
+                x:Name="MethodCombo"
+                Grid.Column="0"
+                Margin="0,0,8,0"
+                SelectedIndex="1">
+                <ComboBoxItem Content="GET"/>
+                <ComboBoxItem Content="POST"/>
+                <ComboBoxItem Content="PUT"/>
+                <ComboBoxItem Content="PATCH"/>
+                <ComboBoxItem Content="DELETE"/>
+            </ComboBox>
+
+            <TextBox
+                x:Name="UrlTextBox"
+                Grid.Column="1"
+                VerticalContentAlignment="Center"
+                FontFamily="Cascadia Code, Consolas"
+                FontSize="12.5"
+                Text="https://"/>
+        </Grid>
+
+        <Border
+            Grid.Row="2"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,0,0">
+                    <RadioButton
+                        x:Name="AuthTabRadio"
+                        Content="Auth"
+                        GroupName="TokenRequestTab"
+                        IsChecked="True"
+                        Checked="Tab_Changed"
+                        Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                    <RadioButton
+                        x:Name="HeadersTabRadio"
+                        Content="Headers"
+                        GroupName="TokenRequestTab"
+                        Checked="Tab_Changed"
+                        Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                    <RadioButton
+                        x:Name="BodyTabRadio"
+                        Content="Body"
+                        GroupName="TokenRequestTab"
+                        Checked="Tab_Changed"
+                        Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                    <RadioButton
+                        x:Name="ExtractionTabRadio"
+                        Content="Extraction"
+                        GroupName="TokenRequestTab"
+                        Checked="Tab_Changed"
+                        Style="{StaticResource RequestTabRadioButtonStyle}"/>
+                </StackPanel>
+
+                <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{StaticResource BorderBrush}"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="14,12,14,14">
+
+                        <!-- Auth -->
+                        <StackPanel x:Name="AuthTabContent">
+                            <TextBlock
+                                Text="How this request proves its identity to the server."
+                                FontSize="11"
+                                Margin="0,0,0,10"
+                                Foreground="{StaticResource TextMutedBrush}"/>
+
+                            <ComboBox
+                                x:Name="AuthTypeCombo"
+                                Width="220"
+                                HorizontalAlignment="Left"
+                                SelectedIndex="0"
+                                SelectionChanged="AuthTypeCombo_SelectionChanged">
+                                <ComboBoxItem Content="No Auth"/>
+                                <ComboBoxItem Content="Bearer Token"/>
+                                <ComboBoxItem Content="Basic Auth"/>
+                                <ComboBoxItem Content="API Key"/>
+                            </ComboBox>
+
+                            <StackPanel
+                                x:Name="BearerAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Token"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="BearerTokenTextBox"/>
+                            </StackPanel>
+
+                            <StackPanel
+                                x:Name="BasicAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Username"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="BasicUsernameTextBox" Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Text="Password"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <PasswordBox x:Name="BasicPasswordBox"/>
+                            </StackPanel>
+
+                            <StackPanel
+                                x:Name="ApiKeyAuthPanel"
+                                Margin="0,10,0,0"
+                                Visibility="Collapsed">
+                                <TextBlock
+                                    Text="Header Name"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox
+                                    x:Name="ApiKeyNameTextBox"
+                                    Text="X-API-Key"
+                                    Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Text="Value"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                    Margin="0,0,0,4"/>
+                                <TextBox x:Name="ApiKeyValueTextBox"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Headers -->
+                        <StackPanel x:Name="HeadersTabContent" Visibility="Collapsed">
+                            <Button
+                                HorizontalAlignment="Right"
+                                Width="26"
+                                Height="26"
+                                Padding="0"
+                                Margin="0,0,0,6"
+                                ToolTip="Add a row"
+                                Content="+"
+                                Click="AddHeaderRow_Click"/>
+
+                            <DataGrid
+                                x:Name="HeadersGrid"
+                                Height="220"
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="True"
+                                CanUserDeleteRows="True"
+                                HeadersVisibility="Column"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto"
+                                RowHeight="38">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn
+                                        Header="On"
+                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                        Width="Auto"/>
+
+                                    <DataGridTextColumn
+                                        Header="Key"
+                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        Width="2*"
+                                        MinWidth="160"/>
+
+                                    <DataGridTextColumn
+                                        Header="Value"
+                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        Width="3*"
+                                        MinWidth="200"/>
+
+                                    <DataGridTemplateColumn Width="34">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button
+                                                    Width="24"
+                                                    Height="24"
+                                                    Padding="0"
+                                                    ToolTip="Delete this row"
+                                                    Content="✕"
+                                                    Click="DeleteRow_Click"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+
+                        <!-- Body -->
+                        <StackPanel x:Name="BodyTabContent" Visibility="Collapsed">
+                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <RadioButton
+                                    x:Name="BodyNoneRadio"
+                                    Content="none"
+                                    Tag="None"
+                                    GroupName="TokenBodyMode"
+                                    Checked="BodyMode_Checked"
+                                    Style="{StaticResource BodyModeChipStyle}"/>
+
+                                <RadioButton
+                                    x:Name="BodyRawRadio"
+                                    Content="raw"
+                                    Tag="Text / JSON"
+                                    GroupName="TokenBodyMode"
+                                    IsChecked="True"
+                                    Checked="BodyMode_Checked"
+                                    Style="{StaticResource BodyModeChipStyle}"/>
+
+                                <RadioButton
+                                    x:Name="BodyFormDataRadio"
+                                    Content="form-data"
+                                    Tag="Form fields"
+                                    GroupName="TokenBodyMode"
+                                    Checked="BodyMode_Checked"
+                                    Style="{StaticResource BodyModeChipStyle}"/>
+
+                                <RadioButton
+                                    x:Name="BodyUrlEncodedRadio"
+                                    Content="x-www-form-urlencoded"
+                                    Tag="URL-encoded form"
+                                    GroupName="TokenBodyMode"
+                                    Checked="BodyMode_Checked"
+                                    Style="{StaticResource BodyModeChipStyle}"/>
+                            </WrapPanel>
+
+                            <TextBlock
+                                x:Name="BodyNonePanel"
+                                Text="This request has no body."
+                                FontStyle="Italic"
+                                Margin="0,6,0,0"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Visibility="Collapsed"/>
+
+                            <TextBox
+                                x:Name="BodyRawTextBox"
+                                Height="200"
+                                Margin="0,6,0,0"
+                                FontFamily="Cascadia Code, Consolas"
+                                FontSize="12"
+                                AcceptsReturn="True"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled"/>
+
+                            <StackPanel
+                                x:Name="BodyFormPanel"
+                                Margin="0,6,0,0"
+                                Visibility="Collapsed">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Width="26"
+                                    Height="26"
+                                    Padding="0"
+                                    Margin="0,0,0,6"
+                                    ToolTip="Add a row"
+                                    Content="+"
+                                    Click="AddBodyFormRow_Click"/>
+
+                                <DataGrid
+                                    x:Name="BodyFormGrid"
+                                    Height="200"
+                                    AutoGenerateColumns="False"
+                                    CanUserAddRows="True"
+                                    CanUserDeleteRows="True"
+                                    HeadersVisibility="Column"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    VerticalScrollBarVisibility="Auto"
+                                    RowHeight="38">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn
+                                            Header="On"
+                                            Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="Auto"/>
+
+                                        <DataGridTextColumn
+                                            Header="Key"
+                                            Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="2*"
+                                            MinWidth="160"/>
+
+                                        <DataGridTextColumn
+                                            Header="Value"
+                                            Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            Width="3*"
+                                            MinWidth="200"/>
+
+                                        <DataGridTemplateColumn Width="34">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Width="24"
+                                                        Height="24"
+                                                        Padding="0"
+                                                        ToolTip="Delete this row"
+                                                        Content="✕"
+                                                        Click="DeleteRow_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Extraction -->
+                        <StackPanel x:Name="ExtractionTabContent" Visibility="Collapsed">
+                            <TextBlock
+                                Margin="0,0,0,10"
+                                FontSize="11"
+                                TextWrapping="Wrap"
+                                Foreground="{StaticResource TextMutedBrush}"
+                                Text="After a successful Get Token, copies a top-level field of the JSON response into a variable of this environment (creates it if needed) — typically the access token itself."/>
+
+                            <Button
+                                HorizontalAlignment="Right"
+                                Width="26"
+                                Height="26"
+                                Padding="0"
+                                Margin="0,0,0,6"
+                                ToolTip="Add a rule"
+                                Content="+"
+                                Click="AddExtractionRow_Click"/>
+
+                            <DataGrid
+                                x:Name="ExtractionsGrid"
+                                Height="160"
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="True"
+                                CanUserDeleteRows="True"
+                                HeadersVisibility="Column"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto"
+                                RowHeight="38">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn
+                                        Header="On"
+                                        Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                        Width="Auto"/>
+
+                                    <DataGridTextColumn
+                                        Header="JSON Field (response)"
+                                        Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        Width="2*"
+                                        MinWidth="160"/>
+
+                                    <DataGridTextColumn
+                                        Header="Environment Variable"
+                                        Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        Width="3*"
+                                        MinWidth="200"/>
+
+                                    <DataGridTemplateColumn Width="34">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button
+                                                    Width="24"
+                                                    Height="24"
+                                                    Padding="0"
+                                                    ToolTip="Delete this row"
+                                                    Content="✕"
+                                                    Click="DeleteRow_Click"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right"
+            Margin="0,12,0,0">
+
+            <Button
+                Width="100"
+                Margin="0,0,8,0"
+                Content="Cancel"
+                Click="CancelButton_Click"/>
+
+            <Button
+                Width="100"
+                Style="{StaticResource AccentButtonStyle}"
+                Content="Save"
+                Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

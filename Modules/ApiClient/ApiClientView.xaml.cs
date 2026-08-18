@@ -1385,92 +1385,33 @@ public partial class ApiClientView
         SaveCollectionOf(node);
     }
 
-    // Mirrors UpdateRequestFromEditor_Click's field-by-field capture, but
-    // builds a fresh standalone node instead of mutating a selected tree
-    // node -- used by the "Get Token" configure button, since that request
-    // isn't part of any collection tree.
-    private CollectionNode
-    CaptureEditorAsNode()
-    {
-        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
-        ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
-        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
-        SyncUrlFromParams();
-
-        var mode = GetSelectedBodyMode();
-
-        return new CollectionNode
-        {
-            Name = "Token Request",
-            IsRequest = true,
-            Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET",
-            Url = UrlTextBox.Text.Trim(),
-
-            Headers =
-                _headers
-                    .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
-                    .ToList(),
-
-            Body = BodyTextBox.Text,
-            BodyMode = mode,
-
-            BodyFormData =
-                (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
-                    .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
-                    .ToList(),
-
-            Auth = BuildAuthConfig(),
-
-            PostResponseExtractions =
-                _extractions
-                    .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
-                    .ToList()
-        };
-    }
-
     private void
     ConfigureTokenRequest_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment)
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || string.IsNullOrEmpty(environment.FilePath))
         {
             AppMessageBox.Show(
-                "Select an environment first.");
+                "Select an environment first (or add one via \"+\").",
+                "No environment selected");
 
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(UrlTextBox.Text.Trim()))
+        var editor = new TokenRequestEditorWindow(_collectionStorage, environment);
+
+        editor.Owner = Window.GetWindow(this);
+
+        editor.ShowDialog();
+
+        if (editor.Saved)
         {
-            AppMessageBox.Show(
-                "Load or enter a request in the editor first, then click this button to save it "
-                + "as the \"Get Token\" request for this environment.");
+            _tokenExpiryUtc.Remove(environment.FilePath);
 
-            return;
+            UpdateGetTokenButtonState();
         }
-
-        environment.TokenRequestConfig = CaptureEditorAsNode();
-
-        _tokenExpiryUtc.Remove(environment.FilePath);
-
-        try
-        {
-            _collectionStorage.SaveEnvironment(environment);
-        }
-        catch (Exception ex)
-        {
-            AppMessageBox.Show(ex.Message, "Save error");
-
-            return;
-        }
-
-        UpdateGetTokenButtonState();
-
-        AppMessageBox.Show(
-            $"The request currently in the editor has been saved as the \"Get Token\" request "
-            + $"for environment \"{environment.Name}\".",
-            "Get Token configured");
     }
 
     private async void
@@ -1491,8 +1432,8 @@ public partial class ApiClientView
         if (node == null)
         {
             AppMessageBox.Show(
-                "No \"Get Token\" request configured for this environment yet. Load a request in "
-                + "the editor and click the gear icon next to \"Get Token\" to configure it.",
+                "No \"Get Token\" request configured for this environment yet. Click the gear icon "
+                + "next to \"Get Token\" to configure it.",
                 "Get Token not configured");
 
             return;
@@ -1586,7 +1527,7 @@ public partial class ApiClientView
             GetTokenButton.ClearValue(ForegroundProperty);
             GetTokenButton.ToolTip =
                 "No \"Get Token\" request configured for this environment yet "
-                + "(click the gear icon to save the current editor request as one).";
+                + "(click the gear icon to configure one).";
 
             return;
         }
