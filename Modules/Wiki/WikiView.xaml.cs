@@ -22,6 +22,11 @@ public partial class WikiView
     private WikiSection? _currentSection;
     private bool _loadingSection;
 
+    // Folders start collapsed -- a folder is added to this set the first
+    // time someone expands it. Not persisted: it's just current-session
+    // browsing state, same idea as _sectionExpanded in ProjectInfoView.
+    private readonly HashSet<string> _expandedFolders = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly DispatcherTimer _saveDebounceTimer;
 
     public WikiView()
@@ -74,6 +79,8 @@ public partial class WikiView
     {
         public string FolderName { get; set; } = "";
         public Visibility HeaderVisibility { get; set; } = Visibility.Visible;
+        public Visibility RowsVisibility { get; set; } = Visibility.Visible;
+        public double ChevronAngle { get; set; }
         public List<SectionRow> Rows { get; set; } = new();
     }
 
@@ -316,11 +323,25 @@ public partial class WikiView
     private SectionGroup
     BuildGroup(
         string folderName,
-        IEnumerable<WikiSection> sections) =>
-        new()
+        IEnumerable<WikiSection> sections)
+    {
+        var hasHeader = !string.IsNullOrEmpty(folderName);
+
+        // Collapsed unless explicitly toggled open, or it's the folder the
+        // currently-selected page lives in -- so selecting a page (or
+        // adding one, which inherits its folder) never hides the very row
+        // being edited.
+        var isExpanded =
+            !hasHeader
+            || _expandedFolders.Contains(folderName)
+            || (_currentSection != null && FolderMatches(_currentSection.Folder, folderName));
+
+        return new SectionGroup
         {
             FolderName = folderName,
-            HeaderVisibility = string.IsNullOrEmpty(folderName) ? Visibility.Collapsed : Visibility.Visible,
+            HeaderVisibility = hasHeader ? Visibility.Visible : Visibility.Collapsed,
+            RowsVisibility = isExpanded ? Visibility.Visible : Visibility.Collapsed,
+            ChevronAngle = isExpanded ? 0 : -90,
             Rows =
                 sections
                     .Select(s => new SectionRow
@@ -334,6 +355,39 @@ public partial class WikiView
                     })
                     .ToList()
         };
+    }
+
+    // The "(No folder)" group is a display-only placeholder -- real pages
+    // in it have Folder == "", never the literal string "(No folder)".
+    private static bool
+    FolderMatches(
+        string sectionFolder,
+        string groupFolderName) =>
+        string.IsNullOrWhiteSpace(sectionFolder)
+            ? groupFolderName == "(No folder)"
+            : string.Equals(sectionFolder, groupFolderName, StringComparison.OrdinalIgnoreCase);
+
+    private void
+    FolderHeader_Click(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: SectionGroup group } || string.IsNullOrEmpty(group.FolderName))
+        {
+            return;
+        }
+
+        if (group.RowsVisibility == Visibility.Visible)
+        {
+            _expandedFolders.Remove(group.FolderName);
+        }
+        else
+        {
+            _expandedFolders.Add(group.FolderName);
+        }
+
+        RefreshSectionsList();
+    }
 
     private void
     SectionRow_Click(
