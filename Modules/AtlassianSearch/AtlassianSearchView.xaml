@@ -9,10 +9,13 @@
         <local:JiraPriorityBadgeForegroundConverter x:Key="JiraPriorityBadgeForegroundConverter"/>
         <local:JiraStatusBadgeBackgroundConverter x:Key="JiraStatusBadgeBackgroundConverter"/>
         <local:JiraStatusBadgeForegroundConverter x:Key="JiraStatusBadgeForegroundConverter"/>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -25,65 +28,27 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock
                 Grid.Column="0"
-                Text="Atlassian Search"
+                Text="Atlassian"
                 FontWeight="Bold"
                 FontSize="14"
                 Foreground="{StaticResource TextPrimaryBrush}"
                 VerticalAlignment="Center"/>
 
-            <ProgressBar
-                x:Name="LoadingProgressBar"
-                Grid.Column="1"
-                Margin="16,0"
-                Visibility="Collapsed"
-                IsIndeterminate="True"
-                VerticalAlignment="Center"/>
-
-            <TextBox
-                x:Name="QueryTextBox"
-                Grid.Column="2"
-                Width="320"
-                VerticalContentAlignment="Center"
-                ToolTip="Search term (e.g. an error message or a component name) -- Enter to search"
-                KeyDown="QueryTextBox_KeyDown"/>
-
-            <Button
-                x:Name="SearchButton"
-                Grid.Column="3"
-                Width="90"
-                Margin="8,0,0,0"
-                Content="Search"
-                Style="{StaticResource AccentButtonStyle}"
-                Click="SearchButton_Click"/>
-
-            <Button
-                x:Name="RefreshButton"
-                Grid.Column="4"
-                Width="70"
-                Margin="8,0,0,0"
-                Content="Refresh"
-                ToolTip="Re-run the current search/queue with the same filters"
-                Click="RefreshButton_Click"/>
-
             <Button
                 x:Name="PopoutJiraButton"
-                Grid.Column="5"
+                Grid.Column="2"
                 Width="80"
-                Margin="8,0,0,0"
                 Content="Pop out"
-                ToolTip="Pop out Jira into its own auto-refreshing window"
+                ToolTip="Pop out a Jira queue into its own auto-refreshing window"
                 Click="PopoutJiraButton_Click"/>
 
             <Button
                 x:Name="SettingsButton"
-                Grid.Column="6"
+                Grid.Column="3"
                 Width="90"
                 Margin="8,0,0,0"
                 Content="Settings"
@@ -98,714 +63,684 @@
             Foreground="{StaticResource TextSecondaryBrush}"
             TextWrapping="Wrap"/>
 
-        <!-- Results -->
-        <Grid Grid.Row="2">
-            <Grid.RowDefinitions>
-                <RowDefinition x:Name="ConfluenceRow" Height="Auto"/>
-                <RowDefinition Height="6"/>
-                <RowDefinition x:Name="JiraRow" Height="Auto"/>
-                <RowDefinition Height="6"/>
-                <RowDefinition x:Name="StatsRow" Height="Auto"/>
-            </Grid.RowDefinitions>
+        <!-- Tab strip -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <RadioButton
+                x:Name="LibraryTabRadio"
+                Content="Library"
+                GroupName="AtlassianTab"
+                IsChecked="True"
+                Checked="AtlassianTab_Changed"
+                Style="{StaticResource RequestTabRadioButtonStyle}"/>
+            <RadioButton
+                x:Name="StatsTabRadio"
+                Content="Statistics"
+                GroupName="AtlassianTab"
+                Checked="AtlassianTab_Changed"
+                Style="{StaticResource RequestTabRadioButtonStyle}"/>
+        </StackPanel>
 
-            <!-- Confluence -->
+        <!-- ===================================================== -->
+        <!-- LIBRARY TAB -->
+        <!-- ===================================================== -->
+        <Grid x:Name="LibraryTabContent" Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="290"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Incidents -->
             <Border
-                Grid.Row="0"
+                Grid.Column="0"
                 BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMedium}"
                 Background="{StaticResource SurfaceBrush}"
                 Effect="{StaticResource CardShadowEffect}"
-                Padding="{StaticResource CardPadding}">
+                Padding="{StaticResource CardPaddingCompact}">
 
-                <Expander
-                    x:Name="ConfluenceResultsExpander"
-                    Header="Confluence pages"
-                    IsExpanded="False"
-                    Expanded="ResultsExpander_Changed"
-                    Collapsed="ResultsExpander_Changed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Top">
-
-                            <StackPanel Width="140" Margin="0,0,14,0">
-                                <TextBlock Text="Space" FontSize="11" Margin="0,0,0,2"/>
-                                <Button
-                                    x:Name="ConfluenceSpaceButton"
-                                    Content="(Any)"
-                                    HorizontalContentAlignment="Left"
-                                    Padding="8,4"
-                                    ToolTip="Pick one or more Confluence spaces (favorites listed first, right-click to favorite)"
-                                    Click="ConfluenceSpaceButton_Click"/>
-                            </StackPanel>
-
-                            <StackPanel Width="160" Margin="0,0,14,0">
-                                <TextBlock Text="Group" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="ConfluenceGroupSearchBox" ToolTip="Type to search top-level pages"/>
-                                <ComboBox
-                                    x:Name="ConfluenceGroupCombo"
-                                    Margin="0,2,0,0"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"
-                                    ToolTip="Top-level page of the space"
-                                    SelectionChanged="ConfluenceGroupCombo_SelectionChanged"/>
-                            </StackPanel>
-
-                            <StackPanel Width="160" Margin="0,0,14,0">
-                                <TextBlock Text="Page" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="ConfluencePageSearchBox" ToolTip="Type to search pages"/>
-                                <ComboBox
-                                    x:Name="ConfluencePageCombo"
-                                    Margin="0,2,0,0"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"
-                                    ToolTip="Page inside the selected group"
-                                    SelectionChanged="ConfluencePageCombo_SelectionChanged"/>
-                            </StackPanel>
-
-                            <StackPanel Width="160">
-                                <TextBlock Text="Article" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox x:Name="ConfluenceArticleSearchBox" ToolTip="Type to search articles"/>
-                                <ComboBox
-                                    x:Name="ConfluenceArticleCombo"
-                                    Margin="0,2,0,0"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"
-                                    ToolTip="Article inside the selected page"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <DataGrid
-                            x:Name="ConfluenceGrid"
-                            Grid.Row="1"
-                            AutoGenerateColumns="False"
-                            IsReadOnly="True"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="False"
-                            CanUserSortColumns="False"
-                            HeadersVisibility="Column"
-                            HorizontalScrollBarVisibility="Disabled"
-                            VirtualizingPanel.ScrollUnit="Pixel"
-                            RowHeight="44"
-                            MouseDoubleClick="ConfluenceGrid_MouseDoubleClick">
-
-                            <DataGrid.Columns>
-                                <DataGridTextColumn
-                                    Header="Title"
-                                    Binding="{Binding Title}"
-                                    SortMemberPath="Title"
-                                    Width="*"/>
-
-                                <DataGridTextColumn
-                                    Header="Space"
-                                    Binding="{Binding Space}"
-                                    SortMemberPath="Space"
-                                    Width="Auto"/>
-
-                                <DataGridTextColumn
-                                    Header="Excerpt"
-                                    Binding="{Binding Excerpt}"
-                                    SortMemberPath="Excerpt"
-                                    Width="2*">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            <Setter Property="ToolTip" Value="{Binding Excerpt}"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-
-                                <DataGridTemplateColumn Header="" Width="80">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button
-                                                Content="View"
-                                                Width="70"
-                                                Click="OpenConfluenceResult_Click"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Expander>
-            </Border>
-
-            <GridSplitter
-                Grid.Row="1"
-                Height="6"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Center"
-                ResizeBehavior="PreviousAndNext"/>
-
-            <!-- Jira -->
-            <Border
-                Grid.Row="2"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}"
-                Background="{StaticResource SurfaceBrush}"
-                Effect="{StaticResource CardShadowEffect}"
-                Padding="{StaticResource CardPadding}">
-
-                <Expander
-                    x:Name="JiraResultsExpander"
-                    Header="Jira issues"
-                    IsExpanded="False"
-                    Expanded="ResultsExpander_Changed"
-                    Collapsed="ResultsExpander_Changed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Center">
-                            <TextBlock Text="Saved list" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ComboBox
-                                x:Name="JiraSavedFilterCombo"
-                                Width="200"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="A saved combination of the filters below (e.g. 'Unassigned &gt; P2')"
-                                SelectionChanged="JiraSavedFilterCombo_SelectionChanged"/>
-                            <Button
-                                x:Name="SaveJiraFilterButton"
-                                Content="Save current..."
-                                Width="110"
-                                Margin="8,0,0,0"
-                                Click="SaveJiraFilterButton_Click"/>
-                            <Button
-                                x:Name="DeleteJiraFilterButton"
-                                Content="Delete"
-                                Width="70"
-                                Margin="8,0,0,0"
-                                IsEnabled="False"
-                                Click="DeleteJiraFilterButton_Click"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-
-                        <StackPanel Width="185" Margin="0,0,14,0">
-                            <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                            <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="JiraProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
-                                <Button
-                                    x:Name="JiraProjectPickerButton"
-                                    Content="(Any)"
-                                    Width="126"
-                                    HorizontalContentAlignment="Left"
-                                    Padding="8,4"
-                                    Click="JiraProjectPickerButton_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Width="160" Margin="0,0,14,0">
-                            <TextBlock Text="Queue" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox
-                                x:Name="JiraQueueSearchBox"
-                                ToolTip="Type to search this project's Service Management queues"/>
-                            <ComboBox
-                                x:Name="JiraQueueCombo"
-                                Margin="0,2,0,0"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="A saved Service Management queue (e.g. 'L1 Incidents') -- Reporter/Assignee/Priority/Status below narrow its results the same way Jira's own queue view lets you filter them"/>
-                        </StackPanel>
-
-                        <StackPanel Width="185" Margin="0,0,14,0">
-                            <TextBlock Text="Reporter" FontSize="11" Margin="0,0,0,2"/>
-                            <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="JiraReporterOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
-                                <Button
-                                    x:Name="JiraReporterPickerButton"
-                                    Content="(Any)"
-                                    Width="126"
-                                    HorizontalContentAlignment="Left"
-                                    Padding="8,4"
-                                    ToolTip="Not every user may be listed"
-                                    Click="JiraReporterPickerButton_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Width="185" Margin="0,0,14,0">
-                            <TextBlock Text="Assignee" FontSize="11" Margin="0,0,0,2"/>
-                            <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="JiraAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
-                                <Button
-                                    x:Name="JiraAssigneePickerButton"
-                                    Content="(Any)"
-                                    Width="126"
-                                    HorizontalContentAlignment="Left"
-                                    Padding="8,4"
-                                    ToolTip="Not every user may be listed"
-                                    Click="JiraAssigneePickerButton_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Width="185" Margin="0,0,14,0">
-                            <TextBlock Text="Priority" FontSize="11" Margin="0,0,0,2"/>
-                            <TextBox x:Name="JiraPrioritySearchBox" ToolTip="Type to search, or a comma-separated list for 'in'/'not in'"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                <ComboBox
-                                    x:Name="JiraPriorityOperatorCombo"
-                                    Width="55"
-                                    Margin="0,0,4,0"
-                                    SelectedIndex="0"
-                                    ToolTip="'&gt;'/'&lt;' compare urgency using this site's own priority order">
-                                    <ComboBoxItem Content="="/>
-                                    <ComboBoxItem Content="!="/>
-                                    <ComboBoxItem Content="&gt;"/>
-                                    <ComboBoxItem Content="&gt;="/>
-                                    <ComboBoxItem Content="&lt;"/>
-                                    <ComboBoxItem Content="&lt;="/>
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
-                                <ComboBox
-                                    x:Name="JiraPriorityCombo"
-                                    Width="126"
-                                    DisplayMemberPath="Display"
-                                    SelectedValuePath="Value"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Width="185">
-                            <TextBlock Text="Status" FontSize="11" Margin="0,0,0,2"/>
-                            <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="JiraStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="in"/>
-                                    <ComboBoxItem Content="not in"/>
-                                </ComboBox>
-                                <Button
-                                    x:Name="JiraStatusPickerButton"
-                                    Content="(Any)"
-                                    Width="126"
-                                    HorizontalContentAlignment="Left"
-                                    Padding="8,4"
-                                    Click="JiraStatusPickerButton_Click"/>
-                            </StackPanel>
-                        </StackPanel>
-                        </StackPanel>
-
-                        <DataGrid
-                            x:Name="JiraGrid"
-                            Grid.Row="2"
-                            AutoGenerateColumns="False"
-                            IsReadOnly="True"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="False"
-                            CanUserSortColumns="False"
-                            HeadersVisibility="Column"
-                            HorizontalScrollBarVisibility="Disabled"
-                            VirtualizingPanel.ScrollUnit="Pixel"
-                            RowHeight="40"
-                            MouseDoubleClick="JiraGrid_MouseDoubleClick">
-
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
-
-                                <DataGridTextColumn
-                                    Header="Summary"
-                                    Binding="{Binding Summary}"
-                                    SortMemberPath="Summary"
-                                    Width="2*">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            <Setter Property="ToolTip" Value="{Binding Summary}"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-
-                                <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border
-                                                Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
-                                                CornerRadius="3"
-                                                Padding="6,1"
-                                                Margin="0,0,6,0"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center">
-                                                <TextBlock
-                                                    Text="{Binding Priority}"
-                                                    FontSize="11"
-                                                    FontWeight="Bold"
-                                                    Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="Auto">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border
-                                                Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
-                                                CornerRadius="3"
-                                                Padding="6,1"
-                                                Margin="0,0,6,0"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center">
-                                                <TextBlock
-                                                    Text="{Binding Status}"
-                                                    FontSize="11"
-                                                    FontWeight="Bold"
-                                                    Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Reporter" Binding="{Binding Reporter}" SortMemberPath="Reporter" Width="*"/>
-                                <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
-
-                                <DataGridTemplateColumn Header="" Width="80">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button
-                                                Content="View"
-                                                Width="70"
-                                                Click="OpenJiraResult_Click"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Expander>
-            </Border>
-
-            <GridSplitter
-                Grid.Row="3"
-                Height="6"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Center"
-                ResizeBehavior="PreviousAndNext"/>
-
-            <!-- Stats -->
-            <Border
-                Grid.Row="4"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}"
-                Background="{StaticResource SurfaceBrush}"
-                Effect="{StaticResource CardShadowEffect}"
-                Padding="{StaticResource CardPadding}">
-
-                <Expander
-                    x:Name="StatsResultsExpander"
-                    Header="Jira stats"
-                    IsExpanded="False"
-                    Expanded="ResultsExpander_Changed"
-                    Collapsed="ResultsExpander_Changed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" VerticalAlignment="Center">
-                            <TextBlock Text="Saved list" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ComboBox
-                                x:Name="StatsSavedFilterCombo"
-                                Width="200"
-                                DisplayMemberPath="Display"
-                                SelectedValuePath="Value"
-                                ToolTip="A saved combination of the filters below"
-                                SelectionChanged="StatsSavedFilterCombo_SelectionChanged"/>
-                            <Button
-                                x:Name="SaveStatsFilterButton"
-                                Content="Save current..."
-                                Width="110"
-                                Margin="8,0,0,0"
-                                Click="SaveStatsFilterButton_Click"/>
-                            <Button
-                                x:Name="DeleteStatsFilterButton"
-                                Content="Delete"
-                                Width="70"
-                                Margin="8,0,0,0"
-                                IsEnabled="False"
-                                Click="DeleteStatsFilterButton_Click"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-
-                            <StackPanel Width="170" Margin="0,0,14,0">
-                                <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="StatsProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="in"/>
-                                        <ComboBoxItem Content="not in"/>
-                                    </ComboBox>
-                                    <Button
-                                        x:Name="StatsProjectPickerButton"
-                                        Content="(Any)"
-                                        Width="111"
-                                        HorizontalContentAlignment="Left"
-                                        Padding="8,4"
-                                        Click="StatsProjectPickerButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Width="220" Margin="0,0,14,0">
-                                <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="in"/>
-                                        <ComboBoxItem Content="not in"/>
-                                    </ComboBox>
-                                    <Button
-                                        x:Name="StatsAssigneePickerButton"
-                                        Content="(Any)"
-                                        Width="161"
-                                        HorizontalContentAlignment="Left"
-                                        Padding="8,4"
-                                        ToolTip="Includes yourself -- not every user may be listed"
-                                        Click="StatsAssigneePickerButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Width="170" Margin="0,0,14,0">
-                                <TextBlock Text="État" FontSize="11" Margin="0,0,0,2"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="StatsStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="in"/>
-                                        <ComboBoxItem Content="not in"/>
-                                    </ComboBox>
-                                    <Button
-                                        x:Name="StatsStatusPickerButton"
-                                        Content="(Any)"
-                                        Width="111"
-                                        HorizontalContentAlignment="Left"
-                                        Padding="8,4"
-                                        Click="StatsStatusPickerButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-
-                            <StackPanel Width="170" Margin="0,0,14,0">
-                                <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="in"/>
-                                        <ComboBoxItem Content="not in"/>
-                                    </ComboBox>
-                                    <Button
-                                        x:Name="StatsModulePickerButton"
-                                        Content="(Any)"
-                                        Width="111"
-                                        HorizontalContentAlignment="Left"
-                                        Padding="8,4"
-                                        ToolTip="'Component (migrated)' values"
-                                        Click="StatsModulePickerButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Width="170" Margin="0,0,14,0">
-                                <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                        <ComboBoxItem Content="in"/>
-                                        <ComboBoxItem Content="not in"/>
-                                    </ComboBox>
-                                    <Button
-                                        x:Name="StatsEscalationPickerButton"
-                                        Content="(Any)"
-                                        Width="111"
-                                        HorizontalContentAlignment="Left"
-                                        Padding="8,4"
-                                        Click="StatsEscalationPickerButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Width="130" Margin="0,0,14,0">
-                                <TextBlock Text="Resolved from" FontSize="11" Margin="0,0,0,2"/>
-                                <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound (only relevant when État includes resolved issues)"/>
-                            </StackPanel>
-
-                            <StackPanel Width="130" Margin="0,0,14,0">
-                                <TextBlock Text="Resolved to" FontSize="11" Margin="0,0,0,2"/>
-                                <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound (only relevant when État includes resolved issues)"/>
-                            </StackPanel>
-
-                            <StackPanel VerticalAlignment="Bottom" Orientation="Horizontal">
-                                <Button
-                                    x:Name="RunStatsButton"
-                                    Content="Run stats"
-                                    Width="90"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="RunStatsButton_Click"/>
-                                <ProgressBar
-                                    x:Name="StatsProgressBar"
-                                    Width="80"
-                                    Margin="8,0,0,0"
-                                    Visibility="Collapsed"
-                                    IsIndeterminate="True"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
-                            <RadioButton x:Name="StatsViewListRadio" Content="List" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
-                            <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
-                            <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
-                            <ComboBox x:Name="StatsGroupByCombo" Width="130" Visibility="Collapsed" SelectionChanged="StatsGroupByCombo_SelectionChanged">
-                                <ComboBoxItem Content="Period" Tag="Period"/>
-                                <ComboBoxItem Content="Person" Tag="Assignee"/>
-                                <ComboBoxItem Content="État" Tag="Status"/>
-                                <ComboBoxItem Content="Priority" Tag="Priority"/>
-                                <ComboBoxItem Content="Project" Tag="Project"/>
-                            </ComboBox>
-                        </StackPanel>
+                    <Grid Grid.Row="0" Margin="2,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
                         <TextBlock
-                            x:Name="StatsStatusText"
-                            Grid.Row="4"
-                            FontSize="11"
-                            Margin="0,0,0,8"
-                            Foreground="{StaticResource TextSecondaryBrush}"
-                            TextWrapping="Wrap"/>
+                            Grid.Column="0"
+                            Text="Incidents"
+                            FontWeight="Bold"
+                            FontSize="13"
+                            Foreground="{StaticResource TextPrimaryBrush}"
+                            VerticalAlignment="Center"/>
 
-                        <Grid Grid.Row="5">
-                            <DataGrid
-                                x:Name="StatsGrid"
-                                AutoGenerateColumns="False"
-                                IsReadOnly="True"
-                                CanUserAddRows="False"
-                                CanUserDeleteRows="False"
-                                CanUserSortColumns="False"
-                                HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Disabled"
-                                VirtualizingPanel.ScrollUnit="Pixel"
-                                RowHeight="40"
-                                MouseDoubleClick="StatsGrid_MouseDoubleClick">
+                        <Button
+                            Grid.Column="1"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Padding="10,0"
+                            Height="26"
+                            FontSize="11.5"
+                            Content="+ New"
+                            Click="NewIncident_Click"/>
+                    </Grid>
 
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
+                    <Border
+                        Grid.Row="1"
+                        Margin="0,0,0,8"
+                        BorderBrush="{StaticResource BorderStrongBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusSmall}">
+                        <Grid>
+                            <Path
+                                Data="M11,4 A7,7 0 1 0 11,18 A7,7 0 1 0 11,4 Z M16,16 L21,21"
+                                Stroke="{StaticResource TextMutedBrush}"
+                                StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"
+                                HorizontalAlignment="Left"
+                                Margin="8,0,0,0"/>
+                            <TextBox
+                                x:Name="IncidentSearchBox"
+                                BorderThickness="0"
+                                Padding="26,0,6,0"
+                                ToolTip="Search incidents by name"
+                                TextChanged="IncidentSearchBox_TextChanged"/>
+                        </Grid>
+                    </Border>
 
-                                    <DataGridTextColumn
-                                        Header="Summary"
-                                        Binding="{Binding Summary}"
-                                        SortMemberPath="Summary"
-                                        Width="2*">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                                <Setter Property="ToolTip" Value="{Binding Summary}"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-
-                                    <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Border
-                                                    Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
-                                                    CornerRadius="3"
-                                                    Padding="6,1"
-                                                    Margin="0,0,6,0"
-                                                    HorizontalAlignment="Left"
-                                                    VerticalAlignment="Center">
-                                                    <TextBlock
-                                                        Text="{Binding Priority}"
-                                                        FontSize="11"
-                                                        FontWeight="Bold"
-                                                        Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Header="État" SortMemberPath="Status" Width="Auto">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Border
-                                                    Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
-                                                    CornerRadius="3"
-                                                    Padding="6,1"
-                                                    Margin="0,0,6,0"
-                                                    HorizontalAlignment="Left"
-                                                    VerticalAlignment="Center">
-                                                    <TextBlock
-                                                        Text="{Binding Status}"
-                                                        FontSize="11"
-                                                        FontWeight="Bold"
-                                                        Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                    <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
-
-                                    <DataGridTemplateColumn Header="" Width="80">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Button
-                                                    Content="View"
-                                                    Width="70"
-                                                    Click="OpenJiraResult_Click"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-
-                            <ScrollViewer
-                                x:Name="StatsChartScrollViewer"
-                                HorizontalScrollBarVisibility="Auto"
-                                VerticalScrollBarVisibility="Disabled"
-                                Visibility="Collapsed">
-                                <ItemsControl x:Name="StatsChartItemsControl" Margin="4,8,4,4">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Width="80" Margin="6,0" VerticalAlignment="Bottom">
-                                                <TextBlock Text="{Binding Count}" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/>
-                                                <Border
-                                                    Background="{StaticResource AccentBrush}"
-                                                    Height="{Binding BarHeight}"
-                                                    Width="42"
-                                                    HorizontalAlignment="Center"
-                                                    CornerRadius="3,3,0,0"
-                                                    Margin="0,2,0,0"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="IncidentListItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="10,8"
+                                        Margin="0,0,0,3"
+                                        CornerRadius="{StaticResource RadiusSmall}"
+                                        Background="{Binding RowBackground}"
+                                        MouseLeftButtonDown="IncidentRow_MouseLeftButtonDown"
+                                        Tag="{Binding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
                                                 <TextBlock
-                                                    Text="{Binding Label}"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="10"
-                                                    TextWrapping="Wrap"
-                                                    TextAlignment="Center"
-                                                    Margin="0,4,0,0"/>
+                                                    Text="{Binding Name}"
+                                                    FontWeight="SemiBold"
+                                                    FontSize="12.5"
+                                                    TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock
+                                                    Text="{Binding CountLabel}"
+                                                    FontSize="10.5"
+                                                    Margin="0,2,0,0"
+                                                    Foreground="{Binding CountForeground}"/>
                                             </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                            <Button
+                                                Grid.Column="1"
+                                                Style="{StaticResource IconChevronButtonStyle}"
+                                                Width="22" Height="22"
+                                                ToolTip="Delete this incident"
+                                                Click="DeleteIncident_Click"
+                                                Tag="{Binding}">
+                                                <Path
+                                                    Data="M6,6 L18,18 M18,6 L6,18"
+                                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                    StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                    Width="10" Height="10" Stretch="Uniform"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <GridSplitter
+                Grid.Column="1"
+                Width="6"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Incident detail -->
+            <Border
+                Grid.Column="2"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}"
+                Background="{StaticResource SurfaceBrush}"
+                Effect="{StaticResource CardShadowEffect}"
+                Padding="{StaticResource CardPadding}">
+
+                <Grid>
+                    <StackPanel x:Name="NoIncidentSelectedPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock
+                            Text="Select an incident on the left, or create a new one."
+                            FontSize="13"
+                            Foreground="{StaticResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <Grid x:Name="IncidentDetailPanel" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBox
+                            x:Name="IncidentNameTextBox"
+                            Grid.Row="0"
+                            BorderThickness="0"
+                            Padding="0"
+                            FontSize="17"
+                            FontWeight="Bold"
+                            Background="Transparent"
+                            LostFocus="IncidentNameTextBox_LostFocus"/>
+
+                        <TextBox
+                            x:Name="IncidentDescriptionTextBox"
+                            Grid.Row="1"
+                            Margin="0,4,0,0"
+                            BorderThickness="0"
+                            Padding="0"
+                            FontSize="12.5"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Background="Transparent"
+                            AcceptsReturn="True"
+                            TextWrapping="Wrap"
+                            Height="Auto"
+                            MaxHeight="70"
+                            VerticalScrollBarVisibility="Auto"
+                            LostFocus="IncidentDescriptionTextBox_LostFocus"/>
+
+                        <Border
+                            Grid.Row="2"
+                            Height="1"
+                            Margin="0,12,0,12"
+                            Background="{StaticResource BorderBrush}"/>
+
+                        <Grid Grid.Row="3">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    x:Name="LinkCountText"
+                                    Grid.Column="0"
+                                    FontWeight="Bold"
+                                    FontSize="12.5"
+                                    VerticalAlignment="Center"/>
+
+                                <TextBox
+                                    x:Name="LinksSearchBox"
+                                    Grid.Column="1"
+                                    Width="200"
+                                    Margin="0,0,8,0"
+                                    ToolTip="Search a word in the linked tickets/pages"
+                                    TextChanged="LinksSearchBox_TextChanged"/>
+
+                                <Button
+                                    Grid.Column="2"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Content="Link an item"
+                                    Click="AttachLink_Click"/>
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <ItemsControl x:Name="LinksItemsControl">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Margin="0,0,0,6"
+                                                    Padding="10,8"
+                                                    Background="{StaticResource SurfaceAltBrush}"
+                                                    BorderBrush="{StaticResource BorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="{StaticResource RadiusSmall}"
+                                                    Cursor="Hand"
+                                                    MouseLeftButtonDown="LinkRow_MouseLeftButtonDown"
+                                                    Tag="{Binding}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Border
+                                                            Grid.Column="0"
+                                                            Width="26"
+                                                            Height="26"
+                                                            Margin="0,0,10,0"
+                                                            CornerRadius="6"
+                                                            VerticalAlignment="Center"
+                                                            Background="{StaticResource AccentSoftBrush}">
+                                                            <Grid>
+                                                                <Path
+                                                                    Data="M3,8.5 A1.8,1.8 0 0 0 3,11.5 L3,12.5 A1.8,1.8 0 0 0 3,15.5 L3,19 L21,19 L21,15.5 A1.8,1.8 0 0 1 21,12.5 L21,11.5 A1.8,1.8 0 0 1 21,8.5 L21,5 L3,5 Z M12,6.5 L12,17.5"
+                                                                    Stroke="{StaticResource AccentPressedBrush}"
+                                                                    StrokeThickness="1.4"
+                                                                    StrokeDashArray="1.6,1.6"
+                                                                    Width="13" Height="13" Stretch="Uniform"
+                                                                    Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                <Path
+                                                                    Data="M6,3 L14,3 L18,7 L18,21 L6,21 Z M14,3 L14,7 L18,7 M8.5,12 L15.5,12 M8.5,15.5 L13.5,15.5"
+                                                                    Stroke="{StaticResource TextSecondaryBrush}"
+                                                                    StrokeThickness="1.4"
+                                                                    StrokeLineJoin="Round"
+                                                                    Width="13" Height="13" Stretch="Uniform"
+                                                                    Visibility="{Binding IsConfluence, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock
+                                                                    Text="{Binding Key}"
+                                                                    FontFamily="Cascadia Code, Consolas"
+                                                                    FontSize="11"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{StaticResource TextMutedBrush}"
+                                                                    Margin="0,0,8,0"
+                                                                    Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                <TextBlock
+                                                                    Text="{Binding Title}"
+                                                                    FontSize="12.5"
+                                                                    FontWeight="SemiBold"
+                                                                    TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                            <TextBlock
+                                                                Text="{Binding Subtitle}"
+                                                                FontSize="11"
+                                                                Foreground="{StaticResource TextMutedBrush}"
+                                                                Margin="0,2,0,0"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Border
+                                                                Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
+                                                                CornerRadius="3"
+                                                                Padding="6,1"
+                                                                Margin="0,0,6,0"
+                                                                Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock
+                                                                    Text="{Binding Priority}"
+                                                                    FontSize="10.5"
+                                                                    FontWeight="Bold"
+                                                                    Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
+                                                            </Border>
+                                                            <Border
+                                                                Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                                                CornerRadius="3"
+                                                                Padding="6,1"
+                                                                Margin="0,0,8,0"
+                                                                Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock
+                                                                    Text="{Binding Status}"
+                                                                    FontSize="10.5"
+                                                                    FontWeight="Bold"
+                                                                    Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                                            </Border>
+                                                            <Button
+                                                                Style="{StaticResource IconChevronButtonStyle}"
+                                                                Width="24" Height="24"
+                                                                ToolTip="Unlink"
+                                                                Click="Unlink_Click"
+                                                                Tag="{Binding}">
+                                                                <Path
+                                                                    Data="M12,3 A9,9 0 1 0 12,21 A9,9 0 1 0 12,3 Z M8.5,12 L15.5,12"
+                                                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                    StrokeThickness="1.6" StrokeStartLineCap="Round"
+                                                                    Width="12" Height="12" Stretch="Uniform"/>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock
+                                        x:Name="NoLinksText"
+                                        FontSize="12.5"
+                                        FontStyle="Italic"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,24,0,0"
+                                        Foreground="{StaticResource TextMutedBrush}"
+                                        Visibility="Collapsed"/>
+                                </StackPanel>
                             </ScrollViewer>
                         </Grid>
                     </Grid>
-                </Expander>
+                </Grid>
             </Border>
         </Grid>
+
+        <!-- ===================================================== -->
+        <!-- STATISTICS TAB -->
+        <!-- ===================================================== -->
+        <Border
+            x:Name="StatsTabContent"
+            Grid.Row="3"
+            Visibility="Collapsed"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="{StaticResource CardPadding}">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
+                    <TextBlock Text="Saved list" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox
+                        x:Name="StatsSavedFilterCombo"
+                        Width="200"
+                        DisplayMemberPath="Display"
+                        SelectedValuePath="Value"
+                        ToolTip="A saved combination of the filters below"
+                        SelectionChanged="StatsSavedFilterCombo_SelectionChanged"/>
+                    <Button
+                        x:Name="SaveStatsFilterButton"
+                        Content="Save current..."
+                        Width="110"
+                        Margin="8,0,0,0"
+                        Click="SaveStatsFilterButton_Click"/>
+                    <Button
+                        x:Name="DeleteStatsFilterButton"
+                        Content="Delete"
+                        Width="70"
+                        Margin="8,0,0,0"
+                        IsEnabled="False"
+                        Click="DeleteStatsFilterButton_Click"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+
+                    <StackPanel Width="170" Margin="0,0,14,0">
+                        <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StatsProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                <ComboBoxItem Content="in"/>
+                                <ComboBoxItem Content="not in"/>
+                            </ComboBox>
+                            <Button
+                                x:Name="StatsProjectPickerButton"
+                                Content="(Any)"
+                                Width="111"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                Click="StatsProjectPickerButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Width="220" Margin="0,0,14,0">
+                        <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                <ComboBoxItem Content="in"/>
+                                <ComboBoxItem Content="not in"/>
+                            </ComboBox>
+                            <Button
+                                x:Name="StatsAssigneePickerButton"
+                                Content="(Any)"
+                                Width="161"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                ToolTip="Includes yourself -- not every user may be listed"
+                                Click="StatsAssigneePickerButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Width="170" Margin="0,0,14,0">
+                        <TextBlock Text="État" FontSize="11" Margin="0,0,0,2"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StatsStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                <ComboBoxItem Content="in"/>
+                                <ComboBoxItem Content="not in"/>
+                            </ComboBox>
+                            <Button
+                                x:Name="StatsStatusPickerButton"
+                                Content="(Any)"
+                                Width="111"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                Click="StatsStatusPickerButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
+
+                    <StackPanel Width="170" Margin="0,0,14,0">
+                        <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                <ComboBoxItem Content="in"/>
+                                <ComboBoxItem Content="not in"/>
+                            </ComboBox>
+                            <Button
+                                x:Name="StatsModulePickerButton"
+                                Content="(Any)"
+                                Width="111"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                ToolTip="'Component (migrated)' values"
+                                Click="StatsModulePickerButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Width="170" Margin="0,0,14,0">
+                        <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
+                                <ComboBoxItem Content="in"/>
+                                <ComboBoxItem Content="not in"/>
+                            </ComboBox>
+                            <Button
+                                x:Name="StatsEscalationPickerButton"
+                                Content="(Any)"
+                                Width="111"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,4"
+                                Click="StatsEscalationPickerButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Width="130" Margin="0,0,14,0">
+                        <TextBlock Text="Resolved from" FontSize="11" Margin="0,0,0,2"/>
+                        <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound (only relevant when État includes resolved issues)"/>
+                    </StackPanel>
+
+                    <StackPanel Width="130" Margin="0,0,14,0">
+                        <TextBlock Text="Resolved to" FontSize="11" Margin="0,0,0,2"/>
+                        <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound (only relevant when État includes resolved issues)"/>
+                    </StackPanel>
+
+                    <StackPanel VerticalAlignment="Bottom" Orientation="Horizontal">
+                        <Button
+                            x:Name="RunStatsButton"
+                            Content="Run stats"
+                            Width="90"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="RunStatsButton_Click"/>
+                        <ProgressBar
+                            x:Name="StatsProgressBar"
+                            Width="80"
+                            Margin="8,0,0,0"
+                            Visibility="Collapsed"
+                            IsIndeterminate="True"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+                    <RadioButton x:Name="StatsViewListRadio" Content="List" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
+                    <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
+                    <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
+                    <ComboBox x:Name="StatsGroupByCombo" Width="130" Visibility="Collapsed" SelectionChanged="StatsGroupByCombo_SelectionChanged">
+                        <ComboBoxItem Content="Period" Tag="Period"/>
+                        <ComboBoxItem Content="Person" Tag="Assignee"/>
+                        <ComboBoxItem Content="État" Tag="Status"/>
+                        <ComboBoxItem Content="Priority" Tag="Priority"/>
+                        <ComboBoxItem Content="Project" Tag="Project"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <TextBlock
+                    x:Name="StatsStatusText"
+                    Grid.Row="4"
+                    FontSize="11"
+                    Margin="0,0,0,8"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    TextWrapping="Wrap"/>
+
+                <Grid Grid.Row="5">
+                    <DataGrid
+                        x:Name="StatsGrid"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        CanUserAddRows="False"
+                        CanUserDeleteRows="False"
+                        CanUserSortColumns="False"
+                        HeadersVisibility="Column"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VirtualizingPanel.ScrollUnit="Pixel"
+                        RowHeight="40"
+                        MouseDoubleClick="StatsGrid_MouseDoubleClick">
+
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Key" Binding="{Binding Key}" SortMemberPath="Key" Width="Auto"/>
+
+                            <DataGridTextColumn
+                                Header="Summary"
+                                Binding="{Binding Summary}"
+                                SortMemberPath="Summary"
+                                Width="2*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding Summary}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTemplateColumn Header="Priority" SortMemberPath="Priority" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
+                                            CornerRadius="3"
+                                            Padding="6,1"
+                                            Margin="0,0,6,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{Binding Priority}"
+                                                FontSize="11"
+                                                FontWeight="Bold"
+                                                Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="État" SortMemberPath="Status" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                            CornerRadius="3"
+                                            Padding="6,1"
+                                            Margin="0,0,6,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{Binding Status}"
+                                                FontSize="11"
+                                                FontWeight="Bold"
+                                                Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Assignee" Binding="{Binding Assignee}" SortMemberPath="Assignee" Width="*"/>
+
+                            <DataGridTemplateColumn Header="" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                            Content="View"
+                                            Width="70"
+                                            Click="OpenJiraResult_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <ScrollViewer
+                        x:Name="StatsChartScrollViewer"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled"
+                        Visibility="Collapsed">
+                        <ItemsControl x:Name="StatsChartItemsControl" Margin="4,8,4,4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Width="80" Margin="6,0" VerticalAlignment="Bottom">
+                                        <TextBlock Text="{Binding Count}" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/>
+                                        <Border
+                                            Background="{StaticResource AccentBrush}"
+                                            Height="{Binding BarHeight}"
+                                            Width="42"
+                                            HorizontalAlignment="Center"
+                                            CornerRadius="3,3,0,0"
+                                            Margin="0,2,0,0"/>
+                                        <TextBlock
+                                            Text="{Binding Label}"
+                                            HorizontalAlignment="Center"
+                                            FontSize="10"
+                                            TextWrapping="Wrap"
+                                            TextAlignment="Center"
+                                            Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

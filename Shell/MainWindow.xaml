@@ -237,7 +237,7 @@
                                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
                                         StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                                 </Grid>
-                                <TextBlock Text="Atlassian Search" VerticalAlignment="Center"/>
+                                <TextBlock Text="Atlassian" VerticalAlignment="Center"/>
                             </StackPanel>
                         </RadioButton>
                 </WrapPanel>
