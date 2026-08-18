@@ -171,6 +171,117 @@
                     Background="Transparent"
                     MouseDoubleClick="CollectionsTreeView_MouseDoubleClick"
                     PreviewMouseRightButtonDown="CollectionsTreeView_PreviewMouseRightButtonDown">
+                    <!-- Replaces the stock Windows expand/collapse triangle
+                         with the same vector chevron used by Expander
+                         elsewhere in the app (rotates in place instead of
+                         swapping glyphs), and reintroduces a selected-row
+                         background (the default TreeViewItem template
+                         normally paints one from SystemColors.HighlightBrushKey,
+                         which a full ControlTemplate replacement drops
+                         unless it's added back explicitly). -->
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="Padding" Value="4,3"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TreeViewItem">
+                                        <StackPanel>
+                                            <Grid Margin="{TemplateBinding Padding}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="16"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <ToggleButton
+                                                    x:Name="Expander"
+                                                    Grid.Column="0"
+                                                    Width="16"
+                                                    Height="16"
+                                                    VerticalAlignment="Center"
+                                                    ClickMode="Press"
+                                                    Focusable="False"
+                                                    IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
+                                                    <ToggleButton.Template>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border Background="Transparent">
+                                                                <Path
+                                                                    x:Name="Arrow"
+                                                                    Data="M0,0 L4,4 L8,0"
+                                                                    Stroke="{StaticResource TextSecondaryBrush}"
+                                                                    StrokeThickness="1.6"
+                                                                    StrokeStartLineCap="Round"
+                                                                    StrokeEndLineCap="Round"
+                                                                    StrokeLineJoin="Round"
+                                                                    Width="8" Height="5"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    RenderTransformOrigin="0.5,0.5">
+                                                                    <Path.RenderTransform>
+                                                                        <RotateTransform x:Name="ArrowRotate" Angle="-90"/>
+                                                                    </Path.RenderTransform>
+                                                                </Path>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Trigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetName="ArrowRotate" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.12"/>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </Trigger.EnterActions>
+                                                                    <Trigger.ExitActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetName="ArrowRotate" Storyboard.TargetProperty="Angle" To="-90" Duration="0:0:0.12"/>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </Trigger.ExitActions>
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource AccentBrush}"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </ToggleButton.Template>
+                                                </ToggleButton>
+
+                                                <Border
+                                                    x:Name="SelectionBd"
+                                                    Grid.Column="1"
+                                                    Background="Transparent"
+                                                    CornerRadius="4">
+                                                    <ContentPresenter
+                                                        ContentSource="Header"
+                                                        HorizontalAlignment="Stretch"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <ItemsPresenter x:Name="ItemsHost" Margin="16,0,0,0"/>
+                                        </StackPanel>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsExpanded" Value="False">
+                                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                            </Trigger>
+                                            <Trigger Property="HasItems" Value="False">
+                                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="SelectionBd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.55"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TreeView.ItemContainerStyle>
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <Border
@@ -223,11 +334,20 @@
 
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="4,0,0,0">
                                         <StackPanel.Style>
+                                            <!-- Opacity (not Visibility) toggle: the row's Auto
+                                                 column always reserves this StackPanel's width, so
+                                                 revealing the buttons on hover never resizes the
+                                                 row — a Visibility toggle here previously changed
+                                                 row width mid-hover, which shifted what was under
+                                                 the cursor and made IsMouseOver flicker on/off
+                                                 (the row visibly "jittered" while hovered). -->
                                             <Style TargetType="StackPanel">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Setter Property="Opacity" Value="0"/>
+                                                <Setter Property="IsHitTestVisible" Value="False"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=IsMouseOver}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="IsHitTestVisible" Value="True"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
