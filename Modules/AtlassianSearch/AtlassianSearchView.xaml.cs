@@ -1037,6 +1037,7 @@ public partial class AtlassianSearchView
         if (!_settings.IsComplete)
         {
             StatusText.Text = "Set up the Jira/Confluence connection first (Settings).";
+            StatusText.Visibility = Visibility.Visible;
         }
     }
 
@@ -1057,6 +1058,7 @@ public partial class AtlassianSearchView
         _settingsService.Save(_settings);
 
         StatusText.Text = "";
+        StatusText.Visibility = Visibility.Collapsed;
 
         _ = LoadFilterOptionsAsync();
     }

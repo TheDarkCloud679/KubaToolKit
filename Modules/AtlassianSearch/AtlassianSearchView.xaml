@@ -60,6 +60,7 @@
             Grid.Row="1"
             FontSize="11"
             Margin="0,0,0,10"
+            Visibility="Collapsed"
             Foreground="{StaticResource TextSecondaryBrush}"
             TextWrapping="Wrap"/>
 
