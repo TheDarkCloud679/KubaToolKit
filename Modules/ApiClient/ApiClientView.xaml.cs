@@ -107,9 +107,6 @@ public partial class ApiClientView
         ParamsTabContent.Visibility =
             ParamsTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
-        AuthTabContent.Visibility =
-            AuthTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-
         HeadersTabContent.Visibility =
             HeadersTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 

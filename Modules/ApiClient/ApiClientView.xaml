@@ -636,15 +636,9 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,0,0">
                         <RadioButton
                             x:Name="ParamsTabRadio"
-                            Content="Params"
+                            Content="Filters"
                             GroupName="RequestConfigTab"
                             IsChecked="True"
-                            Checked="RequestConfigTab_Changed"
-                            Style="{StaticResource RequestTabRadioButtonStyle}"/>
-                        <RadioButton
-                            x:Name="AuthTabRadio"
-                            Content="Auth"
-                            GroupName="RequestConfigTab"
                             Checked="RequestConfigTab_Changed"
                             Style="{StaticResource RequestTabRadioButtonStyle}"/>
                         <RadioButton
