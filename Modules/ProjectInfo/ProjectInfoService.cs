@@ -379,15 +379,6 @@ public class ProjectInfoService
         }
     }
 
-    public void
-    SetProjectKey(
-        ProjectInfoRoot root,
-        string profileName,
-        string projectKey)
-    {
-        root.ProfileProjectKeys[profileName] = projectKey;
-    }
-
     public static readonly Dictionary<string, string[]> SectionPresets =
         new()
         {

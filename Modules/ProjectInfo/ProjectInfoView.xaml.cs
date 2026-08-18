@@ -110,8 +110,6 @@ public partial class ProjectInfoView
 
         var projectKey = _projectInfoService.ResolveProjectKey(_root, profileName);
 
-        ProjectKeyTextBox.Text = projectKey;
-
         _project = _projectInfoService.LoadProject(projectKey);
 
         UpdateTitle();
@@ -134,35 +132,7 @@ public partial class ProjectInfoView
     private void
     UpdateTitle()
     {
-        TitleTextBlock.Text = $"Project Info - {_project.Key} (profile: {_profileName})";
-    }
-
-    private void
-    ProjectKeyTextBox_LostFocus(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var newKey = ProjectKeyTextBox.Text.Trim();
-
-        if (string.IsNullOrWhiteSpace(newKey))
-        {
-            ProjectKeyTextBox.Text = _project.Key;
-
-            return;
-        }
-
-        if (string.Equals(newKey, _project.Key, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        _projectInfoService.SetProjectKey(_root, _profileName, newKey);
-        _projectInfoService.Save(_root);
-        _project = _projectInfoService.LoadProject(newKey);
-
-        UpdateTitle();
-        RenderSections();
-        Save();
+        TitleTextBlock.Text = $"Project Info - {_project.Key} (Profile: {_profileName})";
     }
 
     private void

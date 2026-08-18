@@ -7,40 +7,26 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock
-            x:Name="TitleTextBlock"
-            Grid.Row="0"
-            FontWeight="Bold"
-            FontSize="16"
-            Margin="0,0,0,4"
-            Foreground="{StaticResource TextPrimaryBrush}"/>
-
-        <StackPanel
-            Grid.Row="1"
-            Orientation="Horizontal"
-            Margin="0,0,0,14">
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
             <TextBlock
-                Text="Project"
+                x:Name="TitleTextBlock"
+                Grid.Column="0"
+                FontWeight="Bold"
+                FontSize="16"
                 VerticalAlignment="Center"
-                Margin="0,0,8,0"
-                FontWeight="SemiBold"
-                Foreground="{StaticResource TextSecondaryBrush}"/>
-
-            <TextBox
-                x:Name="ProjectKeyTextBox"
-                Width="220"
-                VerticalContentAlignment="Center"
-                LostFocus="ProjectKeyTextBox_LostFocus"
-                ToolTip="Prod/Preprod/Test profiles of the same project share this information automatically (the _prod/_preprod/_test suffix is detected and stripped). Override it here to force two profiles to share, or to split them."/>
+                Foreground="{StaticResource TextPrimaryBrush}"/>
 
             <Button
+                Grid.Column="1"
                 Style="{StaticResource SecondaryButtonStyle}"
-                Margin="16,0,0,0"
                 Click="OpenProjectFolderButton_Click"
                 ToolTip="Opens (and creates if needed) a shared folder for this project, to drop files alongside this glossary.">
                 <StackPanel Orientation="Horizontal">
@@ -53,10 +39,10 @@
                     <TextBlock Text="Files folder" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-        </StackPanel>
+        </Grid>
 
         <StackPanel
-            Grid.Row="2"
+            Grid.Row="1"
             Orientation="Horizontal"
             Margin="0,0,0,14">
 
@@ -111,7 +97,7 @@
         </StackPanel>
 
         <StackPanel
-            Grid.Row="3"
+            Grid.Row="2"
             Orientation="Horizontal"
             Margin="0,0,0,14">
 
@@ -144,7 +130,7 @@
 
         <ScrollViewer
             x:Name="SectionsScrollViewer"
-            Grid.Row="4"
+            Grid.Row="3"
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="SectionsPanel"/>
