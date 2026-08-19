@@ -112,6 +112,12 @@ public partial class ConfluencePageViewerWindow
             ContentBrowser.NavigateToString(html);
             ContentBrowser.Visibility = Visibility.Visible;
             StatusText.Visibility = Visibility.Collapsed;
+
+            // The legacy WebBrowser control's underlying ActiveX site is
+            // created lazily on this first navigation -- that steals
+            // window activation, dropping this window behind whatever the
+            // user clicked into while the page was loading.
+            Activate();
         }
         catch (Exception ex)
         {

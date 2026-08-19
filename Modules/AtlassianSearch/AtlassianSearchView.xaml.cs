@@ -766,6 +766,12 @@ public partial class AtlassianSearchView
                 _selectedIncident,
                 onLinksChanged: () =>
                 {
+                    // A newly-attached item's project/space/status won't be
+                    // in the filter dropdowns until they're rebuilt from
+                    // the incident's current links -- otherwise it stays
+                    // invisible to those filters until the incident is
+                    // reselected.
+                    PopulateLinkFilterCombos();
                     RefreshLinksList();
                     RefreshIncidentList();
                 })
@@ -789,6 +795,7 @@ public partial class AtlassianSearchView
         _selectedIncident.Links.Remove(row.Link);
 
         SaveSelectedIncident();
+        PopulateLinkFilterCombos();
         RefreshLinksList();
         RefreshIncidentList();
     }
@@ -1456,6 +1463,7 @@ public partial class AtlassianSearchView
         var window = new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url);
 
         window.Show();
+        window.Activate();
     }
 
     private void
@@ -1489,5 +1497,6 @@ public partial class AtlassianSearchView
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
         window.Show();
+        window.Activate();
     }
 }

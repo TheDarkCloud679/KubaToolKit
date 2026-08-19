@@ -111,6 +111,12 @@ public partial class JiraIssueViewerWindow
             DescriptionBrowser.Visibility = Visibility.Visible;
             DescriptionStatusText.Visibility = Visibility.Collapsed;
 
+            // The legacy WebBrowser control's underlying ActiveX site is
+            // created lazily on this first navigation -- that steals
+            // window activation, dropping this window behind whatever the
+            // user clicked into while the issue was loading.
+            Activate();
+
             var transitionsTask = _atlassianService.GetJiraTransitions(_settings, detail.Key);
             var assignableUsersTask = _atlassianService.GetJiraAssignableUsers(_settings, detail.Key);
             var commentsTask = _atlassianService.GetJiraComments(_settings, detail.Key);

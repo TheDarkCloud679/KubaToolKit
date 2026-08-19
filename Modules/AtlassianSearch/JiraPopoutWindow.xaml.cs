@@ -278,6 +278,7 @@ public partial class JiraPopoutWindow
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
         window.Show();
+        window.Activate();
     }
 
     private static void
