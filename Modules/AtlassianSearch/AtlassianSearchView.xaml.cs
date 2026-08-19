@@ -370,6 +370,7 @@ public partial class AtlassianSearchView
 
         IncidentNameTextBox.Text = _selectedIncident.Name;
         IncidentDescriptionTextBox.Text = _selectedIncident.Description;
+        IncidentSolutionTextBox.Text = _selectedIncident.Solution;
 
         LinksSearchBox.Text = "";
 
@@ -417,6 +418,28 @@ public partial class AtlassianSearchView
         }
 
         _selectedIncident.Description = description;
+
+        SaveSelectedIncident();
+    }
+
+    private void
+    IncidentSolutionTextBox_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_selectedIncident == null)
+        {
+            return;
+        }
+
+        var solution = IncidentSolutionTextBox.Text;
+
+        if (solution == _selectedIncident.Solution)
+        {
+            return;
+        }
+
+        _selectedIncident.Solution = solution;
 
         SaveSelectedIncident();
     }

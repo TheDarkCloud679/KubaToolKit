@@ -297,6 +297,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="150"/>
                         </Grid.RowDefinitions>
 
                         <TextBox
@@ -491,6 +493,40 @@
                                         Visibility="Collapsed"/>
                                 </StackPanel>
                             </ScrollViewer>
+                        </Grid>
+
+                        <GridSplitter
+                            Grid.Row="4"
+                            Height="8"
+                            HorizontalAlignment="Stretch"
+                            ResizeBehavior="PreviousAndNext"
+                            ToolTip="Drag to resize"/>
+
+                        <Grid Grid.Row="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock
+                                Grid.Row="0"
+                                Text="Solution"
+                                FontWeight="Bold"
+                                FontSize="12.5"
+                                Margin="0,0,0,6"
+                                Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                            <TextBox
+                                x:Name="IncidentSolutionTextBox"
+                                Grid.Row="1"
+                                AcceptsReturn="True"
+                                AcceptsTab="True"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled"
+                                FontSize="12.5"
+                                ToolTip="What actually fixed it, for next time"
+                                LostFocus="IncidentSolutionTextBox_LostFocus"/>
                         </Grid>
                     </Grid>
                 </Grid>
