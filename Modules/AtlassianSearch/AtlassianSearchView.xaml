@@ -336,10 +336,11 @@
                         <Grid Grid.Row="3">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -368,7 +369,60 @@
                                     Click="AttachLink_Click"/>
                             </Grid>
 
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                                <ComboBox
+                                    x:Name="LinkFilterSpaceCombo"
+                                    Width="120"
+                                    Margin="0,0,8,0"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Filter Confluence pages by space"
+                                    SelectionChanged="LinkFilterSpaceCombo_SelectionChanged"/>
+
+                                <ComboBox
+                                    x:Name="LinkFilterStatusCombo"
+                                    Width="120"
+                                    Margin="0,0,8,0"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Filter Jira tickets by status"
+                                    SelectionChanged="LinkFilterStatusCombo_SelectionChanged"/>
+
+                                <DatePicker
+                                    x:Name="LinkFilterFromDatePicker"
+                                    Width="106"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Updated/modified on or after this date"
+                                    SelectedDateChanged="LinkFilterDatePicker_SelectedDateChanged"/>
+
+                                <DatePicker
+                                    x:Name="LinkFilterToDatePicker"
+                                    Width="106"
+                                    Margin="0,0,14,0"
+                                    ToolTip="Updated/modified on or before this date"
+                                    SelectedDateChanged="LinkFilterDatePicker_SelectedDateChanged"/>
+
+                                <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,0" Foreground="{StaticResource TextMutedBrush}"/>
+
+                                <Button
+                                    Content="▲"
+                                    Width="26"
+                                    Padding="0"
+                                    FontSize="10"
+                                    Margin="0,0,4,0"
+                                    Click="LinkSortDateAscendingButton_Click"
+                                    ToolTip="Sort by date, oldest first"/>
+
+                                <Button
+                                    Content="▼"
+                                    Width="26"
+                                    Padding="0"
+                                    FontSize="10"
+                                    Click="LinkSortDateDescendingButton_Click"
+                                    ToolTip="Sort by date, newest first"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
                                     <ItemsControl x:Name="LinksItemsControl">
                                         <ItemsControl.ItemTemplate>
@@ -433,10 +487,13 @@
                                                                     TextTrimming="CharacterEllipsis"/>
                                                             </StackPanel>
                                                             <TextBlock
-                                                                Text="{Binding Subtitle}"
                                                                 FontSize="11"
                                                                 Foreground="{StaticResource TextMutedBrush}"
-                                                                Margin="0,2,0,0"/>
+                                                                Margin="0,2,0,0">
+                                                                <Run Text="{Binding Subtitle}"/>
+                                                                <Run Text=" · "/>
+                                                                <Run Text="{Binding DisplayDate}"/>
+                                                            </TextBlock>
                                                         </StackPanel>
 
                                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">

@@ -27,4 +27,10 @@ public class IncidentLink
 
     public string Title { get; set; } = "";
     public string Url { get; set; } = "";
+
+    // Snapshot of the item's own last-updated/modified date at the moment
+    // it was linked (raw ISO string) -- same "captured once, never
+    // refreshed" philosophy as Priority/Status above, used to filter/sort
+    // the linked-items list without an API round trip just to render it.
+    public string Date { get; set; } = "";
 }

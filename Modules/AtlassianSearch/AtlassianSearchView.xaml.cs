@@ -51,6 +51,15 @@ public partial class AtlassianSearchView
     private List<IncidentEntry> _incidents = new();
     private IncidentEntry? _selectedIncident;
 
+    private string _linkFilterSpace = "";
+    private string _linkFilterStatus = "";
+    private DateTime? _linkFilterFrom;
+    private DateTime? _linkFilterTo;
+
+    // null = the links' own storage order; set once either sort arrow is
+    // clicked.
+    private bool? _linkSortDateAscending;
+
     private WikiView? _wikiView;
     private ProjectInfoView? _projectInfoView;
 
@@ -211,6 +220,8 @@ public partial class AtlassianSearchView
         public string Subtitle { get; set; } = "";
         public string Priority { get; set; } = "";
         public string Status { get; set; } = "";
+        public string DisplayDate { get; set; } = "";
+        public DateTime? SortDate { get; set; }
     }
 
     private void
@@ -374,7 +385,52 @@ public partial class AtlassianSearchView
 
         LinksSearchBox.Text = "";
 
+        _linkFilterSpace = "";
+        _linkFilterStatus = "";
+        _linkFilterFrom = null;
+        _linkFilterTo = null;
+        _linkSortDateAscending = null;
+
+        PopulateLinkFilterCombos();
         RefreshLinksList();
+    }
+
+    private void
+    PopulateLinkFilterCombos()
+    {
+        if (_selectedIncident == null)
+        {
+            return;
+        }
+
+        var spaces =
+            _selectedIncident.Links
+                .Where(l => l.Type == IncidentLinkType.Confluence && !string.IsNullOrWhiteSpace(l.Space))
+                .Select(l => l.Space)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
+
+        var statuses =
+            _selectedIncident.Links
+                .Where(l => l.Type == IncidentLinkType.Jira && !string.IsNullOrWhiteSpace(l.Status))
+                .Select(l => l.Status)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
+
+        LinkFilterSpaceCombo.ItemsSource = spaces;
+        LinkFilterSpaceCombo.SelectedIndex = 0;
+
+        LinkFilterStatusCombo.ItemsSource = statuses;
+        LinkFilterStatusCombo.SelectedIndex = 0;
+
+        LinkFilterFromDatePicker.SelectedDate = null;
+        LinkFilterToDatePicker.SelectedDate = null;
     }
 
     private void
@@ -477,25 +533,78 @@ public partial class AtlassianSearchView
 
         var query = LinksSearchBox.Text.Trim();
 
+        IEnumerable<IncidentLink> links = _selectedIncident.Links;
+
+        links =
+            links.Where(l => string.IsNullOrEmpty(query)
+                || l.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || l.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(_linkFilterSpace))
+        {
+            links = links.Where(l => string.Equals(l.Space, _linkFilterSpace, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(_linkFilterStatus))
+        {
+            links = links.Where(l => string.Equals(l.Status, _linkFilterStatus, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_linkFilterFrom.HasValue)
+        {
+            links =
+                links.Where(l =>
+                    DateTime.TryParse(l.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+                    && d.Date >= _linkFilterFrom.Value.Date);
+        }
+
+        if (_linkFilterTo.HasValue)
+        {
+            links =
+                links.Where(l =>
+                    DateTime.TryParse(l.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+                    && d.Date <= _linkFilterTo.Value.Date);
+        }
+
         var rows =
-            _selectedIncident.Links
-                .Where(l => string.IsNullOrEmpty(query)
-                    || l.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
-                    || l.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Select(l => new LinkRow
+            links
+                .Select(l =>
                 {
-                    Link = l,
-                    IsJira = l.Type == IncidentLinkType.Jira,
-                    IsConfluence = l.Type == IncidentLinkType.Confluence,
-                    Key = l.Key,
-                    Title = l.Title,
-                    Subtitle = l.Type == IncidentLinkType.Jira ? "Jira ticket" : $"Confluence page · {l.Space}",
-                    Priority = l.Priority,
-                    Status = l.Status
+                    DateTime.TryParse(l.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate);
+
+                    return new LinkRow
+                    {
+                        Link = l,
+                        IsJira = l.Type == IncidentLinkType.Jira,
+                        IsConfluence = l.Type == IncidentLinkType.Confluence,
+                        Key = l.Key,
+                        Title = l.Title,
+                        Subtitle = l.Type == IncidentLinkType.Jira ? "Jira ticket" : $"Confluence page · {l.Space}",
+                        Priority = l.Priority,
+                        Status = l.Status,
+                        SortDate = parsedDate == default ? null : parsedDate,
+                        DisplayDate = parsedDate == default ? "" : parsedDate.ToString("yyyy-MM-dd")
+                    };
                 })
                 .ToList();
 
+        if (_linkSortDateAscending.HasValue)
+        {
+            rows =
+                (_linkSortDateAscending.Value
+                    ? rows.OrderBy(r => r.SortDate ?? DateTime.MinValue)
+                    : rows.OrderByDescending(r => r.SortDate ?? DateTime.MinValue))
+                    .ToList();
+        }
+
         LinksItemsControl.ItemsSource = rows;
+
+        var isFiltered =
+            !string.IsNullOrEmpty(query)
+            || !string.IsNullOrEmpty(_linkFilterSpace)
+            || !string.IsNullOrEmpty(_linkFilterStatus)
+            || _linkFilterFrom.HasValue
+            || _linkFilterTo.HasValue;
 
         if (_selectedIncident.Links.Count == 0)
         {
@@ -504,13 +613,64 @@ public partial class AtlassianSearchView
         }
         else if (rows.Count == 0)
         {
-            NoLinksText.Text = $"No link matches \"{query}\".";
+            NoLinksText.Text = isFiltered ? "No link matches the current search/filters." : "";
             NoLinksText.Visibility = Visibility.Visible;
         }
         else
         {
             NoLinksText.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void
+    LinkFilterSpaceCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _linkFilterSpace = (string)LinkFilterSpaceCombo.SelectedValue;
+
+        RefreshLinksList();
+    }
+
+    private void
+    LinkFilterStatusCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _linkFilterStatus = (string)LinkFilterStatusCombo.SelectedValue;
+
+        RefreshLinksList();
+    }
+
+    private void
+    LinkFilterDatePicker_SelectedDateChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _linkFilterFrom = LinkFilterFromDatePicker.SelectedDate;
+        _linkFilterTo = LinkFilterToDatePicker.SelectedDate;
+
+        RefreshLinksList();
+    }
+
+    private void
+    LinkSortDateAscendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _linkSortDateAscending = true;
+
+        RefreshLinksList();
+    }
+
+    private void
+    LinkSortDateDescendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _linkSortDateAscending = false;
+
+        RefreshLinksList();
     }
 
     private void

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using KubaToolKit.Shared.Windows;
+using System.Globalization;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
@@ -26,6 +27,12 @@ public class AttachResultItem
     public string Space { get; set; } = "";
     public string Url { get; set; } = "";
 
+    // Raw ISO date string (Jira's "updated", Confluence's "lastModified"),
+    // parsed once into SortDate/DisplayDate for filtering/sorting.
+    public string DateRaw { get; set; } = "";
+    public DateTime? SortDate { get; set; }
+    public string DisplayDate { get; set; } = "";
+
     public bool IsAttached { get; set; }
 }
 
@@ -40,6 +47,17 @@ public partial class AttachLinkWindow
 
     private List<AttachResultItem> _rawResults = new();
     private CancellationTokenSource? _searchCancellation;
+
+    private static readonly NameValue AnyOption = new("", "(Any)");
+
+    private string _filterSpace = "";
+    private string _filterStatus = "";
+    private DateTime? _filterFrom;
+    private DateTime? _filterTo;
+
+    // null = keep the search's own order (Jira newest-first, Confluence by
+    // relevance); set once either sort arrow is clicked.
+    private bool? _sortDateAscending;
 
     public AttachLinkWindow(
         AtlassianService atlassianService,
@@ -125,7 +143,7 @@ public partial class AttachLinkWindow
 
             _rawResults =
                 jiraTask.Result
-                    .Select(r => new AttachResultItem
+                    .Select(r => BuildResultItem(new AttachResultItem
                     {
                         Type = IncidentLinkType.Jira,
                         Key = r.Key,
@@ -134,20 +152,29 @@ public partial class AttachLinkWindow
                         Subtitle = $"Jira · {r.Reporter}",
                         Priority = r.Priority,
                         Status = r.Status,
-                        Url = r.Url
-                    })
+                        Url = r.Url,
+                        DateRaw = r.UpdatedDisplay
+                    }))
                     .Concat(
-                        confluenceTask.Result.Select(r => new AttachResultItem
+                        confluenceTask.Result.Select(r => BuildResultItem(new AttachResultItem
                         {
                             Type = IncidentLinkType.Confluence,
                             Title = r.Title,
                             Subtitle = $"Confluence · {r.Space}",
                             PageId = r.Id,
                             Space = r.Space,
-                            Url = r.Url
-                        }))
+                            Url = r.Url,
+                            DateRaw = r.LastModifiedDisplay
+                        })))
                     .ToList();
 
+            _filterSpace = "";
+            _filterStatus = "";
+            _filterFrom = null;
+            _filterTo = null;
+            _sortDateAscending = null;
+
+            PopulateFilterCombos();
             RefreshResultsDisplay();
         }
         catch (OperationCanceledException)
@@ -166,6 +193,54 @@ public partial class AttachLinkWindow
         }
     }
 
+    // Parses DateRaw once right after a result is built, so filtering and
+    // sorting never have to re-parse it on every keystroke/toggle.
+    private static AttachResultItem
+    BuildResultItem(
+        AttachResultItem item)
+    {
+        if (DateTime.TryParse(item.DateRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            item.SortDate = parsed;
+            item.DisplayDate = parsed.ToString("yyyy-MM-dd");
+        }
+
+        return item;
+    }
+
+    private void
+    PopulateFilterCombos()
+    {
+        var spaces =
+            _rawResults
+                .Where(r => r.IsConfluence && !string.IsNullOrWhiteSpace(r.Space))
+                .Select(r => r.Space)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
+
+        var statuses =
+            _rawResults
+                .Where(r => r.IsJira && !string.IsNullOrWhiteSpace(r.Status))
+                .Select(r => r.Status)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
+
+        FilterSpaceCombo.ItemsSource = spaces;
+        FilterSpaceCombo.SelectedIndex = 0;
+
+        FilterStatusCombo.ItemsSource = statuses;
+        FilterStatusCombo.SelectedIndex = 0;
+
+        FilterFromDatePicker.SelectedDate = null;
+        FilterToDatePicker.SelectedDate = null;
+    }
+
     private void
     RefreshResultsDisplay()
     {
@@ -177,11 +252,98 @@ public partial class AttachLinkWindow
                     : _incident.Links.Any(l => l.Type == IncidentLinkType.Confluence && l.PageId == item.PageId);
         }
 
-        ResultsItemsControl.ItemsSource = null;
-        ResultsItemsControl.ItemsSource = _rawResults;
+        IEnumerable<AttachResultItem> filtered = _rawResults;
 
-        EmptyStateText.Visibility = _rawResults.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyStateText.Text = "No results for this search.";
+        if (!string.IsNullOrEmpty(_filterSpace))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Space, _filterSpace, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(_filterStatus))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Status, _filterStatus, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_filterFrom.HasValue)
+        {
+            filtered = filtered.Where(r => r.SortDate.HasValue && r.SortDate.Value.Date >= _filterFrom.Value.Date);
+        }
+
+        if (_filterTo.HasValue)
+        {
+            filtered = filtered.Where(r => r.SortDate.HasValue && r.SortDate.Value.Date <= _filterTo.Value.Date);
+        }
+
+        if (_sortDateAscending.HasValue)
+        {
+            filtered =
+                _sortDateAscending.Value
+                    ? filtered.OrderBy(r => r.SortDate ?? DateTime.MinValue)
+                    : filtered.OrderByDescending(r => r.SortDate ?? DateTime.MinValue);
+        }
+
+        var displayed = filtered.ToList();
+
+        ResultsItemsControl.ItemsSource = null;
+        ResultsItemsControl.ItemsSource = displayed;
+
+        EmptyStateText.Visibility = displayed.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        EmptyStateText.Text =
+            _rawResults.Count == 0
+                ? "No results for this search."
+                : "No results match the current filters.";
+    }
+
+    private void
+    FilterSpaceCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _filterSpace = (string)FilterSpaceCombo.SelectedValue;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
+    FilterStatusCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _filterStatus = (string)FilterStatusCombo.SelectedValue;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
+    FilterDatePicker_SelectedDateChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _filterFrom = FilterFromDatePicker.SelectedDate;
+        _filterTo = FilterToDatePicker.SelectedDate;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
+    SortDateAscendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _sortDateAscending = true;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
+    SortDateDescendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _sortDateAscending = false;
+
+        RefreshResultsDisplay();
     }
 
     private void
@@ -205,7 +367,8 @@ public partial class AttachLinkWindow
                 PageId = item.PageId,
                 Space = item.Space,
                 Title = item.Title,
-                Url = item.Url
+                Url = item.Url,
+                Date = item.DateRaw
             });
 
         try

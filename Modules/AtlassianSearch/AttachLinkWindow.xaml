@@ -24,6 +24,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -64,8 +65,61 @@
                 Click="SearchButton_Click"/>
         </Grid>
 
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+            <ComboBox
+                x:Name="FilterSpaceCombo"
+                Width="130"
+                Margin="0,0,8,0"
+                DisplayMemberPath="Display"
+                SelectedValuePath="Value"
+                ToolTip="Filter Confluence results by space"
+                SelectionChanged="FilterSpaceCombo_SelectionChanged"/>
+
+            <ComboBox
+                x:Name="FilterStatusCombo"
+                Width="130"
+                Margin="0,0,8,0"
+                DisplayMemberPath="Display"
+                SelectedValuePath="Value"
+                ToolTip="Filter Jira results by status"
+                SelectionChanged="FilterStatusCombo_SelectionChanged"/>
+
+            <DatePicker
+                x:Name="FilterFromDatePicker"
+                Width="112"
+                Margin="0,0,4,0"
+                ToolTip="Updated/modified on or after this date"
+                SelectedDateChanged="FilterDatePicker_SelectedDateChanged"/>
+
+            <DatePicker
+                x:Name="FilterToDatePicker"
+                Width="112"
+                Margin="0,0,14,0"
+                ToolTip="Updated/modified on or before this date"
+                SelectedDateChanged="FilterDatePicker_SelectedDateChanged"/>
+
+            <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,0" Foreground="{StaticResource TextMutedBrush}"/>
+
+            <Button
+                Content="▲"
+                Width="26"
+                Padding="0"
+                FontSize="10"
+                Margin="0,0,4,0"
+                Click="SortDateAscendingButton_Click"
+                ToolTip="Sort by date, oldest first"/>
+
+            <Button
+                Content="▼"
+                Width="26"
+                Padding="0"
+                FontSize="10"
+                Click="SortDateDescendingButton_Click"
+                ToolTip="Sort by date, newest first"/>
+        </StackPanel>
+
         <Border
-            Grid.Row="2"
+            Grid.Row="3"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource RadiusMedium}"
@@ -150,10 +204,13 @@
                                                     TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                             <TextBlock
-                                                Text="{Binding Subtitle}"
                                                 FontSize="11"
                                                 Foreground="{StaticResource TextMutedBrush}"
-                                                Margin="0,2,0,0"/>
+                                                Margin="0,2,0,0">
+                                                <Run Text="{Binding Subtitle}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{Binding DisplayDate}"/>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -220,7 +277,7 @@
         </Border>
 
         <StackPanel
-            Grid.Row="3"
+            Grid.Row="4"
             Orientation="Horizontal"
             HorizontalAlignment="Right"
             Margin="0,12,0,0">
