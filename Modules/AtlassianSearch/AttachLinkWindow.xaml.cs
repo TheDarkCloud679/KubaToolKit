@@ -343,6 +343,15 @@ public partial class AttachLinkWindow
         object sender,
         RoutedEventArgs e)
     {
+        // Both checkboxes default to IsChecked="True" in XAML, which fires
+        // Checked during InitializeComponent itself -- for the first one
+        // parsed, that's before the second one's x:Name field is even
+        // assigned yet.
+        if (ShowJiraCheckBox == null || ShowConfluenceCheckBox == null)
+        {
+            return;
+        }
+
         _showJira = ShowJiraCheckBox.IsChecked == true;
         _showConfluence = ShowConfluenceCheckBox.IsChecked == true;
 

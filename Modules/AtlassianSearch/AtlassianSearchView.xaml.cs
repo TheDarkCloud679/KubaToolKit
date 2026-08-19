@@ -674,6 +674,15 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
+        // Both checkboxes default to IsChecked="True" in XAML, which fires
+        // Checked during InitializeComponent itself -- for the first one
+        // parsed, that's before the second one's x:Name field is even
+        // assigned yet.
+        if (LinkShowJiraCheckBox == null || LinkShowConfluenceCheckBox == null)
+        {
+            return;
+        }
+
         _linkShowJira = LinkShowJiraCheckBox.IsChecked == true;
         _linkShowConfluence = LinkShowConfluenceCheckBox.IsChecked == true;
 
