@@ -80,7 +80,12 @@ public partial class ConfluencePageViewerWindow
         TitleText.Text = title;
         OpenInBrowserButton.IsEnabled = !string.IsNullOrWhiteSpace(fallbackUrl);
 
-        Loaded += async (_, __) => await LoadAsync();
+        Loaded += async (_, __) =>
+        {
+            WindowActivation.ForceToForeground(this);
+
+            await LoadAsync();
+        };
     }
 
     private async Task
@@ -117,7 +122,7 @@ public partial class ConfluencePageViewerWindow
             // created lazily on this first navigation -- that steals
             // window activation, dropping this window behind whatever the
             // user clicked into while the page was loading.
-            Activate();
+            WindowActivation.ForceToForeground(this);
         }
         catch (Exception ex)
         {

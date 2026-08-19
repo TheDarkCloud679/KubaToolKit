@@ -1473,7 +1473,7 @@ public partial class AtlassianSearchView
         var window = new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url);
 
         window.Show();
-        window.Activate();
+        WindowActivation.ForceToForeground(window);
     }
 
     private void
@@ -1507,6 +1507,6 @@ public partial class AtlassianSearchView
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
         window.Show();
-        window.Activate();
+        WindowActivation.ForceToForeground(window);
     }
 }

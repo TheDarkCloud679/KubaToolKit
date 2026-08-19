@@ -77,6 +77,8 @@ public partial class JiraIssueViewerWindow
 
         Loaded += async (_, __) =>
         {
+            WindowActivation.ForceToForeground(this);
+
             // Actions from this window (status/assignee changes, comments)
             // happen as whichever account owns the configured API token --
             // shown once up front so that's never ambiguous mid-edit.
@@ -115,7 +117,7 @@ public partial class JiraIssueViewerWindow
             // created lazily on this first navigation -- that steals
             // window activation, dropping this window behind whatever the
             // user clicked into while the issue was loading.
-            Activate();
+            WindowActivation.ForceToForeground(this);
 
             var transitionsTask = _atlassianService.GetJiraTransitions(_settings, detail.Key);
             var assignableUsersTask = _atlassianService.GetJiraAssignableUsers(_settings, detail.Key);
