@@ -51,10 +51,13 @@ public partial class AtlassianSearchView
     private List<IncidentEntry> _incidents = new();
     private IncidentEntry? _selectedIncident;
 
+    private string _linkFilterProject = "";
     private string _linkFilterSpace = "";
     private string _linkFilterStatus = "";
     private DateTime? _linkFilterFrom;
     private DateTime? _linkFilterTo;
+    private bool _linkShowJira = true;
+    private bool _linkShowConfluence = true;
 
     // null = the links' own storage order; set once either sort arrow is
     // clicked.
@@ -385,6 +388,7 @@ public partial class AtlassianSearchView
 
         LinksSearchBox.Text = "";
 
+        _linkFilterProject = "";
         _linkFilterSpace = "";
         _linkFilterStatus = "";
         _linkFilterFrom = null;
@@ -402,6 +406,16 @@ public partial class AtlassianSearchView
         {
             return;
         }
+
+        var projects =
+            _selectedIncident.Links
+                .Where(l => l.Type == IncidentLinkType.Jira && !string.IsNullOrWhiteSpace(l.Project))
+                .Select(l => l.Project)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
 
         var spaces =
             _selectedIncident.Links
@@ -422,6 +436,9 @@ public partial class AtlassianSearchView
                 .Select(s => new NameValue(s, s))
                 .Prepend(AnyOption)
                 .ToList();
+
+        LinkFilterProjectCombo.ItemsSource = projects;
+        LinkFilterProjectCombo.SelectedIndex = 0;
 
         LinkFilterSpaceCombo.ItemsSource = spaces;
         LinkFilterSpaceCombo.SelectedIndex = 0;
@@ -540,6 +557,16 @@ public partial class AtlassianSearchView
                 || l.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
                 || l.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
 
+        links =
+            links.Where(l =>
+                (l.Type == IncidentLinkType.Jira && _linkShowJira)
+                || (l.Type == IncidentLinkType.Confluence && _linkShowConfluence));
+
+        if (!string.IsNullOrEmpty(_linkFilterProject))
+        {
+            links = links.Where(l => string.Equals(l.Project, _linkFilterProject, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (!string.IsNullOrEmpty(_linkFilterSpace))
         {
             links = links.Where(l => string.Equals(l.Space, _linkFilterSpace, StringComparison.OrdinalIgnoreCase));
@@ -623,11 +650,32 @@ public partial class AtlassianSearchView
     }
 
     private void
+    LinkFilterProjectCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _linkFilterProject = (string)LinkFilterProjectCombo.SelectedValue;
+
+        RefreshLinksList();
+    }
+
+    private void
     LinkFilterSpaceCombo_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
         _linkFilterSpace = (string)LinkFilterSpaceCombo.SelectedValue;
+
+        RefreshLinksList();
+    }
+
+    private void
+    LinkTypeFilterCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _linkShowJira = LinkShowJiraCheckBox.IsChecked == true;
+        _linkShowConfluence = LinkShowConfluenceCheckBox.IsChecked == true;
 
         RefreshLinksList();
     }

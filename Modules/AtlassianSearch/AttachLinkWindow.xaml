@@ -65,11 +65,38 @@
                 Click="SearchButton_Click"/>
         </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <CheckBox
+                x:Name="ShowJiraCheckBox"
+                Content="Jira"
+                IsChecked="True"
+                Margin="0,0,12,4"
+                VerticalAlignment="Center"
+                Checked="TypeFilterCheckBox_Changed"
+                Unchecked="TypeFilterCheckBox_Changed"/>
+
+            <CheckBox
+                x:Name="ShowConfluenceCheckBox"
+                Content="Confluence"
+                IsChecked="True"
+                Margin="0,0,14,4"
+                VerticalAlignment="Center"
+                Checked="TypeFilterCheckBox_Changed"
+                Unchecked="TypeFilterCheckBox_Changed"/>
+
+            <ComboBox
+                x:Name="FilterProjectCombo"
+                Width="120"
+                Margin="0,0,8,4"
+                DisplayMemberPath="Display"
+                SelectedValuePath="Value"
+                ToolTip="Filter Jira results by project"
+                SelectionChanged="FilterProjectCombo_SelectionChanged"/>
+
             <ComboBox
                 x:Name="FilterSpaceCombo"
-                Width="130"
-                Margin="0,0,8,0"
+                Width="120"
+                Margin="0,0,8,4"
                 DisplayMemberPath="Display"
                 SelectedValuePath="Value"
                 ToolTip="Filter Confluence results by space"
@@ -77,8 +104,8 @@
 
             <ComboBox
                 x:Name="FilterStatusCombo"
-                Width="130"
-                Margin="0,0,8,0"
+                Width="120"
+                Margin="0,0,14,4"
                 DisplayMemberPath="Display"
                 SelectedValuePath="Value"
                 ToolTip="Filter Jira results by status"
@@ -87,25 +114,25 @@
             <DatePicker
                 x:Name="FilterFromDatePicker"
                 Width="112"
-                Margin="0,0,4,0"
+                Margin="0,0,4,4"
                 ToolTip="Updated/modified on or after this date"
                 SelectedDateChanged="FilterDatePicker_SelectedDateChanged"/>
 
             <DatePicker
                 x:Name="FilterToDatePicker"
                 Width="112"
-                Margin="0,0,14,0"
+                Margin="0,0,14,4"
                 ToolTip="Updated/modified on or before this date"
                 SelectedDateChanged="FilterDatePicker_SelectedDateChanged"/>
 
-            <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,0" Foreground="{StaticResource TextMutedBrush}"/>
+            <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,4" Foreground="{StaticResource TextMutedBrush}"/>
 
             <Button
                 Content="▲"
                 Width="26"
                 Padding="0"
                 FontSize="10"
-                Margin="0,0,4,0"
+                Margin="0,0,4,4"
                 Click="SortDateAscendingButton_Click"
                 ToolTip="Sort by date, oldest first"/>
 
@@ -114,9 +141,10 @@
                 Width="26"
                 Padding="0"
                 FontSize="10"
+                Margin="0,0,0,4"
                 Click="SortDateDescendingButton_Click"
                 ToolTip="Sort by date, newest first"/>
-        </StackPanel>
+        </WrapPanel>
 
         <Border
             Grid.Row="3"

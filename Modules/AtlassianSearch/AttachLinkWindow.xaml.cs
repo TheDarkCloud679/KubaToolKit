@@ -50,10 +50,13 @@ public partial class AttachLinkWindow
 
     private static readonly NameValue AnyOption = new("", "(Any)");
 
+    private string _filterProject = "";
     private string _filterSpace = "";
     private string _filterStatus = "";
     private DateTime? _filterFrom;
     private DateTime? _filterTo;
+    private bool _showJira = true;
+    private bool _showConfluence = true;
 
     // null = keep the search's own order (Jira newest-first, Confluence by
     // relevance); set once either sort arrow is clicked.
@@ -168,6 +171,7 @@ public partial class AttachLinkWindow
                         })))
                     .ToList();
 
+            _filterProject = "";
             _filterSpace = "";
             _filterStatus = "";
             _filterFrom = null;
@@ -211,6 +215,16 @@ public partial class AttachLinkWindow
     private void
     PopulateFilterCombos()
     {
+        var projects =
+            _rawResults
+                .Where(r => r.IsJira && !string.IsNullOrWhiteSpace(r.Project))
+                .Select(r => r.Project)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .Select(s => new NameValue(s, s))
+                .Prepend(AnyOption)
+                .ToList();
+
         var spaces =
             _rawResults
                 .Where(r => r.IsConfluence && !string.IsNullOrWhiteSpace(r.Space))
@@ -230,6 +244,9 @@ public partial class AttachLinkWindow
                 .Select(s => new NameValue(s, s))
                 .Prepend(AnyOption)
                 .ToList();
+
+        FilterProjectCombo.ItemsSource = projects;
+        FilterProjectCombo.SelectedIndex = 0;
 
         FilterSpaceCombo.ItemsSource = spaces;
         FilterSpaceCombo.SelectedIndex = 0;
@@ -252,7 +269,13 @@ public partial class AttachLinkWindow
                     : _incident.Links.Any(l => l.Type == IncidentLinkType.Confluence && l.PageId == item.PageId);
         }
 
-        IEnumerable<AttachResultItem> filtered = _rawResults;
+        IEnumerable<AttachResultItem> filtered =
+            _rawResults.Where(r => (r.IsJira && _showJira) || (r.IsConfluence && _showConfluence));
+
+        if (!string.IsNullOrEmpty(_filterProject))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Project, _filterProject, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (!string.IsNullOrEmpty(_filterSpace))
         {
@@ -296,11 +319,32 @@ public partial class AttachLinkWindow
     }
 
     private void
+    FilterProjectCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _filterProject = (string)FilterProjectCombo.SelectedValue;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
     FilterSpaceCombo_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
         _filterSpace = (string)FilterSpaceCombo.SelectedValue;
+
+        RefreshResultsDisplay();
+    }
+
+    private void
+    TypeFilterCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _showJira = ShowJiraCheckBox.IsChecked == true;
+        _showConfluence = ShowConfluenceCheckBox.IsChecked == true;
 
         RefreshResultsDisplay();
     }

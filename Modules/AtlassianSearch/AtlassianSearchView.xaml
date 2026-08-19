@@ -369,11 +369,38 @@
                                     Click="AttachLink_Click"/>
                             </Grid>
 
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                            <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox
+                                    x:Name="LinkShowJiraCheckBox"
+                                    Content="Jira"
+                                    IsChecked="True"
+                                    Margin="0,0,12,4"
+                                    VerticalAlignment="Center"
+                                    Checked="LinkTypeFilterCheckBox_Changed"
+                                    Unchecked="LinkTypeFilterCheckBox_Changed"/>
+
+                                <CheckBox
+                                    x:Name="LinkShowConfluenceCheckBox"
+                                    Content="Confluence"
+                                    IsChecked="True"
+                                    Margin="0,0,14,4"
+                                    VerticalAlignment="Center"
+                                    Checked="LinkTypeFilterCheckBox_Changed"
+                                    Unchecked="LinkTypeFilterCheckBox_Changed"/>
+
+                                <ComboBox
+                                    x:Name="LinkFilterProjectCombo"
+                                    Width="110"
+                                    Margin="0,0,8,4"
+                                    DisplayMemberPath="Display"
+                                    SelectedValuePath="Value"
+                                    ToolTip="Filter Jira tickets by project"
+                                    SelectionChanged="LinkFilterProjectCombo_SelectionChanged"/>
+
                                 <ComboBox
                                     x:Name="LinkFilterSpaceCombo"
-                                    Width="120"
-                                    Margin="0,0,8,0"
+                                    Width="110"
+                                    Margin="0,0,8,4"
                                     DisplayMemberPath="Display"
                                     SelectedValuePath="Value"
                                     ToolTip="Filter Confluence pages by space"
@@ -381,8 +408,8 @@
 
                                 <ComboBox
                                     x:Name="LinkFilterStatusCombo"
-                                    Width="120"
-                                    Margin="0,0,8,0"
+                                    Width="110"
+                                    Margin="0,0,14,4"
                                     DisplayMemberPath="Display"
                                     SelectedValuePath="Value"
                                     ToolTip="Filter Jira tickets by status"
@@ -391,25 +418,25 @@
                                 <DatePicker
                                     x:Name="LinkFilterFromDatePicker"
                                     Width="106"
-                                    Margin="0,0,4,0"
+                                    Margin="0,0,4,4"
                                     ToolTip="Updated/modified on or after this date"
                                     SelectedDateChanged="LinkFilterDatePicker_SelectedDateChanged"/>
 
                                 <DatePicker
                                     x:Name="LinkFilterToDatePicker"
                                     Width="106"
-                                    Margin="0,0,14,0"
+                                    Margin="0,0,14,4"
                                     ToolTip="Updated/modified on or before this date"
                                     SelectedDateChanged="LinkFilterDatePicker_SelectedDateChanged"/>
 
-                                <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,0" Foreground="{StaticResource TextMutedBrush}"/>
+                                <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,4" Foreground="{StaticResource TextMutedBrush}"/>
 
                                 <Button
                                     Content="▲"
                                     Width="26"
                                     Padding="0"
                                     FontSize="10"
-                                    Margin="0,0,4,0"
+                                    Margin="0,0,4,4"
                                     Click="LinkSortDateAscendingButton_Click"
                                     ToolTip="Sort by date, oldest first"/>
 
@@ -418,9 +445,10 @@
                                     Width="26"
                                     Padding="0"
                                     FontSize="10"
+                                    Margin="0,0,0,4"
                                     Click="LinkSortDateDescendingButton_Click"
                                     ToolTip="Sort by date, newest first"/>
-                            </StackPanel>
+                            </WrapPanel>
 
                             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
