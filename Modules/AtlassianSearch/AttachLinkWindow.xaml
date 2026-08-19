@@ -52,7 +52,7 @@
                 x:Name="QueryTextBox"
                 Grid.Column="0"
                 VerticalContentAlignment="Center"
-                ToolTip="Search Jira and Confluence by keyword -- Enter to search"
+                ToolTip="Search Jira and Confluence by keyword -- Enter to search (optional if a filter below is set)"
                 KeyDown="QueryTextBox_KeyDown"/>
 
             <Button
@@ -300,7 +300,7 @@
                     FontSize="12.5"
                     FontStyle="Italic"
                     Foreground="{StaticResource TextMutedBrush}"
-                    Text="Search Jira and Confluence by keyword above."/>
+                    Text="Search by keyword, or set a filter below and press Enter/Search."/>
             </Grid>
         </Border>
 

@@ -792,6 +792,16 @@ public partial class AtlassianSearchView
             return;
         }
 
+        if (AppMessageBox.Show(
+                $"Unlink \"{row.Title}\" from this incident?",
+                "Unlink item",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning)
+            != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
         _selectedIncident.Links.Remove(row.Link);
 
         SaveSelectedIncident();
