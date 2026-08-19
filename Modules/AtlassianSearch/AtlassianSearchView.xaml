@@ -236,10 +236,14 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border
-                                        Padding="10,8"
-                                        Margin="0,0,0,3"
-                                        CornerRadius="{StaticResource RadiusSmall}"
+                                        Padding="12,10"
+                                        Margin="0,0,0,8"
+                                        BorderThickness="1"
+                                        BorderBrush="{Binding RowBorderBrush}"
+                                        CornerRadius="{StaticResource RadiusMedium}"
                                         Background="{Binding RowBackground}"
+                                        Effect="{StaticResource CardShadowEffect}"
+                                        Cursor="Hand"
                                         MouseLeftButtonDown="IncidentRow_MouseLeftButtonDown"
                                         Tag="{Binding}">
                                         <Grid>

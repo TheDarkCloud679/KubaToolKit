@@ -210,6 +210,7 @@ public partial class AtlassianSearchView
         public string Name { get; set; } = "";
         public string CountLabel { get; set; } = "";
         public Brush RowBackground { get; set; } = Brushes.Transparent;
+        public Brush RowBorderBrush { get; set; } = Brushes.Transparent;
         public Brush CountForeground { get; set; } = Brushes.Gray;
     }
 
@@ -253,7 +254,8 @@ public partial class AtlassianSearchView
                         Entry = i,
                         Name = i.Name,
                         CountLabel = i.Links.Count == 1 ? "1 link" : $"{i.Links.Count} links",
-                        RowBackground = isSelected ? (Brush)FindResource("AccentSoftBrush") : Brushes.Transparent,
+                        RowBackground = isSelected ? (Brush)FindResource("AccentSoftBrush") : (Brush)FindResource("SurfaceAltBrush"),
+                        RowBorderBrush = isSelected ? (Brush)FindResource("AccentBrush") : (Brush)FindResource("BorderBrush"),
                         CountForeground = isSelected ? (Brush)FindResource("AccentPressedBrush") : (Brush)FindResource("TextMutedBrush")
                     };
                 })

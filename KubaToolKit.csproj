@@ -9,7 +9,7 @@
     <RootNamespace>KubaToolKit</RootNamespace>
     <AssemblyName>KubaToolKit</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>2.6.229</Version>
+    <Version>2.6.230</Version>
   </PropertyGroup>
 
   <ItemGroup>
