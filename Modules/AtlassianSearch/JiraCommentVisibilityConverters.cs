@@ -85,3 +85,26 @@ public sealed class CommentVisibilityTextConverter
         CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+// A comment's author name reduced to its first letter, for the small
+// avatar circle next to each comment -- upper-cased since a real avatar
+// image never comes back from Jira's comment API here, only the name.
+public sealed class InitialLetterConverter
+    : IValueConverter
+{
+    public object
+    Convert(
+        object? value,
+        Type targetType,
+        object? parameter,
+        CultureInfo culture) =>
+        value is string { Length: > 0 } name ? name[..1].ToUpper(culture) : "?";
+
+    public object
+    ConvertBack(
+        object? value,
+        Type targetType,
+        object? parameter,
+        CultureInfo culture) =>
+        throw new NotSupportedException();
+}
