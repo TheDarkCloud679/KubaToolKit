@@ -676,9 +676,10 @@ public partial class AtlassianSearchView
     {
         // Both checkboxes default to IsChecked="True" in XAML, which fires
         // Checked during InitializeComponent itself -- for the first one
-        // parsed, that's before the second one's x:Name field is even
-        // assigned yet.
-        if (LinkShowJiraCheckBox == null || LinkShowConfluenceCheckBox == null)
+        // parsed, that's before the second one's x:Name field, or anything
+        // declared later in the same XAML (LinksItemsControl included, via
+        // RefreshLinksList below), is assigned yet.
+        if (LinkShowJiraCheckBox == null || LinkShowConfluenceCheckBox == null || LinksItemsControl == null)
         {
             return;
         }

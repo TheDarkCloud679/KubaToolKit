@@ -345,9 +345,10 @@ public partial class AttachLinkWindow
     {
         // Both checkboxes default to IsChecked="True" in XAML, which fires
         // Checked during InitializeComponent itself -- for the first one
-        // parsed, that's before the second one's x:Name field is even
-        // assigned yet.
-        if (ShowJiraCheckBox == null || ShowConfluenceCheckBox == null)
+        // parsed, that's before the second one's x:Name field, or anything
+        // declared later in the same XAML (ResultsItemsControl included,
+        // via RefreshResultsDisplay below), is assigned yet.
+        if (ShowJiraCheckBox == null || ShowConfluenceCheckBox == null || ResultsItemsControl == null)
         {
             return;
         }
