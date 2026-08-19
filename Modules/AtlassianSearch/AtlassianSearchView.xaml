@@ -519,6 +519,7 @@
                             <TextBox
                                 x:Name="IncidentSolutionTextBox"
                                 Grid.Row="1"
+                                Style="{StaticResource MultilineTextBoxStyle}"
                                 AcceptsReturn="True"
                                 AcceptsTab="True"
                                 TextWrapping="Wrap"

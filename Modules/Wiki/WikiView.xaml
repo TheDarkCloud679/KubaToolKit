@@ -13,38 +13,6 @@
             <MenuItem x:Name="DeleteMenuItem" Header="Delete" Click="DeleteSection_Click"/>
         </ContextMenu>
 
-        <!-- The app-wide TextBox style fixes Height=30 and vertically
-             centers its content, both meant for single-line inputs; this
-             notes box needs to fill its row and start text at the top. -->
-        <Style x:Key="MultilineTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-            <Setter Property="Height" Value="Auto"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border
-                            x:Name="Bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            SnapsToDevicePixels="True">
-                            <ScrollViewer
-                                x:Name="PART_ContentHost"
-                                Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource TextMutedBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
