@@ -123,12 +123,6 @@
                 Checked="AtlassianTab_Changed"
                 Style="{StaticResource RequestTabRadioButtonStyle}"/>
             <RadioButton
-                x:Name="StatsTabRadio"
-                Content="Statistics"
-                GroupName="AtlassianTab"
-                Checked="AtlassianTab_Changed"
-                Style="{StaticResource RequestTabRadioButtonStyle}"/>
-            <RadioButton
                 x:Name="WikiTabRadio"
                 Content="Wiki"
                 GroupName="AtlassianTab"
@@ -137,6 +131,12 @@
             <RadioButton
                 x:Name="ProjectInfoTabRadio"
                 Content="Project Info"
+                GroupName="AtlassianTab"
+                Checked="AtlassianTab_Changed"
+                Style="{StaticResource RequestTabRadioButtonStyle}"/>
+            <RadioButton
+                x:Name="StatsTabRadio"
+                Content="Statistics"
                 GroupName="AtlassianTab"
                 Checked="AtlassianTab_Changed"
                 Style="{StaticResource RequestTabRadioButtonStyle}"/>
@@ -198,14 +198,43 @@
                                 VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <Button
-                            Grid.Column="1"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Padding="10,0"
-                            Height="26"
-                            FontSize="11.5"
-                            Content="+ New"
-                            Click="NewIncident_Click"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button
+                                Style="{StaticResource IconChevronButtonStyle}"
+                                Width="24" Height="24"
+                                Margin="0,0,4,0"
+                                ToolTip="Export the whole library to a JSON file, to share or back up"
+                                Click="ExportLibraryButton_Click">
+                                <Path
+                                    Data="M12,3 L12,14 M7.5,9.5 L12,14 L16.5,9.5 M4,18 L20,18"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                    StrokeThickness="1.6" StrokeLineJoin="Round"
+                                    StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="13" Height="13" Stretch="Uniform"/>
+                            </Button>
+
+                            <Button
+                                Style="{StaticResource IconChevronButtonStyle}"
+                                Width="24" Height="24"
+                                Margin="0,0,8,0"
+                                ToolTip="Import a library JSON file someone shared -- added alongside what's already here"
+                                Click="ImportLibraryButton_Click">
+                                <Path
+                                    Data="M12,14 L12,3 M7.5,7.5 L12,3 L16.5,7.5 M4,18 L20,18"
+                                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                    StrokeThickness="1.6" StrokeLineJoin="Round"
+                                    StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    Width="13" Height="13" Stretch="Uniform"/>
+                            </Button>
+
+                            <Button
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="10,0"
+                                Height="26"
+                                FontSize="11.5"
+                                Content="+ New"
+                                Click="NewIncident_Click"/>
+                        </StackPanel>
                     </Grid>
 
                     <Border

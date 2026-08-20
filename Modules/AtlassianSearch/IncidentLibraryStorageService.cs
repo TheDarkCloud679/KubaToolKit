@@ -101,6 +101,47 @@ public class IncidentLibraryStorageService
         }
     }
 
+    // A single JSON array of every incident -- unlike the one-file-per-
+    // incident storage on disk, this is meant to be handed to a
+    // colleague (or kept as a backup) as one self-contained file.
+    public void
+    ExportLibrary(
+        string filePath)
+    {
+        var incidents = LoadIncidents();
+
+        File.WriteAllText(
+            filePath,
+            JsonSerializer.Serialize(incidents, SerializerOptions));
+    }
+
+    // Imported incidents are always added as new entries, never
+    // overwriting anything already here -- a name that collides with an
+    // existing incident gets the same " (2)", " (3)"... suffix
+    // CreateIncident already uses, rather than silently merging or
+    // replacing someone's existing write-up.
+    public int
+    ImportLibrary(
+        string filePath)
+    {
+        EnsureFolderExists();
+
+        var json = File.ReadAllText(filePath);
+
+        var imported = JsonSerializer.Deserialize<List<IncidentEntry>>(json, SerializerOptions) ?? new();
+
+        foreach (var entry in imported)
+        {
+            var fileName = MakeUniqueFileName(SanitizeFileName(entry.Name));
+
+            entry.FilePath = Path.Combine(RootFolder, fileName);
+
+            SaveIncident(entry);
+        }
+
+        return imported.Count;
+    }
+
     private static string
     SanitizeFileName(
         string name)

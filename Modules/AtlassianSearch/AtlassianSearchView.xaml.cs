@@ -305,6 +305,67 @@ public partial class AtlassianSearchView
     }
 
     private void
+    ExportLibraryButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog =
+            new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json",
+                FileName = $"Atlassian incidents {DateTime.Now:yyyy-MM-dd}.json"
+            };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _incidentStorage.ExportLibrary(dialog.FileName);
+
+            AppMessageBox.Show(
+                $"Exported {_incidents.Count} incident(s) to \"{dialog.FileName}\".",
+                "Export library");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: failed to export the incident library.", ex);
+
+            AppMessageBox.Show(ex.Message, "Export error");
+        }
+    }
+
+    private void
+    ImportLibraryButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "JSON files (*.json)|*.json" };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var importedCount = _incidentStorage.ImportLibrary(dialog.FileName);
+
+            LoadIncidents();
+
+            AppMessageBox.Show($"Imported {importedCount} incident(s).", "Import library");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: failed to import an incident library file.", ex);
+
+            AppMessageBox.Show(ex.Message, "Import error");
+        }
+    }
+
+    private void
     DeleteIncident_Click(
         object sender,
         RoutedEventArgs e)
