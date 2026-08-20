@@ -113,6 +113,12 @@
                 Checked="AtlassianTab_Changed"
                 Style="{StaticResource RequestTabRadioButtonStyle}"/>
             <RadioButton
+                x:Name="SearchTabRadio"
+                Content="Search"
+                GroupName="AtlassianTab"
+                Checked="AtlassianTab_Changed"
+                Style="{StaticResource RequestTabRadioButtonStyle}"/>
+            <RadioButton
                 x:Name="WikiTabRadio"
                 Content="Wiki"
                 GroupName="AtlassianTab"
@@ -679,6 +685,279 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- ===================================================== -->
+        <!-- SEARCH TAB -->
+        <!-- ===================================================== -->
+        <Border
+            x:Name="SearchTabContent"
+            Grid.Row="2"
+            Visibility="Collapsed"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Background="{StaticResource SurfaceBrush}"
+            Effect="{StaticResource CardShadowEffect}"
+            Padding="{StaticResource CardPadding}">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        x:Name="SearchQueryTextBox"
+                        Grid.Column="0"
+                        VerticalContentAlignment="Center"
+                        ToolTip="Search Jira and Confluence by keyword -- Enter to search (optional if a filter below is set)"
+                        KeyDown="SearchQueryTextBox_KeyDown"/>
+
+                    <Button
+                        x:Name="SearchTabSearchButton"
+                        Grid.Column="1"
+                        Width="90"
+                        Margin="8,0,0,0"
+                        Content="Search"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="SearchTabSearchButton_Click"/>
+                </Grid>
+
+                <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                    <CheckBox
+                        x:Name="SearchShowJiraCheckBox"
+                        Content="Jira"
+                        IsChecked="True"
+                        Margin="0,0,12,4"
+                        VerticalAlignment="Center"
+                        Checked="SearchTypeFilterCheckBox_Changed"
+                        Unchecked="SearchTypeFilterCheckBox_Changed"/>
+
+                    <CheckBox
+                        x:Name="SearchShowConfluenceCheckBox"
+                        Content="Confluence"
+                        IsChecked="True"
+                        Margin="0,0,14,4"
+                        VerticalAlignment="Center"
+                        Checked="SearchTypeFilterCheckBox_Changed"
+                        Unchecked="SearchTypeFilterCheckBox_Changed"/>
+
+                    <ComboBox
+                        x:Name="SearchFilterProjectCombo"
+                        Width="130"
+                        Margin="0,0,8,4"
+                        DisplayMemberPath="Display"
+                        SelectedValuePath="Value"
+                        ToolTip="Filter Jira results by project"
+                        SelectionChanged="SearchFilterProjectCombo_SelectionChanged"/>
+
+                    <ComboBox
+                        x:Name="SearchFilterSpaceCombo"
+                        Width="130"
+                        Margin="0,0,8,4"
+                        DisplayMemberPath="Display"
+                        SelectedValuePath="Value"
+                        ToolTip="Filter Confluence results by space"
+                        SelectionChanged="SearchFilterSpaceCombo_SelectionChanged"/>
+
+                    <ComboBox
+                        x:Name="SearchFilterStatusCombo"
+                        Width="130"
+                        Margin="0,0,14,4"
+                        DisplayMemberPath="Display"
+                        SelectedValuePath="Value"
+                        ToolTip="Filter Jira results by status"
+                        SelectionChanged="SearchFilterStatusCombo_SelectionChanged"/>
+
+                    <DatePicker
+                        x:Name="SearchFilterFromDatePicker"
+                        Width="112"
+                        Margin="0,0,4,4"
+                        ToolTip="Updated/modified on or after this date"
+                        SelectedDateChanged="SearchFilterDatePicker_SelectedDateChanged"/>
+
+                    <DatePicker
+                        x:Name="SearchFilterToDatePicker"
+                        Width="112"
+                        Margin="0,0,14,4"
+                        ToolTip="Updated/modified on or before this date"
+                        SelectedDateChanged="SearchFilterDatePicker_SelectedDateChanged"/>
+
+                    <TextBlock Text="Date" VerticalAlignment="Center" FontSize="11" Margin="0,0,6,4" Foreground="{StaticResource TextMutedBrush}"/>
+
+                    <Button
+                        Content="▲"
+                        Width="26"
+                        Padding="0"
+                        FontSize="10"
+                        Margin="0,0,4,4"
+                        Click="SearchSortDateAscendingButton_Click"
+                        ToolTip="Sort by date, oldest first"/>
+
+                    <Button
+                        Content="▼"
+                        Width="26"
+                        Padding="0"
+                        FontSize="10"
+                        Margin="0,0,0,4"
+                        Click="SearchSortDateDescendingButton_Click"
+                        ToolTip="Sort by date, newest first"/>
+                </WrapPanel>
+
+                <Border
+                    Grid.Row="2"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Background="{StaticResource SurfaceAltBrush}"
+                    Padding="4">
+
+                    <Grid>
+                        <ProgressBar
+                            x:Name="SearchProgressBar"
+                            VerticalAlignment="Top"
+                            Height="3"
+                            Visibility="Collapsed"
+                            IsIndeterminate="True"/>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="SearchResultsItemsControl" Margin="6">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,0,0,6"
+                                            Padding="10,8"
+                                            Background="{StaticResource SurfaceBrush}"
+                                            BorderBrush="{StaticResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource RadiusSmall}"
+                                            Cursor="Hand"
+                                            ToolTip="Double-click to open"
+                                            MouseLeftButtonDown="SearchResultRow_MouseLeftButtonDown"
+                                            Tag="{Binding}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border
+                                                    Grid.Column="0"
+                                                    Width="26"
+                                                    Height="26"
+                                                    Margin="0,0,10,0"
+                                                    CornerRadius="6"
+                                                    VerticalAlignment="Center"
+                                                    Background="{StaticResource AccentSoftBrush}">
+                                                    <Grid>
+                                                        <Path
+                                                            Data="M3,8.5 A1.8,1.8 0 0 0 3,11.5 L3,12.5 A1.8,1.8 0 0 0 3,15.5 L3,19 L21,19 L21,15.5 A1.8,1.8 0 0 1 21,12.5 L21,11.5 A1.8,1.8 0 0 1 21,8.5 L21,5 L3,5 Z M12,6.5 L12,17.5"
+                                                            Stroke="{StaticResource AccentPressedBrush}"
+                                                            StrokeThickness="1.4"
+                                                            StrokeDashArray="1.6,1.6"
+                                                            Width="13" Height="13" Stretch="Uniform"
+                                                            Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        <Path
+                                                            Data="M6,3 L14,3 L18,7 L18,21 L6,21 Z M14,3 L14,7 L18,7 M8.5,12 L15.5,12 M8.5,15.5 L13.5,15.5"
+                                                            Stroke="{StaticResource TextSecondaryBrush}"
+                                                            StrokeThickness="1.4"
+                                                            StrokeLineJoin="Round"
+                                                            Width="13" Height="13" Stretch="Uniform"
+                                                            Visibility="{Binding IsConfluence, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock
+                                                            Text="{Binding Key}"
+                                                            FontFamily="Cascadia Code, Consolas"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{StaticResource TextMutedBrush}"
+                                                            Margin="0,0,8,0"
+                                                            Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        <TextBlock
+                                                            Text="{Binding Title}"
+                                                            FontSize="12.5"
+                                                            FontWeight="SemiBold"
+                                                            TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <TextBlock
+                                                        FontSize="11"
+                                                        Foreground="{StaticResource TextMutedBrush}"
+                                                        Margin="0,2,0,0">
+                                                        <Run Text="{Binding Subtitle}"/>
+                                                        <Run Text=" · "/>
+                                                        <Run Text="{Binding DisplayDate}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Border
+                                                        Background="{Binding Priority, Converter={StaticResource JiraPriorityBadgeBackgroundConverter}}"
+                                                        CornerRadius="3"
+                                                        Padding="6,1"
+                                                        Margin="0,0,6,0"
+                                                        Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock
+                                                            Text="{Binding Priority}"
+                                                            FontSize="10.5"
+                                                            FontWeight="Bold"
+                                                            Foreground="{Binding Priority, Converter={StaticResource JiraPriorityBadgeForegroundConverter}}"/>
+                                                    </Border>
+                                                    <Border
+                                                        Background="{Binding Status, Converter={StaticResource JiraStatusBadgeBackgroundConverter}}"
+                                                        CornerRadius="3"
+                                                        Padding="6,1"
+                                                        Margin="0,0,8,0"
+                                                        Visibility="{Binding IsJira, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock
+                                                            Text="{Binding Status}"
+                                                            FontSize="10.5"
+                                                            FontWeight="Bold"
+                                                            Foreground="{Binding Status, Converter={StaticResource JiraStatusBadgeForegroundConverter}}"/>
+                                                    </Border>
+                                                    <Button
+                                                        Style="{StaticResource IconChevronButtonStyle}"
+                                                        Width="24" Height="24"
+                                                        ToolTip="Open"
+                                                        Click="SearchResultOpenButton_Click"
+                                                        Tag="{Binding}">
+                                                        <Path
+                                                            Data="M9,15 L20,4 M20,4 L20,10 M20,4 L14,4 M18,13 L18,19 A1,1 0 0 1 17,20 L5,20 A1,1 0 0 1 4,19 L4,7 A1,1 0 0 1 5,6 L11,6"
+                                                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                            Width="12" Height="12" Stretch="Uniform"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <TextBlock
+                            x:Name="SearchEmptyStateText"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="12.5"
+                            FontStyle="Italic"
+                            Foreground="{StaticResource TextMutedBrush}"
+                            Text="Search by keyword, or set a filter above and press Enter/Search."/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
 
         <!-- ===================================================== -->
         <!-- STATISTICS TAB -->

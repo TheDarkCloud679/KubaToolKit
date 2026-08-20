@@ -66,6 +66,22 @@ public partial class AtlassianSearchView
     private WikiView? _wikiView;
     private ProjectInfoView? _projectInfoView;
 
+    // Search tab -- free Jira/Confluence keyword search, not tied to any
+    // incident. Mirrors AttachLinkWindow's filter state, but that window is
+    // scoped to one incident's Links, whereas this is just for browsing.
+    private List<AtlassianResultItem> _searchRawResults = new();
+    private CancellationTokenSource? _searchCancellation;
+
+    private string _searchFilterProject = "";
+    private string _searchFilterStatus = "";
+    private string _searchFilterSpaceKey = "";
+    private string _searchFilterSpaceDisplay = "";
+    private DateTime? _searchFilterFrom;
+    private DateTime? _searchFilterTo;
+    private bool _searchShowJira = true;
+    private bool _searchShowConfluence = true;
+    private bool? _searchSortDateAscending;
+
     public AtlassianSearchView()
     {
         InitializeComponent();
@@ -91,6 +107,7 @@ public partial class AtlassianSearchView
         if (_settings.IsComplete)
         {
             _ = LoadFilterOptionsAsync();
+            _ = LoadSearchFilterOptionsAsync();
         }
 
         LoadIncidents();
@@ -160,7 +177,7 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
-        if (StatsTabContent == null || WikiTabContent == null || ProjectInfoTabContent == null)
+        if (StatsTabContent == null || WikiTabContent == null || ProjectInfoTabContent == null || SearchTabContent == null)
         {
             return;
         }
@@ -172,6 +189,9 @@ public partial class AtlassianSearchView
 
         LibraryTabContent.Visibility =
             LibraryTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        SearchTabContent.Visibility =
+            SearchTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
         StatsTabContent.Visibility =
             StatsTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -953,6 +973,383 @@ public partial class AtlassianSearchView
     }
 
     // ===================================================================
+    // Search tab -- free Jira/Confluence search, not tied to any incident.
+    // ===================================================================
+
+    // Populates Project/Status/Space from the site's own full lists, the
+    // same approach AttachLinkWindow uses, so they work as real query
+    // parameters before a first search has even run.
+    private async Task
+    LoadSearchFilterOptionsAsync()
+    {
+        try
+        {
+            var projectsTask = _atlassianService.GetJiraProjects(_settings);
+            var statusesTask = _atlassianService.GetJiraStatuses(_settings);
+            var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
+
+            await Task.WhenAll(projectsTask, statusesTask, spacesTask);
+
+            SearchFilterProjectCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(projectsTask.Result).ToList();
+            SearchFilterProjectCombo.SelectedIndex = 0;
+
+            SearchFilterStatusCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(statusesTask.Result).ToList();
+            SearchFilterStatusCombo.SelectedIndex = 0;
+
+            SearchFilterSpaceCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(spacesTask.Result).ToList();
+            SearchFilterSpaceCombo.SelectedIndex = 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: failed to load Search tab filter options.", ex);
+        }
+    }
+
+    private void
+    SearchQueryTextBox_KeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _ = RunFreeSearchAsync();
+        }
+    }
+
+    private async void
+    SearchTabSearchButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await RunFreeSearchAsync();
+
+    private async Task
+    RunFreeSearchAsync()
+    {
+        var query = SearchQueryTextBox.Text.Trim();
+
+        var hasAnyFilter =
+            !string.IsNullOrEmpty(_searchFilterProject)
+            || !string.IsNullOrEmpty(_searchFilterStatus)
+            || !string.IsNullOrEmpty(_searchFilterSpaceKey);
+
+        // Mirrors SearchJira/SearchConfluence's own contract: each builds
+        // a valid query from filters alone, but not from nothing at all.
+        if (string.IsNullOrWhiteSpace(query) && !hasAnyFilter)
+        {
+            return;
+        }
+
+        if (!_searchShowJira && !_searchShowConfluence)
+        {
+            return;
+        }
+
+        _searchCancellation?.Cancel();
+        _searchCancellation = new CancellationTokenSource();
+
+        var cancellationToken = _searchCancellation.Token;
+
+        SearchProgressBar.Visibility = Visibility.Visible;
+        SearchTabSearchButton.IsEnabled = false;
+        SearchEmptyStateText.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var projectFilter =
+                string.IsNullOrEmpty(_searchFilterProject) ? JiraFieldFilter.Empty : new JiraFieldFilter(_searchFilterProject, "=");
+
+            var statusFilter =
+                string.IsNullOrEmpty(_searchFilterStatus) ? JiraFieldFilter.Empty : new JiraFieldFilter(_searchFilterStatus, "=");
+
+            var spaceKeys =
+                string.IsNullOrEmpty(_searchFilterSpaceKey) ? Array.Empty<string>() : new[] { _searchFilterSpaceKey };
+
+            var jiraTask =
+                _searchShowJira
+                    ? _atlassianService.SearchJira(
+                        _settings,
+                        query,
+                        projectFilter,
+                        JiraFieldFilter.Empty,
+                        JiraFieldFilter.Empty,
+                        JiraFieldFilter.Empty,
+                        statusFilter,
+                        cancellationToken)
+                    : Task.FromResult(new List<JiraSearchResult>());
+
+            var confluenceTask =
+                _searchShowConfluence
+                    ? _atlassianService.SearchConfluence(
+                        _settings,
+                        query,
+                        spaceKeys,
+                        null,
+                        cancellationToken)
+                    : Task.FromResult(new List<ConfluenceSearchResult>());
+
+            await Task.WhenAll(jiraTask, confluenceTask);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _searchRawResults =
+                jiraTask.Result
+                    .Select(r => BuildSearchResultItem(new AtlassianResultItem
+                    {
+                        Type = IncidentLinkType.Jira,
+                        Key = r.Key,
+                        Project = r.Project,
+                        Title = r.Summary,
+                        Subtitle = $"Jira · {r.Reporter}",
+                        Priority = r.Priority,
+                        Status = r.Status,
+                        Url = r.Url,
+                        DateRaw = r.UpdatedDisplay
+                    }))
+                    .Concat(
+                        confluenceTask.Result.Select(r => BuildSearchResultItem(new AtlassianResultItem
+                        {
+                            Type = IncidentLinkType.Confluence,
+                            Title = r.Title,
+                            Subtitle = $"Confluence · {r.Space}",
+                            PageId = r.Id,
+                            Space = r.Space,
+                            Url = r.Url,
+                            DateRaw = r.LastModifiedDisplay
+                        })))
+                    .ToList();
+
+            RefreshFreeSearchResultsDisplay();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("AtlassianSearchView: free search failed.", ex);
+
+            AppMessageBox.Show(ex.Message, "Search error");
+        }
+        finally
+        {
+            SearchProgressBar.Visibility = Visibility.Collapsed;
+            SearchTabSearchButton.IsEnabled = true;
+        }
+    }
+
+    // Parses DateRaw once right after a result is built, so filtering and
+    // sorting never have to re-parse it on every keystroke/toggle.
+    private static AtlassianResultItem
+    BuildSearchResultItem(
+        AtlassianResultItem item)
+    {
+        if (DateTime.TryParse(item.DateRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            item.SortDate = parsed;
+            item.DisplayDate = parsed.ToString("yyyy-MM-dd");
+        }
+
+        return item;
+    }
+
+    private void
+    RefreshFreeSearchResultsDisplay()
+    {
+        IEnumerable<AtlassianResultItem> filtered =
+            _searchRawResults.Where(r => (r.IsJira && _searchShowJira) || (r.IsConfluence && _searchShowConfluence));
+
+        if (!string.IsNullOrEmpty(_searchFilterProject))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Project, _searchFilterProject, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(_searchFilterSpaceDisplay))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Space, _searchFilterSpaceDisplay, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(_searchFilterStatus))
+        {
+            filtered = filtered.Where(r => string.Equals(r.Status, _searchFilterStatus, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_searchFilterFrom.HasValue)
+        {
+            filtered = filtered.Where(r => r.SortDate.HasValue && r.SortDate.Value.Date >= _searchFilterFrom.Value.Date);
+        }
+
+        if (_searchFilterTo.HasValue)
+        {
+            filtered = filtered.Where(r => r.SortDate.HasValue && r.SortDate.Value.Date <= _searchFilterTo.Value.Date);
+        }
+
+        if (_searchSortDateAscending.HasValue)
+        {
+            filtered =
+                _searchSortDateAscending.Value
+                    ? filtered.OrderBy(r => r.SortDate ?? DateTime.MinValue)
+                    : filtered.OrderByDescending(r => r.SortDate ?? DateTime.MinValue);
+        }
+
+        var displayed = filtered.ToList();
+
+        SearchResultsItemsControl.ItemsSource = null;
+        SearchResultsItemsControl.ItemsSource = displayed;
+
+        SearchEmptyStateText.Visibility = displayed.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        SearchEmptyStateText.Text =
+            _searchRawResults.Count == 0
+                ? "No results for this search."
+                : "No results match the current filters.";
+    }
+
+    private void
+    SearchFilterProjectCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _searchFilterProject = (string)SearchFilterProjectCombo.SelectedValue;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchFilterSpaceCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (SearchFilterSpaceCombo.SelectedItem is NameValue selected)
+        {
+            // AnyOption's own Display ("(Any)") would otherwise read as a
+            // real space name to filter by, once selected.Value is empty.
+            _searchFilterSpaceKey = selected.Value;
+            _searchFilterSpaceDisplay = string.IsNullOrEmpty(selected.Value) ? "" : selected.Display;
+        }
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchFilterStatusCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _searchFilterStatus = (string)SearchFilterStatusCombo.SelectedValue;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchFilterDatePicker_SelectedDateChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _searchFilterFrom = SearchFilterFromDatePicker.SelectedDate;
+        _searchFilterTo = SearchFilterToDatePicker.SelectedDate;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchTypeFilterCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        // Both checkboxes default to IsChecked="True" in XAML, which fires
+        // Checked during InitializeComponent itself -- for the first one
+        // parsed, that's before the second one's x:Name field, or anything
+        // declared later in the same XAML (SearchResultsItemsControl
+        // included, via RefreshFreeSearchResultsDisplay below), is assigned
+        // yet.
+        if (SearchShowJiraCheckBox == null || SearchShowConfluenceCheckBox == null || SearchResultsItemsControl == null)
+        {
+            return;
+        }
+
+        _searchShowJira = SearchShowJiraCheckBox.IsChecked == true;
+        _searchShowConfluence = SearchShowConfluenceCheckBox.IsChecked == true;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchSortDateAscendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _searchSortDateAscending = true;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchSortDateDescendingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _searchSortDateAscending = false;
+
+        RefreshFreeSearchResultsDisplay();
+    }
+
+    private void
+    SearchResultRow_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2 || sender is not FrameworkElement { Tag: AtlassianResultItem item })
+        {
+            return;
+        }
+
+        OpenSearchResult(item);
+    }
+
+    private void
+    SearchResultOpenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: AtlassianResultItem item })
+        {
+            OpenSearchResult(item);
+        }
+    }
+
+    private void
+    OpenSearchResult(
+        AtlassianResultItem item)
+    {
+        if (item.IsJira)
+        {
+            OpenJiraResult(
+                new JiraSearchResult
+                {
+                    Key = item.Key,
+                    Project = item.Project,
+                    Summary = item.Title,
+                    Priority = item.Priority,
+                    Status = item.Status,
+                    Url = item.Url
+                });
+        }
+        else
+        {
+            OpenConfluenceResult(
+                new ConfluenceSearchResult
+                {
+                    Id = item.PageId,
+                    Title = item.Title,
+                    Space = item.Space,
+                    Url = item.Url
+                });
+        }
+    }
+
+    // ===================================================================
     // Statistics (unchanged from before the incident library)
     // ===================================================================
 
@@ -1511,6 +1908,7 @@ public partial class AtlassianSearchView
         StatusText.Visibility = Visibility.Collapsed;
 
         _ = LoadFilterOptionsAsync();
+        _ = LoadSearchFilterOptionsAsync();
     }
 
     private static void

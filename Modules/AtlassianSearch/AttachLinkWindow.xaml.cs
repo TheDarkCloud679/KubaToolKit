@@ -8,34 +8,6 @@ using System.Globalization;
 
 namespace KubaToolKit.Modules.AtlassianSearch;
 
-// A row of AttachLinkWindow's search results -- not persisted, just the
-// display/attach-state shape for one Jira issue or Confluence page found
-// by a keyword search.
-public class AttachResultItem
-{
-    public IncidentLinkType Type { get; set; } = IncidentLinkType.Jira;
-    public bool IsJira => Type == IncidentLinkType.Jira;
-    public bool IsConfluence => Type == IncidentLinkType.Confluence;
-
-    public string Key { get; set; } = "";
-    public string Project { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string Subtitle { get; set; } = "";
-    public string Priority { get; set; } = "";
-    public string Status { get; set; } = "";
-    public string PageId { get; set; } = "";
-    public string Space { get; set; } = "";
-    public string Url { get; set; } = "";
-
-    // Raw ISO date string (Jira's "updated", Confluence's "lastModified"),
-    // parsed once into SortDate/DisplayDate for filtering/sorting.
-    public string DateRaw { get; set; } = "";
-    public DateTime? SortDate { get; set; }
-    public string DisplayDate { get; set; } = "";
-
-    public bool IsAttached { get; set; }
-}
-
 public partial class AttachLinkWindow
     : Window
 {
@@ -45,7 +17,7 @@ public partial class AttachLinkWindow
     private readonly IncidentEntry _incident;
     private readonly Action _onLinksChanged;
 
-    private List<AttachResultItem> _rawResults = new();
+    private List<AtlassianResultItem> _rawResults = new();
     private CancellationTokenSource? _searchCancellation;
 
     private static readonly NameValue AnyOption = new("", "(Any)");
@@ -214,7 +186,7 @@ public partial class AttachLinkWindow
 
             _rawResults =
                 jiraTask.Result
-                    .Select(r => BuildResultItem(new AttachResultItem
+                    .Select(r => BuildResultItem(new AtlassianResultItem
                     {
                         Type = IncidentLinkType.Jira,
                         Key = r.Key,
@@ -227,7 +199,7 @@ public partial class AttachLinkWindow
                         DateRaw = r.UpdatedDisplay
                     }))
                     .Concat(
-                        confluenceTask.Result.Select(r => BuildResultItem(new AttachResultItem
+                        confluenceTask.Result.Select(r => BuildResultItem(new AtlassianResultItem
                         {
                             Type = IncidentLinkType.Confluence,
                             Title = r.Title,
@@ -259,9 +231,9 @@ public partial class AttachLinkWindow
 
     // Parses DateRaw once right after a result is built, so filtering and
     // sorting never have to re-parse it on every keystroke/toggle.
-    private static AttachResultItem
+    private static AtlassianResultItem
     BuildResultItem(
-        AttachResultItem item)
+        AtlassianResultItem item)
     {
         if (DateTime.TryParse(item.DateRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
         {
@@ -283,7 +255,7 @@ public partial class AttachLinkWindow
                     : _incident.Links.Any(l => l.Type == IncidentLinkType.Confluence && l.PageId == item.PageId);
         }
 
-        IEnumerable<AttachResultItem> filtered =
+        IEnumerable<AtlassianResultItem> filtered =
             _rawResults.Where(r => (r.IsJira && _showJira) || (r.IsConfluence && _showConfluence));
 
         if (!string.IsNullOrEmpty(_filterProject))
@@ -425,7 +397,7 @@ public partial class AttachLinkWindow
         object sender,
         RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: AttachResultItem item })
+        if (sender is not Button { DataContext: AtlassianResultItem item })
         {
             return;
         }
