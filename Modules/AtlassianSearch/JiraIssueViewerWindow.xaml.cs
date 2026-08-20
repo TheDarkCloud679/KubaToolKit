@@ -75,18 +75,8 @@ public partial class JiraIssueViewerWindow
                     : obj => obj is NameValue nv && nv.Display.Contains(text, StringComparison.OrdinalIgnoreCase);
         };
 
-        // The activation right after NavigateToString below fires too
-        // early to matter -- the legacy WebBrowser control's ActiveX site
-        // does its own internal rendering/focus handling afterward, on its
-        // own schedule, and that's what was actually stealing activation
-        // a moment later. LoadCompleted is the one signal that fires once
-        // that's actually settled.
-        DescriptionBrowser.LoadCompleted += (_, __) => WindowActivation.ForceToForeground(this);
-
         Loaded += async (_, __) =>
         {
-            WindowActivation.ForceToForeground(this);
-
             // Actions from this window (status/assignee changes, comments)
             // happen as whichever account owns the configured API token --
             // shown once up front so that's never ambiguous mid-edit.
@@ -120,12 +110,6 @@ public partial class JiraIssueViewerWindow
             DescriptionBrowser.NavigateToString(html);
             DescriptionBrowser.Visibility = Visibility.Visible;
             DescriptionStatusText.Visibility = Visibility.Collapsed;
-
-            // The legacy WebBrowser control's underlying ActiveX site is
-            // created lazily on this first navigation -- that steals
-            // window activation, dropping this window behind whatever the
-            // user clicked into while the issue was loading.
-            WindowActivation.ForceToForeground(this);
 
             var transitionsTask = _atlassianService.GetJiraTransitions(_settings, detail.Key);
             var assignableUsersTask = _atlassianService.GetJiraAssignableUsers(_settings, detail.Key);
