@@ -16,6 +16,5 @@ public class AtlassianSettings
     // on the site (typing still searches everything).
     public List<string> FavoriteConfluenceSpaceKeys { get; set; } = new();
 
-    public List<SavedJiraFilter> SavedJiraFilters { get; set; } = new();
     public List<SavedJiraStatsFilter> SavedJiraStatsFilters { get; set; } = new();
 }

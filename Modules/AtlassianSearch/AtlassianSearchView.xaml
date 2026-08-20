@@ -36,7 +36,6 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
@@ -96,18 +95,9 @@
                 </StackPanel>
 
                 <Button
-                    x:Name="PopoutJiraButton"
-                    Grid.Column="3"
-                    Width="80"
-                    Content="Pop out"
-                    ToolTip="Pop out a Jira queue into its own auto-refreshing window"
-                    Click="PopoutJiraButton_Click"/>
-
-                <Button
                     x:Name="SettingsButton"
-                    Grid.Column="4"
+                    Grid.Column="3"
                     Width="90"
-                    Margin="8,0,0,0"
                     Content="Settings"
                     Click="SettingsButton_Click"/>
             </Grid>

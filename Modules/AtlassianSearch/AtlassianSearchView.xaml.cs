@@ -1468,31 +1468,6 @@ public partial class AtlassianSearchView
         _ = LoadFilterOptionsAsync();
     }
 
-    // The popout starts unfiltered -- it has its own saved-filter combo to
-    // pick from once open, and there's no longer an embedded Jira search
-    // card here to seed an initial filter from.
-    private void
-    PopoutJiraButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (!_settings.IsComplete)
-        {
-            AppMessageBox.Show(
-                "Set up the Jira/Confluence connection first (Settings).",
-                "Atlassian");
-
-            return;
-        }
-
-        // No Owner: an owned non-modal window minimizing/restoring can
-        // cascade to the main window in WPF -- same reasoning as the
-        // other popups (MainWindow_Closing closes it explicitly instead).
-        var window = new JiraPopoutWindow(_atlassianService, _settings, new SavedJiraFilter(), _settings.SavedJiraFilters);
-
-        window.Show();
-    }
-
     private static void
     OpenUrl(
         string url)
