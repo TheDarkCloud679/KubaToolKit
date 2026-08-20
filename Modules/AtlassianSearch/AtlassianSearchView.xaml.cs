@@ -425,10 +425,55 @@ public partial class AtlassianSearchView
     SelectIncident(
         IncidentEntry entry)
     {
+        FlushIncidentDetailEdits();
+
         _selectedIncident = entry;
 
         RefreshIncidentList();
         UpdateIncidentDetailPanel();
+    }
+
+    // Incident rows are plain Borders (not Focusable), so clicking one to
+    // switch incidents never fires LostFocus on whichever detail TextBox is
+    // currently focused -- without this, an in-progress edit (e.g. the
+    // Solution field) is silently overwritten by UpdateIncidentDetailPanel
+    // before it ever gets saved.
+    private void
+    FlushIncidentDetailEdits()
+    {
+        if (_selectedIncident == null)
+        {
+            return;
+        }
+
+        var name = IncidentNameTextBox.Text.Trim();
+        var description = IncidentDescriptionTextBox.Text;
+        var solution = IncidentSolutionTextBox.Text;
+
+        var changed = false;
+
+        if (!string.IsNullOrWhiteSpace(name) && name != _selectedIncident.Name)
+        {
+            _selectedIncident.Name = name;
+            changed = true;
+        }
+
+        if (description != _selectedIncident.Description)
+        {
+            _selectedIncident.Description = description;
+            changed = true;
+        }
+
+        if (solution != _selectedIncident.Solution)
+        {
+            _selectedIncident.Solution = solution;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            SaveSelectedIncident();
+        }
     }
 
     private void
