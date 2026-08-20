@@ -80,6 +80,14 @@ public partial class ConfluencePageViewerWindow
         TitleText.Text = title;
         OpenInBrowserButton.IsEnabled = !string.IsNullOrWhiteSpace(fallbackUrl);
 
+        // The activation right after NavigateToString below fires too
+        // early to matter -- the legacy WebBrowser control's ActiveX site
+        // does its own internal rendering/focus handling afterward, on its
+        // own schedule, and that's what was actually stealing activation
+        // a moment later. LoadCompleted is the one signal that fires once
+        // that's actually settled.
+        ContentBrowser.LoadCompleted += (_, __) => WindowActivation.ForceToForeground(this);
+
         Loaded += async (_, __) =>
         {
             WindowActivation.ForceToForeground(this);
