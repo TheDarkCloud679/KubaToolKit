@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ProjectInfo.Models;
+using KubaToolKit.Shared.Behaviors;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
 using System.Data;
@@ -678,6 +679,12 @@ public partial class ProjectInfoView
             // SelectedCells. CellOrRowHeader supports both.
             SelectionUnit = DataGridSelectionUnit.CellOrRowHeader
         };
+
+        // Slowed down a lot from the app-wide default (18px/notch) --
+        // MaxHeight above means most sections scroll internally rather
+        // than growing, and the default rate blew past several rows per
+        // notch on a grid this compact.
+        ScrollSpeedBehavior.SetLinesPerNotch(grid, 0.25);
 
         grid.LoadingRow += (_, e) =>
         {
