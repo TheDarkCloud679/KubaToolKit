@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace KubaToolKit.Shared.Windows;
 
@@ -45,6 +46,33 @@ public static class WindowActivation
         ForceToForeground(window);
 
         window.Topmost = false;
+
+        // The above still isn't 100% reliable on its own -- depending on
+        // exact OS/timing conditions it can silently fail. A few short,
+        // early rechecks catch that without risking stealing focus back
+        // from a window the user deliberately switched to later on: each
+        // one bails the instant this window is genuinely in front, and
+        // the whole thing gives up for good well under a second in.
+        var handle = new WindowInteropHelper(window).Handle;
+        var attemptsLeft = 5;
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+
+        timer.Tick += (_, __) =>
+        {
+            attemptsLeft--;
+
+            if (GetForegroundWindow() == handle || attemptsLeft <= 0)
+            {
+                timer.Stop();
+
+                return;
+            }
+
+            ForceToForeground(window);
+        };
+
+        timer.Start();
     }
 
     public static void
