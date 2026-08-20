@@ -39,6 +39,8 @@ public static class WindowActivation
     ShowActivated(
         Window window)
     {
+        PositionOverMainWindow(window);
+
         window.Topmost = true;
 
         window.Show();
@@ -73,6 +75,33 @@ public static class WindowActivation
         };
 
         timer.Start();
+    }
+
+    // These popups are deliberately never given an Owner (see the comments
+    // where they're constructed -- an owned non-modal window minimizing/
+    // restoring can cascade to the main window), which means their XAML
+    // WindowStartupLocation="CenterOwner" silently falls back to
+    // CenterScreen -- always the PRIMARY monitor, regardless of which one
+    // the app itself is actually on. Centering manually over MainWindow's
+    // current bounds instead keeps the popup on whichever monitor the app
+    // window is on.
+    private static void
+    PositionOverMainWindow(
+        Window window)
+    {
+        var mainWindow = Application.Current?.MainWindow;
+
+        if (mainWindow == null
+            || ReferenceEquals(mainWindow, window)
+            || double.IsNaN(window.Width)
+            || double.IsNaN(window.Height))
+        {
+            return;
+        }
+
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.Left = mainWindow.Left + (mainWindow.ActualWidth - window.Width) / 2;
+        window.Top = mainWindow.Top + (mainWindow.ActualHeight - window.Height) / 2;
     }
 
     public static void
