@@ -968,8 +968,9 @@ public class AtlassianService
     // needs the actual matching issues, not just a count, to aggregate by
     // person/status/priority/project. Module maps to this instance's
     // "Component (migrated)" field, Escalade to its "Escalade" custom
-    // field -- both referenced by display name directly in the JQL, which
-    // Jira resolves server-side, so no field id lookup is needed.
+    // field, Request type to its "Request Type" (JSM) field -- all three
+    // referenced by display name directly in the JQL, which Jira resolves
+    // server-side, so no field id lookup is needed.
     public async Task<List<JiraSearchResult>>
     SearchJiraStats(
         AtlassianSettings settings,
@@ -978,6 +979,7 @@ public class AtlassianService
         JiraFieldFilter status,
         JiraFieldFilter module,
         JiraFieldFilter escalation,
+        JiraFieldFilter requestType,
         DateTime? from,
         DateTime? to,
         CancellationToken cancellationToken = default)
@@ -989,6 +991,7 @@ public class AtlassianService
         AddJqlCondition(conditions, "status", status, allowComparison: false);
         AddJqlCondition(conditions, "\"Component (migrated)\"", module, allowComparison: false);
         AddJqlCondition(conditions, "\"Escalade\"", escalation, allowComparison: false);
+        AddJqlCondition(conditions, "\"Request Type\"", requestType, allowComparison: false);
 
         if (from.HasValue)
         {

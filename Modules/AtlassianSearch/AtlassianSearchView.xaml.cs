@@ -41,12 +41,25 @@ public partial class AtlassianSearchView
     private Dictionary<string, string> _jiraServiceDesksByProjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     // Backing state for every Statistics filter that supports picking
-    // several values at once via MultiSelectPickerWindow.
+    // several values at once via MultiSelectPickerWindow -- edited through
+    // StatsFilterWindow now that they no longer live inline on the tab
+    // itself. Each one's "in"/"not in" operator is tracked separately here
+    // rather than via a ComboBox, since that ComboBox now only exists
+    // inside the (not always open) filter popup.
     private readonly MultiSelectFilterState _statsProjectFilter = new();
+    private string _statsProjectOperator = "in";
     private readonly MultiSelectFilterState _statsAssigneeFilter = new();
+    private string _statsAssigneeOperator = "in";
     private readonly MultiSelectFilterState _statsStatusFilter = new();
+    private string _statsStatusOperator = "in";
     private readonly MultiSelectFilterState _statsModuleFilter = new();
+    private string _statsModuleOperator = "in";
     private readonly MultiSelectFilterState _statsEscalationFilter = new();
+    private string _statsEscalationOperator = "in";
+    private readonly MultiSelectFilterState _statsRequestTypeFilter = new();
+    private string _statsRequestTypeOperator = "in";
+    private DateTime? _statsFrom;
+    private DateTime? _statsTo;
 
     private List<IncidentEntry> _incidents = new();
     private IncidentEntry? _selectedIncident;
@@ -1366,10 +1379,11 @@ public partial class AtlassianSearchView
         var usersTask = _atlassianService.GetJiraUsers(_settings);
         var moduleOptionsTask = _atlassianService.GetJiraFieldOptions(_settings, "Component (migrated)");
         var escalationOptionsTask = _atlassianService.GetJiraFieldOptions(_settings, "Escalade");
+        var requestTypeOptionsTask = _atlassianService.GetJiraFieldOptions(_settings, "Request Type");
 
         await Task.WhenAll(
             projectsTask, statusesTask, statusCategoriesTask, serviceDesksTask, usersTask,
-            moduleOptionsTask, escalationOptionsTask);
+            moduleOptionsTask, escalationOptionsTask, requestTypeOptionsTask);
 
         JiraStatusColors.CategoryByStatus = statusCategoriesTask.Result;
         _jiraServiceDesksByProjectKey = serviceDesksTask.Result;
@@ -1379,72 +1393,68 @@ public partial class AtlassianSearchView
         _statsStatusFilter.AllOptions = statusesTask.Result;
         _statsModuleFilter.AllOptions = moduleOptionsTask.Result;
         _statsEscalationFilter.AllOptions = escalationOptionsTask.Result;
-
-        UpdateFilterButton(StatsProjectPickerButton, _statsProjectFilter);
-        UpdateFilterButton(StatsAssigneePickerButton, _statsAssigneeFilter);
-        UpdateFilterButton(StatsStatusPickerButton, _statsStatusFilter);
-        UpdateFilterButton(StatsModulePickerButton, _statsModuleFilter);
-        UpdateFilterButton(StatsEscalationPickerButton, _statsEscalationFilter);
+        _statsRequestTypeFilter.AllOptions = requestTypeOptionsTask.Result;
     }
 
-    // Shared by every multi-select filter button below -- opens the
-    // picker pre-seeded with whatever's currently selected, and on OK
-    // (a null result means Cancel) writes the new selection back into
-    // both the state and the button's own summary text.
+    // Opens the popup holding every Statistics filter (moved out of the
+    // tab's own header once it had six filters plus a date range -- too
+    // crowded to stay inline). Picker selections made inside it apply
+    // straight to these MultiSelectFilterState instances (shared by
+    // reference), so only the operator/date values need reading back once
+    // the popup closes.
     private void
-    OpenMultiSelectFilter(
-        Button button,
-        MultiSelectFilterState state,
-        string title)
+    StatsFiltersButton_Click(
+        object sender,
+        RoutedEventArgs e)
     {
-        var result =
-            MultiSelectPickerWindow.Prompt(Window.GetWindow(this), title, state.AllOptions, state.SelectedValues);
+        var window =
+            new StatsFilterWindow(
+                _statsProjectFilter, _statsProjectOperator,
+                _statsAssigneeFilter, _statsAssigneeOperator,
+                _statsStatusFilter, _statsStatusOperator,
+                _statsModuleFilter, _statsModuleOperator,
+                _statsEscalationFilter, _statsEscalationOperator,
+                _statsRequestTypeFilter, _statsRequestTypeOperator,
+                _statsFrom, _statsTo)
+            {
+                Owner = Window.GetWindow(this)
+            };
 
-        if (result == null)
-        {
-            return;
-        }
+        window.ShowDialog();
 
-        state.SelectedValues = result;
+        _statsProjectOperator = window.ProjectOperator;
+        _statsAssigneeOperator = window.AssigneeOperator;
+        _statsStatusOperator = window.StatusOperator;
+        _statsModuleOperator = window.ModuleOperator;
+        _statsEscalationOperator = window.EscalationOperator;
+        _statsRequestTypeOperator = window.RequestTypeOperator;
+        _statsFrom = window.From;
+        _statsTo = window.To;
 
-        UpdateFilterButton(button, state);
+        UpdateStatsFilterSummary();
     }
 
+    // Counts how many of the filter dimensions are actually narrowed, so
+    // the Filters button reads e.g. "Filters (2)" instead of forcing the
+    // popup open just to check what's set.
     private void
-    StatsProjectPickerButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        OpenMultiSelectFilter(StatsProjectPickerButton, _statsProjectFilter, "Select project(s)");
+    UpdateStatsFilterSummary()
+    {
+        var activeCount =
+            new[]
+            {
+                _statsProjectFilter.SelectedValues.Count > 0,
+                _statsAssigneeFilter.SelectedValues.Count > 0,
+                _statsStatusFilter.SelectedValues.Count > 0,
+                _statsModuleFilter.SelectedValues.Count > 0,
+                _statsEscalationFilter.SelectedValues.Count > 0,
+                _statsRequestTypeFilter.SelectedValues.Count > 0,
+                _statsFrom.HasValue,
+                _statsTo.HasValue
+            }.Count(active => active);
 
-    private void
-    StatsAssigneePickerButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        OpenMultiSelectFilter(StatsAssigneePickerButton, _statsAssigneeFilter, "Select person(s)");
-
-    private void
-    StatsStatusPickerButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        OpenMultiSelectFilter(StatsStatusPickerButton, _statsStatusFilter, "Select status(es)");
-
-    private void
-    StatsModulePickerButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        OpenMultiSelectFilter(StatsModulePickerButton, _statsModuleFilter, "Select module(s)");
-
-    private void
-    StatsEscalationPickerButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        OpenMultiSelectFilter(StatsEscalationPickerButton, _statsEscalationFilter, "Select escalade(s)");
-
-    private static void
-    UpdateFilterButton(
-        Button button,
-        MultiSelectFilterState state) =>
-        button.Content = state.Summary();
+        StatsFiltersButton.Content = activeCount == 0 ? "Filters" : $"Filters ({activeCount})";
+    }
 
     private static void
     PopulateCombo(
@@ -1475,29 +1485,6 @@ public partial class AtlassianSearchView
                 return;
             }
         }
-    }
-
-    private static string
-    GetOperatorValue(
-        ComboBox operatorCombo) =>
-        (operatorCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "=";
-
-    private static void
-    SelectOperatorValue(
-        ComboBox operatorCombo,
-        string op)
-    {
-        foreach (ComboBoxItem item in operatorCombo.Items)
-        {
-            if (string.Equals(item.Content as string, op, StringComparison.Ordinal))
-            {
-                operatorCombo.SelectedItem = item;
-
-                return;
-            }
-        }
-
-        operatorCombo.SelectedIndex = 0;
     }
 
     private void
@@ -1541,30 +1528,28 @@ public partial class AtlassianSearchView
     ApplyJiraStatsSavedFilter(
         SavedJiraStatsFilter filter)
     {
-        ApplyMultiSelectFilterToUi(StatsProjectPickerButton, _statsProjectFilter, StatsProjectOperatorCombo, filter.Project, filter.ProjectOperator);
-        ApplyMultiSelectFilterToUi(StatsAssigneePickerButton, _statsAssigneeFilter, StatsAssigneeOperatorCombo, filter.Assignee, filter.AssigneeOperator);
-        ApplyMultiSelectFilterToUi(StatsStatusPickerButton, _statsStatusFilter, StatsStatusOperatorCombo, filter.Status, filter.StatusOperator);
-        ApplyMultiSelectFilterToUi(StatsModulePickerButton, _statsModuleFilter, StatsModuleOperatorCombo, filter.Module, filter.ModuleOperator);
-        ApplyMultiSelectFilterToUi(StatsEscalationPickerButton, _statsEscalationFilter, StatsEscalationOperatorCombo, filter.Escalation, filter.EscalationOperator);
+        _statsProjectFilter.SetFromCommaList(filter.Project);
+        _statsProjectOperator = NormalizeMultiSelectOperator(filter.ProjectOperator);
 
-        StatsFromDatePicker.SelectedDate = filter.From;
-        StatsToDatePicker.SelectedDate = filter.To;
-    }
+        _statsAssigneeFilter.SetFromCommaList(filter.Assignee);
+        _statsAssigneeOperator = NormalizeMultiSelectOperator(filter.AssigneeOperator);
 
-    // Maps a saved filter's (comma-list) value/operator back onto both
-    // the picker state and its button's summary text -- the inverse of
-    // building a JiraFieldFilter from them.
-    private void
-    ApplyMultiSelectFilterToUi(
-        Button button,
-        MultiSelectFilterState state,
-        ComboBox operatorCombo,
-        string value,
-        string op)
-    {
-        state.SetFromCommaList(value);
-        SelectOperatorValue(operatorCombo, NormalizeMultiSelectOperator(op));
-        UpdateFilterButton(button, state);
+        _statsStatusFilter.SetFromCommaList(filter.Status);
+        _statsStatusOperator = NormalizeMultiSelectOperator(filter.StatusOperator);
+
+        _statsModuleFilter.SetFromCommaList(filter.Module);
+        _statsModuleOperator = NormalizeMultiSelectOperator(filter.ModuleOperator);
+
+        _statsEscalationFilter.SetFromCommaList(filter.Escalation);
+        _statsEscalationOperator = NormalizeMultiSelectOperator(filter.EscalationOperator);
+
+        _statsRequestTypeFilter.SetFromCommaList(filter.RequestType);
+        _statsRequestTypeOperator = NormalizeMultiSelectOperator(filter.RequestTypeOperator);
+
+        _statsFrom = filter.From;
+        _statsTo = filter.To;
+
+        UpdateStatsFilterSummary();
     }
 
     // A filter saved before multi-select existed may carry "="/"!=" --
@@ -1633,17 +1618,19 @@ public partial class AtlassianSearchView
         new()
         {
             Project = _statsProjectFilter.JqlValue(),
-            ProjectOperator = GetOperatorValue(StatsProjectOperatorCombo),
+            ProjectOperator = _statsProjectOperator,
             Assignee = _statsAssigneeFilter.JqlValue(),
-            AssigneeOperator = GetOperatorValue(StatsAssigneeOperatorCombo),
+            AssigneeOperator = _statsAssigneeOperator,
             Status = _statsStatusFilter.JqlValue(),
-            StatusOperator = GetOperatorValue(StatsStatusOperatorCombo),
+            StatusOperator = _statsStatusOperator,
             Module = _statsModuleFilter.JqlValue(),
-            ModuleOperator = GetOperatorValue(StatsModuleOperatorCombo),
+            ModuleOperator = _statsModuleOperator,
             Escalation = _statsEscalationFilter.JqlValue(),
-            EscalationOperator = GetOperatorValue(StatsEscalationOperatorCombo),
-            From = StatsFromDatePicker.SelectedDate,
-            To = StatsToDatePicker.SelectedDate
+            EscalationOperator = _statsEscalationOperator,
+            RequestType = _statsRequestTypeFilter.JqlValue(),
+            RequestTypeOperator = _statsRequestTypeOperator,
+            From = _statsFrom,
+            To = _statsTo
         };
 
     private async void
@@ -1677,11 +1664,12 @@ public partial class AtlassianSearchView
             StatsProgressBar.Visibility = Visibility.Visible;
             StatsStatusText.Text = "Running...";
 
-            var project = new JiraFieldFilter(_statsProjectFilter.JqlValue(), GetOperatorValue(StatsProjectOperatorCombo));
-            var assignee = new JiraFieldFilter(_statsAssigneeFilter.JqlValue(), GetOperatorValue(StatsAssigneeOperatorCombo));
-            var status = new JiraFieldFilter(_statsStatusFilter.JqlValue(), GetOperatorValue(StatsStatusOperatorCombo));
-            var module = new JiraFieldFilter(_statsModuleFilter.JqlValue(), GetOperatorValue(StatsModuleOperatorCombo));
-            var escalation = new JiraFieldFilter(_statsEscalationFilter.JqlValue(), GetOperatorValue(StatsEscalationOperatorCombo));
+            var project = new JiraFieldFilter(_statsProjectFilter.JqlValue(), _statsProjectOperator);
+            var assignee = new JiraFieldFilter(_statsAssigneeFilter.JqlValue(), _statsAssigneeOperator);
+            var status = new JiraFieldFilter(_statsStatusFilter.JqlValue(), _statsStatusOperator);
+            var module = new JiraFieldFilter(_statsModuleFilter.JqlValue(), _statsModuleOperator);
+            var escalation = new JiraFieldFilter(_statsEscalationFilter.JqlValue(), _statsEscalationOperator);
+            var requestType = new JiraFieldFilter(_statsRequestTypeFilter.JqlValue(), _statsRequestTypeOperator);
 
             var results =
                 await _atlassianService.SearchJiraStats(
@@ -1691,8 +1679,9 @@ public partial class AtlassianSearchView
                     status,
                     module,
                     escalation,
-                    StatsFromDatePicker.SelectedDate,
-                    StatsToDatePicker.SelectedDate,
+                    requestType,
+                    _statsFrom,
+                    _statsTo,
                     cancellationToken);
 
             _statsResults.Clear();

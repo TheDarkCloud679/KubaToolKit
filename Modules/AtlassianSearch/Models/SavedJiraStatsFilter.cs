@@ -22,6 +22,9 @@ public class SavedJiraStatsFilter
     public string Escalation { get; set; } = "";
     public string EscalationOperator { get; set; } = "=";
 
+    public string RequestType { get; set; } = "";
+    public string RequestTypeOperator { get; set; } = "=";
+
     public DateTime? From { get; set; }
     public DateTime? To { get; set; }
 }

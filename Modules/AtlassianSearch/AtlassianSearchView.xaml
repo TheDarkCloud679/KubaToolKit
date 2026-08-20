@@ -979,7 +979,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -1007,125 +1006,31 @@
                         Click="DeleteStatsFilterButton_Click"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-
-                    <StackPanel Width="170" Margin="0,0,14,0">
-                        <TextBlock Text="Project" FontSize="11" Margin="0,0,0,2"/>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="StatsProjectOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                <ComboBoxItem Content="in"/>
-                                <ComboBoxItem Content="not in"/>
-                            </ComboBox>
-                            <Button
-                                x:Name="StatsProjectPickerButton"
-                                Content="(Any)"
-                                Width="111"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                Click="StatsProjectPickerButton_Click"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Width="220" Margin="0,0,14,0">
-                        <TextBlock Text="Person" FontSize="11" Margin="0,0,0,2"/>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="StatsAssigneeOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                <ComboBoxItem Content="in"/>
-                                <ComboBoxItem Content="not in"/>
-                            </ComboBox>
-                            <Button
-                                x:Name="StatsAssigneePickerButton"
-                                Content="(Any)"
-                                Width="161"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                ToolTip="Includes yourself -- not every user may be listed"
-                                Click="StatsAssigneePickerButton_Click"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Width="170" Margin="0,0,14,0">
-                        <TextBlock Text="État" FontSize="11" Margin="0,0,0,2"/>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="StatsStatusOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                <ComboBoxItem Content="in"/>
-                                <ComboBoxItem Content="not in"/>
-                            </ComboBox>
-                            <Button
-                                x:Name="StatsStatusPickerButton"
-                                Content="(Any)"
-                                Width="111"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                Click="StatsStatusPickerButton_Click"/>
-                        </StackPanel>
-                    </StackPanel>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                    <Button
+                        x:Name="StatsFiltersButton"
+                        Content="Filters"
+                        Width="130"
+                        HorizontalContentAlignment="Left"
+                        Padding="10,4"
+                        ToolTip="Project, Person, État, Module, Escalade, Type de demande, dates"
+                        Click="StatsFiltersButton_Click"/>
+                    <Button
+                        x:Name="RunStatsButton"
+                        Content="Run stats"
+                        Width="90"
+                        Margin="10,0,0,0"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="RunStatsButton_Click"/>
+                    <ProgressBar
+                        x:Name="StatsProgressBar"
+                        Width="80"
+                        Margin="8,0,0,0"
+                        Visibility="Collapsed"
+                        IsIndeterminate="True"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-
-                    <StackPanel Width="170" Margin="0,0,14,0">
-                        <TextBlock Text="Module" FontSize="11" Margin="0,0,0,2"/>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="StatsModuleOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                <ComboBoxItem Content="in"/>
-                                <ComboBoxItem Content="not in"/>
-                            </ComboBox>
-                            <Button
-                                x:Name="StatsModulePickerButton"
-                                Content="(Any)"
-                                Width="111"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                ToolTip="'Component (migrated)' values"
-                                Click="StatsModulePickerButton_Click"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Width="170" Margin="0,0,14,0">
-                        <TextBlock Text="Escalade" FontSize="11" Margin="0,0,0,2"/>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="StatsEscalationOperatorCombo" Width="55" Margin="0,0,4,0" SelectedIndex="0">
-                                <ComboBoxItem Content="in"/>
-                                <ComboBoxItem Content="not in"/>
-                            </ComboBox>
-                            <Button
-                                x:Name="StatsEscalationPickerButton"
-                                Content="(Any)"
-                                Width="111"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,4"
-                                Click="StatsEscalationPickerButton_Click"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Width="130" Margin="0,0,14,0">
-                        <TextBlock Text="Resolved from" FontSize="11" Margin="0,0,0,2"/>
-                        <DatePicker x:Name="StatsFromDatePicker" ToolTip="Resolved on/after this date -- leave blank for no lower bound (only relevant when État includes resolved issues)"/>
-                    </StackPanel>
-
-                    <StackPanel Width="130" Margin="0,0,14,0">
-                        <TextBlock Text="Resolved to" FontSize="11" Margin="0,0,0,2"/>
-                        <DatePicker x:Name="StatsToDatePicker" ToolTip="Resolved on/before this date (inclusive) -- leave blank for no upper bound (only relevant when État includes resolved issues)"/>
-                    </StackPanel>
-
-                    <StackPanel VerticalAlignment="Bottom" Orientation="Horizontal">
-                        <Button
-                            x:Name="RunStatsButton"
-                            Content="Run stats"
-                            Width="90"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Click="RunStatsButton_Click"/>
-                        <ProgressBar
-                            x:Name="StatsProgressBar"
-                            Width="80"
-                            Margin="8,0,0,0"
-                            Visibility="Collapsed"
-                            IsIndeterminate="True"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
                     <RadioButton x:Name="StatsViewListRadio" Content="List" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
                     <RadioButton x:Name="StatsViewChartRadio" Content="Chart" GroupName="StatsView" Checked="StatsViewRadio_Checked" Margin="0,0,14,0"/>
                     <TextBlock x:Name="StatsGroupByLabel" Text="Group by" FontSize="11" VerticalAlignment="Center" Margin="14,0,6,0" Visibility="Collapsed"/>
@@ -1140,13 +1045,13 @@
 
                 <TextBlock
                     x:Name="StatsStatusText"
-                    Grid.Row="4"
+                    Grid.Row="3"
                     FontSize="11"
                     Margin="0,0,0,8"
                     Foreground="{StaticResource TextSecondaryBrush}"
                     TextWrapping="Wrap"/>
 
-                <Grid Grid.Row="5">
+                <Grid Grid.Row="4">
                     <DataGrid
                         x:Name="StatsGrid"
                         AutoGenerateColumns="False"
