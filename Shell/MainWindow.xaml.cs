@@ -708,36 +708,18 @@ MainWindow_PreviewMouseWheel(
             return;
         }
 
-        if (ScrollSpeedBehavior.GetLinesPerNotch(currentScroll) > 0)
+        // The nearest ScrollViewer (e.g. a DataGrid's own internal one)
+        // may have nothing to scroll -- fall back to the next ScrollViewer
+        // ancestor in that case (e.g. Project Info's section list),
+        // rather than swallowing the wheel event for nothing. Each
+        // candidate is checked for its own ScrollSpeedBehavior.
+        // LinesPerNotch, not just the first one found, so a slowed-down
+        // outer ScrollViewer still gets its own rate even when the wheel
+        // started over a non-scrollable inner one (a DataGrid sized to
+        // its content, say).
+        if (TryScrollWithWheel(currentScroll, e))
         {
-            return;
-        }
-
-        bool scrollingUp =
-            e.Delta > 0;
-
-        bool atTop =
-            currentScroll.VerticalOffset <= 0;
-
-        bool atBottom =
-            currentScroll.VerticalOffset >=
-            currentScroll.ScrollableHeight;
-
-        double delta =
-            -e.Delta / 120.0
-            * PixelsPerNotch;
-
-        if ((!scrollingUp && !atBottom)
-            ||
-            (scrollingUp && !atTop))
-        {
-            currentScroll
-                .ScrollToVerticalOffset(
-                    currentScroll.VerticalOffset
-                    + delta);
-
-            e.Handled =
-                true;
+            e.Handled = true;
 
             return;
         }
@@ -749,16 +731,9 @@ MainWindow_PreviewMouseWheel(
 
         while (parent != null)
         {
-            if (parent
-                is ScrollViewer parentScroll)
+            if (parent is ScrollViewer parentScroll && TryScrollWithWheel(parentScroll, e))
             {
-                parentScroll
-                    .ScrollToVerticalOffset(
-                        parentScroll.VerticalOffset
-                        + delta);
-
-                e.Handled =
-                    true;
+                e.Handled = true;
 
                 return;
             }
@@ -768,5 +743,32 @@ MainWindow_PreviewMouseWheel(
                     .GetParent(
                         parent);
         }
+    }
+
+    // Returns false (without moving anything) when this ScrollViewer has
+    // no room left to scroll further in the requested direction, so the
+    // caller can keep walking up to find one that does.
+    private static bool
+    TryScrollWithWheel(
+        ScrollViewer scroll,
+        MouseWheelEventArgs e)
+    {
+        var linesPerNotch = ScrollSpeedBehavior.GetLinesPerNotch(scroll);
+        var pixelsPerNotch = linesPerNotch > 0 ? linesPerNotch * 16 : PixelsPerNotch;
+
+        bool scrollingUp = e.Delta > 0;
+        bool atTop = scroll.VerticalOffset <= 0;
+        bool atBottom = scroll.VerticalOffset >= scroll.ScrollableHeight;
+
+        if ((!scrollingUp && atBottom) || (scrollingUp && atTop))
+        {
+            return false;
+        }
+
+        double delta = -e.Delta / 120.0 * pixelsPerNotch;
+
+        scroll.ScrollToVerticalOffset(scroll.VerticalOffset + delta);
+
+        return true;
     }
 }

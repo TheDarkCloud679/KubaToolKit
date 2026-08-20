@@ -1,9 +1,12 @@
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace KubaToolKit.Shared.Behaviors;
 
+// Just a value store -- MainWindow's own PreviewMouseWheel handler is what
+// actually reads this (per ScrollViewer, walking up the tree) and applies
+// it as pixels-per-notch = LinesPerNotch * 16. A plain attached property
+// rather than a per-ScrollViewer event subscription, since the app already
+// funnels every wheel event through one place at the Window level.
 public static class ScrollSpeedBehavior
 {
     public static readonly DependencyProperty LinesPerNotchProperty =
@@ -11,7 +14,7 @@ public static class ScrollSpeedBehavior
             "LinesPerNotch",
             typeof(double),
             typeof(ScrollSpeedBehavior),
-            new PropertyMetadata(0.0, OnLinesPerNotchChanged));
+            new PropertyMetadata(0.0));
 
     public static void
     SetLinesPerNotch(
@@ -29,49 +32,5 @@ public static class ScrollSpeedBehavior
     {
         return (double)element.GetValue(
             LinesPerNotchProperty);
-    }
-
-    private static void
-    OnLinesPerNotchChanged(
-        DependencyObject d,
-        DependencyPropertyChangedEventArgs e)
-    {
-        if (d is not ScrollViewer scrollViewer)
-        {
-            return;
-        }
-
-        scrollViewer.PreviewMouseWheel -=
-            OnPreviewMouseWheel;
-
-        if ((double)e.NewValue > 0)
-        {
-            scrollViewer.PreviewMouseWheel +=
-                OnPreviewMouseWheel;
-        }
-    }
-
-    private static void
-    OnPreviewMouseWheel(
-        object sender,
-        MouseWheelEventArgs e)
-    {
-        if (sender is not ScrollViewer scrollViewer)
-        {
-            return;
-        }
-
-        double linesPerNotch =
-            GetLinesPerNotch(scrollViewer);
-
-        double offset =
-            -e.Delta / 120.0
-            * linesPerNotch
-            * 16;
-
-        scrollViewer.ScrollToVerticalOffset(
-            scrollViewer.VerticalOffset + offset);
-
-        e.Handled = true;
     }
 }
