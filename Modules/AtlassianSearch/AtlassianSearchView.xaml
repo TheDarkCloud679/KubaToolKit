@@ -671,6 +671,7 @@
                                 VerticalScrollBarVisibility="Auto"
                                 HorizontalScrollBarVisibility="Disabled"
                                 FontSize="12.5"
+                                Padding="8,6,8,6"
                                 ToolTip="What actually fixed it, for next time"
                                 LostFocus="IncidentSolutionTextBox_LostFocus"/>
                         </Grid>
