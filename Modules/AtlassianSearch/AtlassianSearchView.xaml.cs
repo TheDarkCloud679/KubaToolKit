@@ -130,7 +130,13 @@ public partial class AtlassianSearchView
 
     // Project Info stays scoped per AWS profile (unlike the Wiki, which
     // went generic) -- the main nav's profile picker is deliberately hidden
-    // in Atlassian mode, so this tab needs its own.
+    // in Atlassian mode, so this tab needs its own. It defaults to
+    // whatever's selected in the main nav (see SetDefaultProjectInfoProfile)
+    // until the user explicitly picks something else here, after which it
+    // stops following.
+    private bool _projectInfoProfileFollowsMainProfile = true;
+    private bool _settingProjectInfoProfileProgrammatically;
+
     private void
     PopulateProjectInfoProfileCombo()
     {
@@ -158,6 +164,35 @@ public partial class AtlassianSearchView
         }
     }
 
+    // Called by MainWindow whenever the main nav's own profile changes
+    // (which is what the Dashboard/S3/Sqs/StepFunctions tabs are scoped
+    // to) -- Project Info keeps its own separate combo, but should still
+    // default to that same profile rather than just the alphabetically
+    // first one, right up until the user overrides it here.
+    public void
+    SetDefaultProjectInfoProfile(
+        string? profile)
+    {
+        if (!_projectInfoProfileFollowsMainProfile
+            || string.IsNullOrWhiteSpace(profile)
+            || ProjectInfoProfileCombo.ItemsSource is not IEnumerable<string> profiles
+            || !profiles.Contains(profile, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _settingProjectInfoProfileProgrammatically = true;
+
+        try
+        {
+            ProjectInfoProfileCombo.SelectedItem = profile;
+        }
+        finally
+        {
+            _settingProjectInfoProfileProgrammatically = false;
+        }
+    }
+
     private void
     ProjectInfoProfileCombo_SelectionChanged(
         object sender,
@@ -166,6 +201,11 @@ public partial class AtlassianSearchView
         if (ProjectInfoProfileCombo.SelectedItem is not string profileName)
         {
             return;
+        }
+
+        if (!_settingProjectInfoProfileProgrammatically)
+        {
+            _projectInfoProfileFollowsMainProfile = false;
         }
 
         if (_projectInfoView == null)

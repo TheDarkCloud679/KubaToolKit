@@ -119,6 +119,8 @@ MainWindow_Loaded(
             var profile =
     ProfileCombo.SelectedItem?.ToString();
 
+            _atlassianSearchView.SetDefaultProjectInfoProfile(profile);
+
             if (!string.IsNullOrWhiteSpace(profile))
             {
                 await AwsSsoService
@@ -234,6 +236,8 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
         var profile =
             ProfileCombo.SelectedItem?.ToString();
+
+        _atlassianSearchView.SetDefaultProjectInfoProfile(profile);
 
         if (S3ModeRadio?.IsChecked == true)
         {

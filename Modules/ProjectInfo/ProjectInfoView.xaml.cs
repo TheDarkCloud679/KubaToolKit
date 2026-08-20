@@ -265,7 +265,11 @@ public partial class ProjectInfoView
         toggleIcon.Margin = new Thickness(0);
         toggleIcon.RenderTransformOrigin = new Point(0.5, 0.5);
 
-        var toggleIconRotate = new RotateTransform(isExpanded ? 90 : 0);
+        // The raw chevron geometry points down -- 0deg is that as-is
+        // (expanded, "pointing at" the now-visible content below), and
+        // -90deg rotates it to point right (collapsed, "pointing at" the
+        // content hidden to the side).
+        var toggleIconRotate = new RotateTransform(isExpanded ? 0 : -90);
         toggleIcon.RenderTransform = toggleIconRotate;
 
         var toggleButton = new Button
@@ -283,7 +287,7 @@ public partial class ProjectInfoView
 
             toggleIconRotate.BeginAnimation(
                 RotateTransform.AngleProperty,
-                new DoubleAnimation(isExpanded ? 90 : 0, new Duration(TimeSpan.FromSeconds(0.16))));
+                new DoubleAnimation(isExpanded ? 0 : -90, new Duration(TimeSpan.FromSeconds(0.16))));
 
             AnimateCardExpand(collapsibleContent, isExpanded);
         };
