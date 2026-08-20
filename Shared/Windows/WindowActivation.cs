@@ -27,6 +27,26 @@ public static class WindowActivation
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
 
+    // Use this instead of a plain Show() for a window that must open
+    // already in front, not just get corrected a moment after appearing.
+    // Setting Topmost before Show() means it's placed above everything
+    // else in the Z-order the instant it's actually created, instead of
+    // trying to fix its position afterward -- which raced against
+    // whatever else Windows was doing right then and still let it flash
+    // behind briefly before ForceToForeground caught up.
+    public static void
+    ShowActivated(
+        Window window)
+    {
+        window.Topmost = true;
+
+        window.Show();
+
+        ForceToForeground(window);
+
+        window.Topmost = false;
+    }
+
     public static void
     ForceToForeground(
         Window window)

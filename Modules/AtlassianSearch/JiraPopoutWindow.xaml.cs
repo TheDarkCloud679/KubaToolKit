@@ -277,8 +277,7 @@ public partial class JiraPopoutWindow
         var window =
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
-        window.Show();
-        WindowActivation.ForceToForeground(window);
+        WindowActivation.ShowActivated(window);
     }
 
     private static void

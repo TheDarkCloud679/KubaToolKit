@@ -1472,8 +1472,7 @@ public partial class AtlassianSearchView
         // other popups (MainWindow_Closing closes it explicitly instead).
         var window = new ConfluencePageViewerWindow(_atlassianService, _settings, result.Id, result.Title, result.Url);
 
-        window.Show();
-        WindowActivation.ForceToForeground(window);
+        WindowActivation.ShowActivated(window);
     }
 
     private void
@@ -1506,7 +1505,6 @@ public partial class AtlassianSearchView
         var window =
             new JiraIssueViewerWindow(_atlassianService, _settings, result.Key, result.Url, isServiceDeskIssue);
 
-        window.Show();
-        WindowActivation.ForceToForeground(window);
+        WindowActivation.ShowActivated(window);
     }
 }
