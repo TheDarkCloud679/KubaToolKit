@@ -42,6 +42,13 @@ jobs:
           # default -- redirecting stderr doesn't stop that, only try/
           # catch around it does, so "not found yet" has to be caught
           # here rather than read back off $LASTEXITCODE afterward.
+          #
+          # Catching it isn't enough on its own, though: GitHub Actions'
+          # pwsh step wrapper fails the step based on $LASTEXITCODE as it
+          # stands once the whole script finishes, not on whether an
+          # exception went uncaught -- gh's own non-zero exit is still
+          # sitting in there even after our catch handles it, so the
+          # explicit "exit 0" is what actually keeps this step green.
           $tag = "v${{ steps.version.outputs.version }}"
           try {
             gh release view $tag 2>$null | Out-Null
@@ -49,6 +56,7 @@ jobs:
           } catch {
             "skip=false" >> $env:GITHUB_OUTPUT
           }
+          exit 0
 
       - name: Setup .NET
         if: steps.check.outputs.skip == 'false'
