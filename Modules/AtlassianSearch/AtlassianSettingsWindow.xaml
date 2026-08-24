@@ -39,6 +39,31 @@
                 TextWrapping="Wrap"/>
         </StackPanel>
 
+        <Border Height="1" Margin="0,0,0,16" Background="{StaticResource BorderBrush}"/>
+
+        <TextBlock
+            Text="Shared Library folder (optional)"
+            FontWeight="SemiBold"
+            Margin="0,0,0,4"/>
+        <TextBlock
+            Text="Point this at a folder a sync tool already keeps up to date (Google Drive, OneDrive...) to share the incident Library with your team automatically. Leave empty to keep it on this machine only."
+            FontSize="11"
+            TextWrapping="Wrap"
+            Margin="0,0,0,6"
+            Foreground="{StaticResource TextMutedBrush}"/>
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="SharedLibraryFolderTextBox" Grid.Column="0" Margin="0,0,8,0"/>
+            <Button
+                Grid.Column="1"
+                Content="Browse..."
+                Width="90"
+                Click="BrowseSharedLibraryFolderButton_Click"/>
+        </Grid>
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="CancelButton_Click"/>
             <Button Content="Save" Width="90" Style="{StaticResource AccentButtonStyle}" Click="SaveButton_Click"/>

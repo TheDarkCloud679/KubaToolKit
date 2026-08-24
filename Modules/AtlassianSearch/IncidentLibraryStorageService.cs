@@ -15,12 +15,21 @@ public class IncidentLibraryStorageService
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
-    public static string RootFolder =>
+    private static string DefaultRootFolder =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "KubaToolKit",
             "Atlassian",
             "Incidents");
+
+    // Set from AtlassianSettings.SharedLibraryFolder -- empty keeps the
+    // usual per-machine %AppData% folder; pointed at a folder a sync
+    // client already keeps up to date (Google Drive, OneDrive...), every
+    // colleague pointed at the same folder shares the Library live.
+    public string OverrideRootFolder { get; set; } = "";
+
+    public string RootFolder =>
+        string.IsNullOrWhiteSpace(OverrideRootFolder) ? DefaultRootFolder : OverrideRootFolder;
 
     public void
     EnsureFolderExists() =>
