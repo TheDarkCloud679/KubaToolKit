@@ -96,7 +96,7 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Content="Team Sharing..."
-                    ToolTip="Share the incident Library, Wiki, and API Client collections with your team via a synced folder (Google Drive, OneDrive...)"
+                    ToolTip="Share the incident Library, Wiki, Project Info, and API Client collections with your team via a synced folder (Google Drive, OneDrive...)"
                     Click="TeamSharingButton_Click"/>
 
                 <!-- Module switcher: pill-highlighted radio labels

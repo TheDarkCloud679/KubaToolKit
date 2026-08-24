@@ -33,6 +33,15 @@ public static class TeamSharingFolders
     SharedApiClientCollectionsFolder() =>
         SharedRoot() is { } root ? Path.Combine(root, "ApiClient", "Collections") : null;
 
+    // One subfolder per project underneath -- ProjectInfoService combines
+    // this with each project's own sanitized key. Project Info's
+    // profile->key mapping itself stays local (a personal convenience,
+    // not team data), only the per-project sections/contacts/files move
+    // here.
+    public static string?
+    SharedProjectInfoRoot() =>
+        SharedRoot() is { } root ? Path.Combine(root, "ProjectInfo") : null;
+
     // Only copies when the destination doesn't exist yet or is completely
     // empty -- never merges into (or overwrites anything in) a folder a
     // colleague may already be using, to avoid clobbering their data.

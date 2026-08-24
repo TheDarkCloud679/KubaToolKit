@@ -10,21 +10,31 @@ public class ProjectInfoService
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
-    // Global: only the profile -> project key map lives here. Each
-    // project's own sections/rows live in its own folder instead, next to
-    // its Wiki data and files -- see GetProjectDataFilePath.
+    // Global: only the profile -> project key map lives here, always
+    // local -- it's a personal convenience (which AWS profile means which
+    // project, on this machine), not team data. Each project's own
+    // sections/rows live in its own folder instead, next to its Wiki data
+    // and files -- see GetProjectDataFilePath.
     public static string
     GetFilePath() =>
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "project-info.json");
 
+    // TeamSharingFolders.SharedProjectInfoRoot() is non-null once a
+    // shared folder is set (Team Sharing settings, in MainWindow) --
+    // every colleague pointed at the same synced folder then shares
+    // every project's data live instead of each having their own local
+    // install-folder copy. Public so TeamSharingSettingsWindow can read
+    // the effective root before/after a shared-folder change to migrate
+    // existing content, without duplicating this resolution logic.
+    public static string
+    GetProjectFilesRootPath() =>
+        TeamSharingFolders.SharedProjectInfoRoot()
+        ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "ProjectFiles");
+
     public static string
     GetProjectFolderPath(
         string projectKey) =>
-        Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "Config",
-            "ProjectFiles",
-            SanitizeForFolderName(projectKey));
+        Path.Combine(GetProjectFilesRootPath(), SanitizeForFolderName(projectKey));
 
     public static string
     GetProjectDataFilePath(
@@ -70,9 +80,10 @@ public class ProjectInfoService
                 Everything about this project lives here: its Project Info
                 data (project-info.json), its Wiki (wiki.json, WikiImages\),
                 and any file you drop in yourself (schemas, configs,
-                exports, a key file for the FileZilla export...) to share
-                it with colleagues, the same way you already share this
-                KubaToolKit installation (network drive, sync tool, git...).
+                exports, a key file for the FileZilla export...). Shared
+                with colleagues automatically if a Team Sharing folder is
+                set (see "Team Sharing..." in KubaToolKit's header) --
+                otherwise this stays local to this machine only.
 
                 Prod/Preprod/Test profiles of the same project
                 automatically share this same folder -- see the "Project"

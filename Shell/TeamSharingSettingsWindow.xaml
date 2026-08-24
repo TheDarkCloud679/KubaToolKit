@@ -18,7 +18,7 @@
             TextWrapping="Wrap"
             Margin="0,0,0,6"
             Foreground="{StaticResource TextMutedBrush}">
-            <Run Text="Point this at a folder a sync tool already keeps up to date (Google Drive, OneDrive...) to share the incident Library, the Wiki, and API Client collections with your team automatically -- everyone pointed at the same folder reads and writes the same data. Never used for anything that can hold credentials (API tokens, Environments' auth values), which always stay local. Leave empty to keep everything on this machine only."/>
+            <Run Text="Point this at a folder a sync tool already keeps up to date (Google Drive, OneDrive...) to share the incident Library, the Wiki, Project Info's per-project data, and API Client collections with your team automatically -- everyone pointed at the same folder reads and writes the same data. Never used for anything that can hold credentials (API tokens, Environments' auth values) or personal preferences (Project Info's profile-to-project mapping), which always stay local. Leave empty to keep everything on this machine only."/>
         </TextBlock>
         <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions>

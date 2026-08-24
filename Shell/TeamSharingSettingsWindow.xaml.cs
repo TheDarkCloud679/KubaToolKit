@@ -61,12 +61,14 @@ public partial class TeamSharingSettingsWindow
         var oldIncidentsFolder = new IncidentLibraryStorageService().RootFolder;
         var oldWikiFolder = WikiFolderPath();
         var oldCollectionsFolder = CollectionStorageService.CollectionsFolder;
+        var oldProjectInfoFolder = Modules.ProjectInfo.ProjectInfoService.GetProjectFilesRootPath();
 
         _settingsService.Save(new TeamSharingSettings { SharedFolder = newSharedFolder });
 
         var newIncidentsFolder = new IncidentLibraryStorageService().RootFolder;
         var newWikiFolder = WikiFolderPath();
         var newCollectionsFolder = CollectionStorageService.CollectionsFolder;
+        var newProjectInfoFolder = Modules.ProjectInfo.ProjectInfoService.GetProjectFilesRootPath();
 
         var migrated = new List<string>();
 
@@ -85,6 +87,20 @@ public partial class TeamSharingSettingsWindow
             TryCopy("API Client collections", oldCollectionsFolder, newCollectionsFolder, migrated);
         }
 
+        if (!string.Equals(oldProjectInfoFolder, newProjectInfoFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            // One copy of the whole root, not per project -- every
+            // project's subfolder underneath moves together in one shot
+            // since TryCopyIfDestinationEmpty already recurses.
+            TryCopy("Project Info (per-project data)", oldProjectInfoFolder, newProjectInfoFolder, migrated);
+        }
+
+        var anyFolderChanged =
+            !string.Equals(oldIncidentsFolder, newIncidentsFolder, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(oldWikiFolder, newWikiFolder, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(oldCollectionsFolder, newCollectionsFolder, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(oldProjectInfoFolder, newProjectInfoFolder, StringComparison.OrdinalIgnoreCase);
+
         if (migrated.Count > 0)
         {
             AppMessageBox.Show(
@@ -92,9 +108,7 @@ public partial class TeamSharingSettingsWindow
                 + "\n\nRestart KubaToolKit for the shared folder to take effect everywhere.",
                 "Team Sharing");
         }
-        else if (!string.Equals(oldIncidentsFolder, newIncidentsFolder, StringComparison.OrdinalIgnoreCase)
-                 || !string.Equals(oldWikiFolder, newWikiFolder, StringComparison.OrdinalIgnoreCase)
-                 || !string.Equals(oldCollectionsFolder, newCollectionsFolder, StringComparison.OrdinalIgnoreCase))
+        else if (anyFolderChanged)
         {
             AppMessageBox.Show(
                 "Restart KubaToolKit for the shared folder to take effect everywhere.",
@@ -104,10 +118,6 @@ public partial class TeamSharingSettingsWindow
         Close();
     }
 
-    // Every project's per-project data (Project Info's own "Files
-    // folder", per-project sections) isn't included here yet -- its
-    // per-project-key folder structure needs a bit more thought about
-    // what exactly should be shared before it gets the same treatment.
     private static string
     WikiFolderPath() =>
         Modules.Wiki.WikiService.GetLibraryFolderPath();
