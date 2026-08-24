@@ -37,26 +37,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          # pwsh 7.3+ (what GitHub Actions runs) turns a non-zero exit
-          # from a native command like gh into a terminating error by
-          # default -- redirecting stderr doesn't stop that, only try/
-          # catch around it does, so "not found yet" has to be caught
-          # here rather than read back off $LASTEXITCODE afterward.
-          #
-          # Catching it isn't enough on its own, though: GitHub Actions'
-          # pwsh step wrapper fails the step based on $LASTEXITCODE as it
-          # stands once the whole script finishes, not on whether an
-          # exception went uncaught -- gh's own non-zero exit is still
-          # sitting in there even after our catch handles it, so the
-          # explicit "exit 0" is what actually keeps this step green.
+          # "gh release view <tag>" (tried first) exits non-zero for a
+          # not-yet-released tag -- the expected/common case here -- and
+          # pwsh 7.3+'s handling of that (a terminating error regardless
+          # of try/catch, PLUS GitHub Actions' own pwsh wrapper failing
+          # the step off the trailing $LASTEXITCODE even once caught)
+          # made that approach unreliable however it was written. Listing
+          # every release and checking membership instead never errors,
+          # tag found or not, so there's nothing to catch or reset.
           $tag = "v${{ steps.version.outputs.version }}"
-          try {
-            gh release view $tag 2>$null | Out-Null
+          $existingTags = gh release list --json tagName | ConvertFrom-Json | ForEach-Object { $_.tagName }
+          if ($existingTags -contains $tag) {
             "skip=true" >> $env:GITHUB_OUTPUT
-          } catch {
+          } else {
             "skip=false" >> $env:GITHUB_OUTPUT
           }
-          exit 0
 
       - name: Setup .NET
         if: steps.check.outputs.skip == 'false'
