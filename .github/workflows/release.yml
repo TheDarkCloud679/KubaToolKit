@@ -1,14 +1,17 @@
 name: Release
 
-# Publishes a build and attaches it to a GitHub Release whenever a tag
-# matching v<Version> (e.g. v3.3.0, matching KubaToolKit.csproj's
-# <Version>) is pushed -- this is what the in-app updater (UpdateService)
-# checks against, via the public "latest release" API, so a new version
-# only needs a tag push here to reach everyone automatically.
+# Triggered by a version bump landing on main -- not by a manually pushed
+# tag. The tag and the GitHub Release are both created here, by this
+# workflow's own token, so shipping a new version is just "bump <Version>
+# in KubaToolKit.csproj and push to main"; nobody needs to push a tag by
+# hand. Safe to run on any csproj change: if the tag for the current
+# <Version> already exists (nothing to release -- e.g. an unrelated
+# csproj edit), the build/publish/release steps are skipped.
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: [main]
+    paths:
+      - "KubaToolKit.csproj"
 
 permissions:
   contents: write
@@ -20,12 +23,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content KubaToolKit.csproj
+          $version = $csproj.Project.PropertyGroup.Version | Select-Object -First 1
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Skip if this version was already released
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "v${{ steps.version.outputs.version }}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            "skip=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "skip=false" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Setup .NET
+        if: steps.check.outputs.skip == 'false'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
       - name: Publish
+        if: steps.check.outputs.skip == 'false'
         run: dotnet publish KubaToolKit.csproj -c Release -o publish
 
       # Zipped from inside the publish folder, not the folder itself, so
@@ -35,11 +62,15 @@ jobs:
       # guessing (it copes with a wrapper folder anyway, but this avoids
       # needing to rely on that fallback at all).
       - name: Zip publish output
+        if: steps.check.outputs.skip == 'false'
         shell: pwsh
         run: Compress-Archive -Path publish\* -DestinationPath KubaToolKit.zip
 
-      - name: Create GitHub Release
+      - name: Create tag and GitHub Release
+        if: steps.check.outputs.skip == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
-        run: gh release create "${{ github.ref_name }}" KubaToolKit.zip --title "${{ github.ref_name }}" --generate-notes
+        run: |
+          $tag = "v${{ steps.version.outputs.version }}"
+          gh release create $tag KubaToolKit.zip --title $tag --generate-notes
