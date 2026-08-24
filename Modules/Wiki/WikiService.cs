@@ -17,9 +17,17 @@ public class WikiService
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { WriteIndented = true };
 
-    private static string
+    // TeamSharingFolders.SharedWikiFolder() is non-null once a shared
+    // folder is set (Team Sharing settings, in MainWindow) -- every
+    // colleague pointed at the same synced folder then shares this
+    // library live instead of each having their own local install-folder
+    // copy. Public so TeamSharingSettingsWindow can read the effective
+    // path before/after a shared-folder change to migrate existing
+    // content, without duplicating this resolution logic.
+    public static string
     GetLibraryFolderPath() =>
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Wiki");
+        TeamSharingFolders.SharedWikiFolder()
+        ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Wiki");
 
     private static string
     GetLibraryFilePath() =>

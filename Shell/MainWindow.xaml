@@ -90,6 +90,15 @@
                     </StackPanel>
                 </StackPanel>
 
+                <Button
+                    x:Name="TeamSharingButton"
+                    Grid.Row="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Content="Team Sharing..."
+                    ToolTip="Share the incident Library, Wiki, and API Client collections with your team via a synced folder (Google Drive, OneDrive...)"
+                    Click="TeamSharingButton_Click"/>
+
                 <!-- Module switcher: pill-highlighted radio labels
                      (NavPillRadioButtonStyle) directly on the header, no
                      enclosing track: the header card is already a rounded

@@ -1,5 +1,4 @@
 using KubaToolKit.Modules.AtlassianSearch.Models;
-using System.IO;
 using System.Windows;
 using System.Windows.Media;
 
@@ -11,8 +10,8 @@ public partial class AtlassianSettingsWindow
     private readonly AtlassianService _atlassianService = new();
 
     // Carried through as-is by ReadFromFields -- this window only edits
-    // the connection fields and the shared folder, and previously built a
-    // brand new AtlassianSettings that silently dropped everything else
+    // the connection fields, and previously built a brand new
+    // AtlassianSettings that silently dropped everything else
     // (FavoriteConfluenceSpaceKeys, SavedJiraStatsFilters) on every save.
     private readonly AtlassianSettings _existing;
 
@@ -28,7 +27,6 @@ public partial class AtlassianSettingsWindow
         BaseUrlTextBox.Text = existing.BaseUrl;
         EmailTextBox.Text = existing.Email;
         ApiTokenTextBox.Text = existing.ApiToken;
-        SharedLibraryFolderTextBox.Text = existing.SharedLibraryFolder;
     }
 
     public AtlassianSettings? Result { get; private set; }
@@ -45,28 +43,6 @@ public partial class AtlassianSettingsWindow
         return window._saved ? window.Result : null;
     }
 
-    private void
-    BrowseSharedLibraryFolderButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Choose a synced folder for the shared Library"
-        };
-
-        if (!string.IsNullOrWhiteSpace(SharedLibraryFolderTextBox.Text)
-            && Directory.Exists(SharedLibraryFolderTextBox.Text))
-        {
-            dialog.InitialDirectory = SharedLibraryFolderTextBox.Text;
-        }
-
-        if (dialog.ShowDialog(this) == true)
-        {
-            SharedLibraryFolderTextBox.Text = dialog.FolderName;
-        }
-    }
-
     private AtlassianSettings
     ReadFromFields() =>
         new()
@@ -74,7 +50,6 @@ public partial class AtlassianSettingsWindow
             BaseUrl = BaseUrlTextBox.Text.Trim(),
             Email = EmailTextBox.Text.Trim(),
             ApiToken = ApiTokenTextBox.Text.Trim(),
-            SharedLibraryFolder = SharedLibraryFolderTextBox.Text.Trim(),
             FavoriteConfluenceSpaceKeys = _existing.FavoriteConfluenceSpaceKeys,
             SavedJiraStatsFilters = _existing.SavedJiraStatsFilters
         };

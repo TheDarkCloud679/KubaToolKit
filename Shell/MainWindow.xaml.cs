@@ -268,6 +268,16 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
     }
 
     private void
+    TeamSharingButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var window = new TeamSharingSettingsWindow { Owner = this };
+
+        window.ShowDialog();
+    }
+
+    private void
     ProfileColorButton_Click(
         object sender,
         RoutedEventArgs e)

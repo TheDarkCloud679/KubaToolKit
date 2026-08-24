@@ -113,7 +113,6 @@ public partial class AtlassianSearchView
         UpdateStatsViewVisibility();
 
         _settings = _settingsService.Load();
-        _incidentStorage.OverrideRootFolder = _settings.SharedLibraryFolder;
 
         PopulateJiraStatsSavedFilterCombo();
 
@@ -1924,8 +1923,6 @@ public partial class AtlassianSearchView
         object sender,
         RoutedEventArgs e)
     {
-        var previousSharedFolder = _settings.SharedLibraryFolder;
-
         var result =
             AtlassianSettingsWindow.Prompt(Window.GetWindow(this), _settings);
 
@@ -1937,70 +1934,11 @@ public partial class AtlassianSearchView
         _settings = result;
         _settingsService.Save(_settings);
 
-        if (!string.Equals(_settings.SharedLibraryFolder, previousSharedFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            ApplySharedLibraryFolderChange(previousSharedFolder, _settings.SharedLibraryFolder);
-        }
-
         StatusText.Text = "";
         StatusText.Visibility = Visibility.Collapsed;
 
         _ = LoadFilterOptionsAsync();
         _ = LoadSearchFilterOptionsAsync();
-    }
-
-    // Repointing the shared folder never touches whatever's already
-    // sitting in the OLD one -- if it had incidents, offer a one-time
-    // copy into the new location (reusing the same Export/Import
-    // machinery the Library tab's own buttons use) rather than making
-    // the user do that by hand.
-    private void
-    ApplySharedLibraryFolderChange(
-        string previousFolder,
-        string newFolder)
-    {
-        if (!string.IsNullOrWhiteSpace(newFolder))
-        {
-            var previousStorage = new IncidentLibraryStorageService { OverrideRootFolder = previousFolder };
-            var hasExistingIncidents = previousStorage.LoadIncidents().Count > 0;
-
-            if (hasExistingIncidents)
-            {
-                var copy = AppMessageBox.Show(
-                    "Copy your existing incidents into the new shared folder? (Nothing already there will be touched or removed.)",
-                    "Shared Library folder",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (copy == MessageBoxResult.Yes)
-                {
-                    try
-                    {
-                        var tempFile = Path.GetTempFileName();
-
-                        previousStorage.ExportLibrary(tempFile);
-
-                        _incidentStorage.OverrideRootFolder = newFolder;
-
-                        var importedCount = _incidentStorage.ImportLibrary(tempFile);
-
-                        File.Delete(tempFile);
-
-                        AppMessageBox.Show($"Copied {importedCount} incident(s) into the shared folder.", "Shared Library folder");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("AtlassianSearchView: failed to copy incidents into the new shared folder.", ex);
-
-                        AppMessageBox.Show(ex.Message, "Copy error");
-                    }
-                }
-            }
-        }
-
-        _incidentStorage.OverrideRootFolder = newFolder;
-
-        LoadIncidents();
     }
 
     private static void

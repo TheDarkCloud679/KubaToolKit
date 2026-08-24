@@ -17,10 +17,4 @@ public class AtlassianSettings
     public List<string> FavoriteConfluenceSpaceKeys { get; set; } = new();
 
     public List<SavedJiraStatsFilter> SavedJiraStatsFilters { get; set; } = new();
-
-    // Empty = the incident Library stays on this machine only (the usual
-    // %AppData% folder). Pointed at a folder a cloud-sync client (Google
-    // Drive, OneDrive...) already keeps in sync, the whole team reads and
-    // writes the same incidents automatically -- no more Export/Import.
-    public string SharedLibraryFolder { get; set; } = "";
 }

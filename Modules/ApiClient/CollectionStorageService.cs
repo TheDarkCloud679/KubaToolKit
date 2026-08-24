@@ -15,8 +15,15 @@ public class CollectionStorageService
             "KubaToolKit",
             "ApiClient");
 
+    // TeamSharingFolders.SharedApiClientCollectionsFolder() is non-null
+    // once a shared folder is set (Team Sharing settings, in MainWindow)
+    // -- every colleague pointed at the same synced folder then shares
+    // these collections live. Environments/ValueLabelsFile stay local
+    // regardless: Environments can hold bearer tokens/API keys entered by
+    // the user, which must never end up in a folder shared with the team.
     public static string CollectionsFolder =>
-        Path.Combine(RootFolder, "Collections");
+        TeamSharingFolders.SharedApiClientCollectionsFolder()
+        ?? Path.Combine(RootFolder, "Collections");
 
     public static string EnvironmentsFolder =>
         Path.Combine(RootFolder, "Environments");

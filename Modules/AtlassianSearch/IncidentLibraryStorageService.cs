@@ -22,14 +22,18 @@ public class IncidentLibraryStorageService
             "Atlassian",
             "Incidents");
 
-    // Set from AtlassianSettings.SharedLibraryFolder -- empty keeps the
-    // usual per-machine %AppData% folder; pointed at a folder a sync
-    // client already keeps up to date (Google Drive, OneDrive...), every
-    // colleague pointed at the same folder shares the Library live.
-    public string OverrideRootFolder { get; set; } = "";
+    // Lets TeamSharingSettingsWindow read/write a SPECIFIC folder during
+    // migration (the old one, the new one) regardless of whatever's
+    // currently saved in Team Sharing settings -- unset (the normal case
+    // everywhere else) falls through to the usual resolution below.
+    public string? OverrideRootFolder { get; set; }
 
+    // TeamSharingFolders.SharedIncidentsFolder() is non-null once a
+    // shared folder is set (Team Sharing settings) -- every colleague
+    // pointed at the same synced folder then shares the Library live
+    // instead of each having their own local %AppData% copy.
     public string RootFolder =>
-        string.IsNullOrWhiteSpace(OverrideRootFolder) ? DefaultRootFolder : OverrideRootFolder;
+        OverrideRootFolder ?? TeamSharingFolders.SharedIncidentsFolder() ?? DefaultRootFolder;
 
     public void
     EnsureFolderExists() =>
