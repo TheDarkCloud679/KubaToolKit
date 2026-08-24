@@ -37,11 +37,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
+          # pwsh 7.3+ (what GitHub Actions runs) turns a non-zero exit
+          # from a native command like gh into a terminating error by
+          # default -- redirecting stderr doesn't stop that, only try/
+          # catch around it does, so "not found yet" has to be caught
+          # here rather than read back off $LASTEXITCODE afterward.
           $tag = "v${{ steps.version.outputs.version }}"
-          gh release view $tag 2>$null
-          if ($LASTEXITCODE -eq 0) {
+          try {
+            gh release view $tag 2>$null | Out-Null
             "skip=true" >> $env:GITHUB_OUTPUT
-          } else {
+          } catch {
             "skip=false" >> $env:GITHUB_OUTPUT
           }
 
