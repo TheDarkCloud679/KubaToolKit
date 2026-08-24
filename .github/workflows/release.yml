@@ -1,0 +1,45 @@
+name: Release
+
+# Publishes a build and attaches it to a GitHub Release whenever a tag
+# matching v<Version> (e.g. v3.3.0, matching KubaToolKit.csproj's
+# <Version>) is pushed -- this is what the in-app updater (UpdateService)
+# checks against, via the public "latest release" API, so a new version
+# only needs a tag push here to reach everyone automatically.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish
+        run: dotnet publish KubaToolKit.csproj -c Release -o publish
+
+      # Zipped from inside the publish folder, not the folder itself, so
+      # the archive's root already matches the app's install directory
+      # layout -- UpdateService can then extract it straight over the
+      # existing install with no extra "which folder is the real one"
+      # guessing (it copes with a wrapper folder anyway, but this avoids
+      # needing to rely on that fallback at all).
+      - name: Zip publish output
+        shell: pwsh
+        run: Compress-Archive -Path publish\* -DestinationPath KubaToolKit.zip
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: gh release create "${{ github.ref_name }}" KubaToolKit.zip --title "${{ github.ref_name }}" --generate-notes
