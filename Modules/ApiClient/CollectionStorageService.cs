@@ -667,15 +667,14 @@ public class CollectionStorageService
         return filePath;
     }
 
+    // Moved into a Backup subfolder rather than actually deleted -- once
+    // Collections live in a folder several colleagues can write to,
+    // anyone's accidental (or not) delete would otherwise be
+    // unrecoverable for everyone else too.
     public void
     DeleteCollectionFile(
-        string filePath)
-    {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-    }
+        string filePath) =>
+        BackupHelper.MoveToBackup(filePath);
 
     public void
     SaveCollection(

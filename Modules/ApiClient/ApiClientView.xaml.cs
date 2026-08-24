@@ -1676,6 +1676,13 @@ public partial class ApiClientView
 
         var parent = node.Parent;
 
+        // Snapshotted before the removal is actually saved -- once a
+        // collection lives in a folder several colleagues can write to,
+        // deleting a folder/request here still overwrites that one
+        // shared file, so it gets the same "recoverable in Backup"
+        // treatment as a whole-collection delete.
+        BackupHelper.SnapshotBeforeDelete(parent.GetRoot().FilePath ?? "");
+
         parent.Children.Remove(node);
         RebuildFavoritesFolders();
 

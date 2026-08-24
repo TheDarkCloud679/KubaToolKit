@@ -259,6 +259,17 @@ public class ProjectInfoService
         }
     }
 
+    // Called by the UI right before a save that removes something (a
+    // section, a column, a row) -- snapshots that project's current
+    // project-info.json into a Backup subfolder first, since several
+    // colleagues can write to it once it's Team-Shared. Not called from
+    // SaveProject itself: that would snapshot every ordinary edit too,
+    // not just deletions.
+    public void
+    SnapshotBeforeDelete(
+        string projectKey) =>
+        BackupHelper.SnapshotBeforeDelete(GetProjectDataFilePath(projectKey));
+
     public void
     SaveProject(
         ProjectInfoProject project)

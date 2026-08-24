@@ -104,15 +104,14 @@ public class IncidentLibraryStorageService
         return entry;
     }
 
+    // Moved into a Backup subfolder rather than actually deleted -- once
+    // the Library lives in a folder several colleagues can write to,
+    // anyone's accidental (or not) delete would otherwise be
+    // unrecoverable for everyone else too.
     public void
     DeleteIncidentFile(
-        string filePath)
-    {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-    }
+        string filePath) =>
+        BackupHelper.MoveToBackup(filePath);
 
     // A single JSON array of every incident -- unlike the one-file-per-
     // incident storage on disk, this is meant to be handed to a

@@ -117,6 +117,16 @@ public class WikiService
         }
     }
 
+    // Called by the UI right before a save that removes something (a
+    // section, an attachment reference) -- snapshots wiki.json's current
+    // content into a Backup subfolder first, since the whole library
+    // lives in that one file and several colleagues can write to it once
+    // it's Team-Shared. Not called from SaveLibrary itself: that would
+    // snapshot every ordinary edit too, not just deletions.
+    public void
+    SnapshotBeforeDelete() =>
+        BackupHelper.SnapshotBeforeDelete(GetLibraryFilePath());
+
     public void
     SaveLibrary(
         WikiLibrary library)

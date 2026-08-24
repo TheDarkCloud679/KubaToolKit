@@ -211,6 +211,8 @@ public partial class WikiView
             return;
         }
 
+        _wikiService.SnapshotBeforeDelete();
+
         _library.Sections.Remove(_currentSection);
 
         SelectSection(null);
@@ -887,6 +889,8 @@ public partial class WikiView
         var removeItem = new MenuItem { Header = "Remove attachment" };
         removeItem.Click += (_, __) =>
         {
+            _wikiService.SnapshotBeforeDelete();
+
             _currentSection?.ImageFileNames.Remove(fileName);
 
             RefreshImages();

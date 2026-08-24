@@ -437,6 +437,8 @@ public partial class ProjectInfoView
 
             TryCommitEdit(grid);
 
+            _projectInfoService.SnapshotBeforeDelete(_project.Key);
+
             _project.Sections.Remove(section);
             SectionsPanel.Children.Remove(card);
             _sectionControls.Remove(section);
@@ -574,6 +576,8 @@ public partial class ProjectInfoView
             }
 
             TryCommitEdit(grid);
+
+            _projectInfoService.SnapshotBeforeDelete(_project.Key);
 
             section.Columns.Remove(columnName);
 
@@ -869,6 +873,9 @@ public partial class ProjectInfoView
             }
 
             TryCommitEdit(grid);
+
+            _projectInfoService.SnapshotBeforeDelete(_project.Key);
+
             rowView.Row.Delete();
         };
 
