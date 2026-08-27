@@ -241,6 +241,48 @@ public partial class WikiView
     }
 
     private void
+    DuplicateSection_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentSection == null)
+        {
+            return;
+        }
+
+        var baseName = $"{_currentSection.Name} (Copy)";
+        var name = baseName;
+        var counter = 2;
+
+        while (_library.Sections.Any(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            name = $"{baseName} {counter}";
+            counter++;
+        }
+
+        var duplicate = new WikiSection
+        {
+            Name = name,
+            Text = _currentSection.Text,
+            Folder = _currentSection.Folder,
+            // A copy of the list, not the same instance -- removing an
+            // attachment from one page must not affect the other's
+            // reference list (the underlying files themselves are still
+            // shared either way, same as the original attach/remove flow).
+            ImageFileNames = new List<string>(_currentSection.ImageFileNames),
+            ImageOnlyMode = _currentSection.ImageOnlyMode
+        };
+
+        _library.Sections.Insert(_library.Sections.IndexOf(_currentSection) + 1, duplicate);
+
+        EnsureFolderExpanded(duplicate);
+
+        SelectSection(duplicate);
+
+        Save();
+    }
+
+    private void
     DeleteSection_Click(
         object sender,
         RoutedEventArgs e)
@@ -320,6 +362,11 @@ public partial class WikiView
         if (menu.FindName("DeleteMenuItem") is MenuItem deleteItem)
         {
             deleteItem.IsEnabled = hasSelection;
+        }
+
+        if (menu.FindName("DuplicateMenuItem") is MenuItem duplicateItem)
+        {
+            duplicateItem.IsEnabled = hasSelection;
         }
 
         if (menu.FindName("MoveToFolderMenuItem") is MenuItem moveToFolderItem)
@@ -447,7 +494,171 @@ public partial class WikiView
             return;
         }
 
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            _rowDragStartPoint = e.GetPosition(null);
+        }
+
         SelectSection(row.Section);
+    }
+
+    // Drag-and-drop lets a page be reassigned to a different folder by
+    // dropping it on that folder's header or on any of its rows, as an
+    // alternative to "Move to folder..." -- SectionRow_Click already fires
+    // on the same MouseLeftButtonDown and records the start point; a real
+    // drag only kicks in once the mouse has moved past the OS's own
+    // click-vs-drag threshold while still held down.
+    private Point? _rowDragStartPoint;
+
+    private void
+    SectionRow_PreviewMouseMove(
+        object sender,
+        MouseEventArgs e)
+    {
+        if (_rowDragStartPoint == null
+            || e.LeftButton != MouseButtonState.Pressed
+            || sender is not FrameworkElement { Tag: SectionRow row })
+        {
+            return;
+        }
+
+        var position = e.GetPosition(null);
+        var diff = _rowDragStartPoint.Value - position;
+
+        if (Math.Abs(diff.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(diff.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        _rowDragStartPoint = null;
+
+        DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(WikiSection), row.Section), DragDropEffects.Move);
+    }
+
+    private static bool
+    TryGetDraggedSection(
+        DragEventArgs e,
+        out WikiSection section)
+    {
+        if (e.Data.GetDataPresent(typeof(WikiSection)))
+        {
+            section = (WikiSection)e.Data.GetData(typeof(WikiSection))!;
+
+            return true;
+        }
+
+        section = null!;
+
+        return false;
+    }
+
+    private void
+    MoveSectionToFolder(
+        WikiSection section,
+        string folder)
+    {
+        if (string.Equals(section.Folder, folder, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        section.Folder = folder;
+
+        EnsureFolderExpanded(section);
+
+        RefreshSectionsList();
+        Save();
+    }
+
+    private void
+    SectionRow_DragEnter(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is Border border && e.Data.GetDataPresent(typeof(WikiSection)))
+        {
+            border.Background = (Brush)FindResource("AccentSoftBrush");
+        }
+    }
+
+    private void
+    SectionRow_DragLeave(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is Border { Tag: SectionRow row } border)
+        {
+            border.Background = row.RowBackground;
+        }
+    }
+
+    private void
+    SectionRow_Drop(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is not Border { Tag: SectionRow row } border)
+        {
+            return;
+        }
+
+        border.Background = row.RowBackground;
+
+        if (!TryGetDraggedSection(e, out var dragged) || ReferenceEquals(dragged, row.Section))
+        {
+            return;
+        }
+
+        MoveSectionToFolder(dragged, row.Section.Folder);
+    }
+
+    private void
+    FolderHeader_DragEnter(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is Border border && e.Data.GetDataPresent(typeof(WikiSection)))
+        {
+            border.Background = (Brush)FindResource("AccentSoftBrush");
+        }
+    }
+
+    private void
+    FolderHeader_DragLeave(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            border.Background = Brushes.Transparent;
+        }
+    }
+
+    // group.FolderName is the literal display placeholder "(No folder)"
+    // when there are other real folders around (see BuildGroup) -- that
+    // string is never an actual WikiSection.Folder value, so it has to be
+    // translated back to "" before being applied.
+    private void
+    FolderHeader_Drop(
+        object sender,
+        DragEventArgs e)
+    {
+        if (sender is not Border { Tag: SectionGroup group } border)
+        {
+            return;
+        }
+
+        border.Background = Brushes.Transparent;
+
+        if (!TryGetDraggedSection(e, out var dragged))
+        {
+            return;
+        }
+
+        var targetFolder = group.FolderName == "(No folder)" ? "" : group.FolderName;
+
+        MoveSectionToFolder(dragged, targetFolder);
     }
 
     private void

@@ -10,6 +10,7 @@
             <MenuItem Header="Add page above" Click="AddSectionAbove_Click"/>
             <MenuItem Header="Add page below" Click="AddSectionBelow_Click"/>
             <MenuItem x:Name="RenameMenuItem" Header="Rename" Click="RenameSection_Click"/>
+            <MenuItem x:Name="DuplicateMenuItem" Header="Duplicate" Click="DuplicateSection_Click"/>
             <MenuItem x:Name="MoveToFolderMenuItem" Header="Move to folder..." Click="MoveToFolder_Click"/>
             <MenuItem x:Name="RemoveFromFolderMenuItem" Header="Remove from folder" Click="RemoveFromFolder_Click"/>
             <Separator/>
@@ -175,6 +176,10 @@
                                             Cursor="Hand"
                                             Background="Transparent"
                                             MouseLeftButtonDown="FolderHeader_Click"
+                                            AllowDrop="True"
+                                            DragEnter="FolderHeader_DragEnter"
+                                            DragLeave="FolderHeader_DragLeave"
+                                            Drop="FolderHeader_Drop"
                                             Tag="{Binding}"
                                             Visibility="{Binding HeaderVisibility}">
                                             <Grid>
@@ -214,6 +219,11 @@
                                                         Background="{Binding RowBackground}"
                                                         MouseLeftButtonDown="SectionRow_Click"
                                                         MouseRightButtonDown="SectionRow_Click"
+                                                        PreviewMouseMove="SectionRow_PreviewMouseMove"
+                                                        AllowDrop="True"
+                                                        DragEnter="SectionRow_DragEnter"
+                                                        DragLeave="SectionRow_DragLeave"
+                                                        Drop="SectionRow_Drop"
                                                         Tag="{Binding}"
                                                         ContextMenu="{StaticResource SectionRowContextMenu}">
                                                         <TextBlock
