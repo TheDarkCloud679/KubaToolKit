@@ -615,84 +615,81 @@ public partial class WikiView
         }
 
         FeaturedImageEmptyText.Visibility = Visibility.Collapsed;
-        FeaturedImage.Visibility = Visibility.Visible;
 
-        // Unlike the 100px-wide thumbnails elsewhere, this had no decode
-        // size cap at all -- a large photo/scan decoded at full native
-        // resolution (BitmapCacheOption.OnLoad forces that synchronously
-        // in EndInit()) can throw well before FeaturedImage.Source is
-        // ever set, which is why big images silently never appeared here.
-        // The cap is only applied when actually needed, so ordinary-sized
-        // images still decode at native resolution exactly as before.
-        const int MaxDecodeDimension = 4096;
+        _ = LoadFeaturedImageAsync(fullPath, firstImage);
+    }
 
-        BitmapImage bitmap;
+    // Bumped on every call -- a page switch (or the same page reloading)
+    // while a previous load is still in flight makes that older call's
+    // eventual result stale, so it's discarded instead of overwriting
+    // whatever the newer call already showed.
+    private int _featuredImageLoadGeneration;
+
+    // Decoding at full native resolution (no size cap -- zooming in on a
+    // large photo/scan needs the real detail, not a downscaled copy) off
+    // the UI thread, so a big file's decode time doesn't freeze the
+    // window while it loads. A visible "Loading image..." spinner covers
+    // that gap; on the rare genuine failure (corrupt file, or decoding
+    // truly exhausts memory), the awaited exception is caught here same
+    // as before rather than crashing the app.
+    private async Task
+    LoadFeaturedImageAsync(
+        string fullPath,
+        string displayName)
+    {
+        var generation = ++_featuredImageLoadGeneration;
+
+        FeaturedImage.Visibility = Visibility.Collapsed;
+        FeaturedImageLoadingPanel.Visibility = Visibility.Visible;
+
+        BitmapImage? bitmap = null;
+        Exception? error = null;
 
         try
         {
-            var (pixelWidth, pixelHeight) = GetPixelDimensions(fullPath);
-
-            bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-
-            if (pixelWidth > MaxDecodeDimension || pixelHeight > MaxDecodeDimension)
+            bitmap = await Task.Run(() =>
             {
-                if (pixelWidth >= pixelHeight)
-                {
-                    bitmap.DecodePixelWidth = MaxDecodeDimension;
-                }
-                else
-                {
-                    bitmap.DecodePixelHeight = MaxDecodeDimension;
-                }
-            }
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.UriSource = new Uri(fullPath, UriKind.Absolute);
+                image.EndInit();
+                image.Freeze();
 
-            bitmap.UriSource = new Uri(fullPath, UriKind.Absolute);
-            bitmap.EndInit();
+                return image;
+            });
         }
         catch (Exception ex)
         {
-            Logger.Error($"WikiView: failed to load image '{fullPath}'.", ex);
+            error = ex;
+        }
+
+        if (generation != _featuredImageLoadGeneration)
+        {
+            return;
+        }
+
+        FeaturedImageLoadingPanel.Visibility = Visibility.Collapsed;
+
+        if (error != null || bitmap == null)
+        {
+            Logger.Error($"WikiView: failed to load image '{fullPath}'.", error);
 
             FeaturedImage.Source = null;
             FeaturedImage.Visibility = Visibility.Collapsed;
-            FeaturedImageEmptyText.Text = $"Couldn't display this image (too large or corrupt): {firstImage}";
+            FeaturedImageEmptyText.Text = $"Couldn't display this image (too large or corrupt): {displayName}";
             FeaturedImageEmptyText.Visibility = Visibility.Visible;
 
             return;
         }
 
         FeaturedImage.Source = bitmap;
+        FeaturedImage.Visibility = Visibility.Visible;
 
         // A newly loaded image (new page, or attachments changed) starts
         // fresh rather than keeping whatever zoom/pan was left over from a
         // previous one.
         ResetFeaturedImageZoom();
-    }
-
-    // Cheap metadata-only read (DelayCreation skips decoding pixel data)
-    // just to learn the image's native size, so the cap above can be
-    // skipped entirely for the common case of an ordinary-sized image.
-    private static (int Width, int Height)
-    GetPixelDimensions(
-        string filePath)
-    {
-        try
-        {
-            using var stream = File.OpenRead(filePath);
-
-            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
-            var frame = decoder.Frames[0];
-
-            return (frame.PixelWidth, frame.PixelHeight);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"WikiView: failed to read image dimensions for '{filePath}'.", ex);
-
-            return (0, 0);
-        }
     }
 
     private Point? _featuredImagePanStart;

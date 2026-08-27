@@ -310,6 +310,23 @@
                                 Foreground="{StaticResource TextMutedBrush}"
                                 IsHitTestVisible="False"
                                 Visibility="Collapsed"/>
+                            <StackPanel
+                                x:Name="FeaturedImageLoadingPanel"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                IsHitTestVisible="False"
+                                Visibility="Collapsed">
+                                <ProgressBar
+                                    Width="140"
+                                    Height="4"
+                                    IsIndeterminate="True"/>
+                                <TextBlock
+                                    Text="Loading image..."
+                                    FontSize="11"
+                                    Margin="0,6,0,0"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
 
