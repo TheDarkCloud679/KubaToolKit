@@ -1,7 +1,8 @@
 <UserControl
     x:Class="KubaToolKit.Modules.Wiki.WikiView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
@@ -301,6 +302,9 @@
                                 MouseMove="FeaturedImageOverlay_MouseMove"
                                 MouseLeftButtonUp="FeaturedImageOverlay_MouseLeftButtonUp"
                                 ToolTip="Scroll to zoom (Ctrl+Scroll to pan up/down), drag to pan, double-click to reset"/>
+                            <wv2:WebView2
+                                x:Name="PdfPreview"
+                                Visibility="Collapsed"/>
                             <TextBlock
                                 x:Name="FeaturedImageEmptyText"
                                 Text="No image attached yet -- add one below."

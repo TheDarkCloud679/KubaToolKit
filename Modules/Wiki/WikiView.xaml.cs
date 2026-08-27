@@ -588,27 +588,31 @@ public partial class WikiView
             return;
         }
 
-        var firstImage =
-            _currentSection.ImageFileNames.FirstOrDefault(f =>
-                !string.Equals(Path.GetExtension(f), ".pdf", StringComparison.OrdinalIgnoreCase));
+        // A PDF is just as valid a "featured" attachment as an image now
+        // (previously excluded here entirely, since there was nowhere to
+        // show one) -- FirstOrDefault() with no filter picks whichever
+        // attachment comes first, of either kind.
+        var firstAttachment = _currentSection.ImageFileNames.FirstOrDefault();
 
-        if (firstImage == null)
+        if (firstAttachment == null)
         {
             FeaturedImage.Source = null;
             FeaturedImage.Visibility = Visibility.Collapsed;
+            PdfPreview.Visibility = Visibility.Collapsed;
             FeaturedImageEmptyText.Text = "No image attached yet -- add one below.";
             FeaturedImageEmptyText.Visibility = Visibility.Visible;
 
             return;
         }
 
-        var fullPath = Path.Combine(WikiService.GetImagesFolderPath(), firstImage);
+        var fullPath = Path.Combine(WikiService.GetImagesFolderPath(), firstAttachment);
 
         if (!File.Exists(fullPath))
         {
             FeaturedImage.Source = null;
             FeaturedImage.Visibility = Visibility.Collapsed;
-            FeaturedImageEmptyText.Text = $"Missing file: {firstImage}";
+            PdfPreview.Visibility = Visibility.Collapsed;
+            FeaturedImageEmptyText.Text = $"Missing file: {firstAttachment}";
             FeaturedImageEmptyText.Visibility = Visibility.Visible;
 
             return;
@@ -616,7 +620,50 @@ public partial class WikiView
 
         FeaturedImageEmptyText.Visibility = Visibility.Collapsed;
 
-        _ = LoadFeaturedImageAsync(fullPath, firstImage);
+        if (string.Equals(Path.GetExtension(firstAttachment), ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            FeaturedImage.Visibility = Visibility.Collapsed;
+
+            _ = ShowPdfPreviewAsync(fullPath);
+
+            return;
+        }
+
+        PdfPreview.Visibility = Visibility.Collapsed;
+
+        _ = LoadFeaturedImageAsync(fullPath, firstAttachment);
+    }
+
+    // WebView2's own Edge-based PDF viewer (pages, zoom, search, all for
+    // free) navigated straight at the local file -- WPF has no built-in
+    // PDF rendering, and this needs no bundled third-party PDF library.
+    // Requires the WebView2 Runtime to be installed, which every current
+    // Windows 10/11 machine already has (it ships with Edge); falls back
+    // to a plain message pointing at "double-click to open externally"
+    // if it isn't.
+    private async Task
+    ShowPdfPreviewAsync(
+        string fullPath)
+    {
+        try
+        {
+            if (PdfPreview.CoreWebView2 == null)
+            {
+                await PdfPreview.EnsureCoreWebView2Async();
+            }
+
+            PdfPreview.Source = new Uri(fullPath);
+            PdfPreview.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("WikiView: WebView2 PDF preview failed to initialize.", ex);
+
+            PdfPreview.Visibility = Visibility.Collapsed;
+            FeaturedImageEmptyText.Text =
+                "PDF preview unavailable (WebView2 Runtime not installed) -- double-click the attachment below to open it externally.";
+            FeaturedImageEmptyText.Visibility = Visibility.Visible;
+        }
     }
 
     // Bumped on every call -- a page switch (or the same page reloading)
