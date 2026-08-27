@@ -632,6 +632,15 @@ public partial class WikiView
     // that gap; on the rare genuine failure (corrupt file, or decoding
     // truly exhausts memory), the awaited exception is caught here same
     // as before rather than crashing the app.
+    //
+    // BitmapDecoder/BitmapFrame here, not BitmapImage: BitmapImage is
+    // built around the calling thread's Dispatcher (even with
+    // CacheOption.OnLoad) and constructing/EndInit-ing one from a
+    // background Task.Run thread is unreliable -- it can silently hang
+    // rather than throw, which is exactly why the previous attempt at
+    // this showed neither the spinner nor the image nor an error.
+    // BitmapDecoder has no such affinity and is the standard way to
+    // decode off the UI thread in WPF.
     private async Task
     LoadFeaturedImageAsync(
         string fullPath,
@@ -642,21 +651,21 @@ public partial class WikiView
         FeaturedImage.Visibility = Visibility.Collapsed;
         FeaturedImageLoadingPanel.Visibility = Visibility.Visible;
 
-        BitmapImage? bitmap = null;
+        BitmapSource? bitmap = null;
         Exception? error = null;
 
         try
         {
             bitmap = await Task.Run(() =>
             {
-                var image = new BitmapImage();
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.UriSource = new Uri(fullPath, UriKind.Absolute);
-                image.EndInit();
-                image.Freeze();
+                using var stream = File.OpenRead(fullPath);
 
-                return image;
+                var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                var frame = decoder.Frames[0];
+
+                frame.Freeze();
+
+                return (BitmapSource)frame;
             });
         }
         catch (Exception ex)
