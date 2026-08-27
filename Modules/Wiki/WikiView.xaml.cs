@@ -129,7 +129,8 @@ public partial class WikiView
 
     private void
     AddSection(
-        int index)
+        int index,
+        string? folder = null)
     {
         var name = NewSectionNameTextBox.Text.Trim();
 
@@ -145,10 +146,11 @@ public partial class WikiView
             return;
         }
 
-        // A newly added page defaults to the same folder as whatever's
+        // An explicit folder (from "+ Add folder") always wins; otherwise
+        // a newly added page defaults to the same folder as whatever's
         // currently selected -- adding a related page from within a folder
         // shouldn't drop it back to ungrouped.
-        var section = new WikiSection { Name = name, Folder = _currentSection?.Folder ?? "" };
+        var section = new WikiSection { Name = name, Folder = folder ?? _currentSection?.Folder ?? "" };
 
         _library.Sections.Insert(Math.Clamp(index, 0, _library.Sections.Count), section);
 
@@ -157,6 +159,51 @@ public partial class WikiView
         SelectSection(section);
 
         Save();
+    }
+
+    // Folders only ever exist as the distinct Folder values of existing
+    // pages (see RefreshSectionsList) -- there's no separate "create an
+    // empty folder" concept, so this creates a page inside a new folder
+    // right away, same as "+ Add page" otherwise.
+    private void
+    AddFolderButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var folderName =
+            TextInputWindow.Prompt(Window.GetWindow(this), "New folder", "Folder name:");
+
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            return;
+        }
+
+        AddSection(_library.Sections.Count, folderName.Trim());
+    }
+
+    private void
+    OpenWikiFolderButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            var folderPath = WikiService.GetLibraryFolderPath();
+
+            Directory.CreateDirectory(folderPath);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = folderPath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("WikiView: failed to open the Wiki folder.", ex);
+
+            AppMessageBox.Show(ex.ToString(), "Wiki - open folder");
+        }
     }
 
     private void
@@ -274,6 +321,16 @@ public partial class WikiView
         {
             deleteItem.IsEnabled = hasSelection;
         }
+
+        if (menu.FindName("MoveToFolderMenuItem") is MenuItem moveToFolderItem)
+        {
+            moveToFolderItem.IsEnabled = hasSelection;
+        }
+
+        if (menu.FindName("RemoveFromFolderMenuItem") is MenuItem removeFromFolderItem)
+        {
+            removeFromFolderItem.IsEnabled = hasSelection && !string.IsNullOrEmpty(_currentSection?.Folder);
+        }
     }
 
     private void
@@ -306,8 +363,6 @@ public partial class WikiView
 
         SectionGroupsItemsControl.ItemsSource = groups;
 
-        SectionFolderCombo.ItemsSource = folders;
-
         // A stale match could point at a page that no longer exists (or no
         // longer matches after a rename), or would jump to the wrong
         // position after other pages got added/removed/reordered.
@@ -325,10 +380,11 @@ public partial class WikiView
         var hasHeader = !string.IsNullOrEmpty(folderName);
 
         // Driven entirely by _expandedFolders -- whoever puts a page into a
-        // folder (SelectSection, CommitFolderChange) is responsible for
-        // calling EnsureFolderExpanded first so it doesn't vanish from
-        // view, but past that a folder stays exactly as collapsed/expanded
-        // as it was last explicitly toggled, current selection or not.
+        // folder (SelectSection, MoveToFolder_Click, AddSection) is
+        // responsible for calling EnsureFolderExpanded first so it doesn't
+        // vanish from view, but past that a folder stays exactly as
+        // collapsed/expanded as it was last explicitly toggled, current
+        // selection or not.
         var isExpanded = !hasHeader || _expandedFolders.Contains(folderName);
 
         return new SectionGroup
@@ -424,7 +480,6 @@ public partial class WikiView
         {
             ContentTextBox.Text = _currentSection.Text;
             ImageOnlyCheckBox.IsChecked = _currentSection.ImageOnlyMode;
-            SectionFolderCombo.Text = _currentSection.Folder;
         }
         finally
         {
@@ -449,36 +504,52 @@ public partial class WikiView
         ScheduleSave();
     }
 
+    // Moved out of the page editor itself (a "type a folder name" combo
+    // sitting on every page) and into the row's own context menu instead
+    // -- creating a folder now happens via "+ Add folder" next to "+ Add
+    // page", and moving an already-existing page into/out of one happens
+    // here.
     private void
-    SectionFolderCombo_SelectionChanged(
+    MoveToFolder_Click(
         object sender,
-        SelectionChangedEventArgs e) =>
-        CommitFolderChange();
-
-    private void
-    SectionFolderCombo_LostFocus(
-        object sender,
-        RoutedEventArgs e) =>
-        CommitFolderChange();
-
-    private void
-    CommitFolderChange()
+        RoutedEventArgs e)
     {
-        if (_loadingSection || _currentSection == null)
+        if (_currentSection == null)
         {
             return;
         }
 
-        var folder = SectionFolderCombo.Text.Trim();
+        var folder =
+            TextInputWindow.Prompt(
+                Window.GetWindow(this),
+                "Move to folder",
+                "Folder name:",
+                _currentSection.Folder);
 
-        if (folder == _currentSection.Folder)
+        if (string.IsNullOrWhiteSpace(folder) || folder == _currentSection.Folder)
         {
             return;
         }
 
-        _currentSection.Folder = folder;
+        _currentSection.Folder = folder.Trim();
 
         EnsureFolderExpanded(_currentSection);
+
+        RefreshSectionsList();
+        Save();
+    }
+
+    private void
+    RemoveFromFolder_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentSection == null || string.IsNullOrEmpty(_currentSection.Folder))
+        {
+            return;
+        }
+
+        _currentSection.Folder = "";
 
         RefreshSectionsList();
         Save();
