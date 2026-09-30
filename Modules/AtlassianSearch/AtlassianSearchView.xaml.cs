@@ -286,6 +286,16 @@ public partial class AtlassianSearchView
         public Brush RowBackground { get; set; } = Brushes.Transparent;
         public Brush RowBorderBrush { get; set; } = Brushes.Transparent;
         public Brush CountForeground { get; set; } = Brushes.Gray;
+
+        // Only set on the selected card, and only when the current search
+        // matched somewhere other than the incident's own Name (which is
+        // already shown as the card's title) -- a short excerpt around the
+        // match, split in three so the middle Run can be styled as a
+        // highlight without a converter.
+        public Visibility SnippetVisibility { get; set; } = Visibility.Collapsed;
+        public string SnippetBefore { get; set; } = "";
+        public string SnippetMatch { get; set; } = "";
+        public string SnippetAfter { get; set; } = "";
     }
 
     private class LinkRow
@@ -323,6 +333,11 @@ public partial class AtlassianSearchView
                 {
                     var isSelected = ReferenceEquals(i, _selectedIncident);
 
+                    var snippet =
+                        isSelected && !string.IsNullOrEmpty(query)
+                            ? BuildIncidentSnippet(i, query)
+                            : null;
+
                     return new IncidentListRow
                     {
                         Entry = i,
@@ -330,7 +345,11 @@ public partial class AtlassianSearchView
                         CountLabel = i.Links.Count == 1 ? "1 link" : $"{i.Links.Count} links",
                         RowBackground = isSelected ? (Brush)FindResource("AccentSoftBrush") : (Brush)FindResource("SurfaceAltBrush"),
                         RowBorderBrush = isSelected ? (Brush)FindResource("AccentBrush") : (Brush)FindResource("BorderBrush"),
-                        CountForeground = isSelected ? (Brush)FindResource("AccentPressedBrush") : (Brush)FindResource("TextMutedBrush")
+                        CountForeground = isSelected ? (Brush)FindResource("AccentPressedBrush") : (Brush)FindResource("TextMutedBrush"),
+                        SnippetVisibility = snippet != null ? Visibility.Visible : Visibility.Collapsed,
+                        SnippetBefore = snippet?.Before ?? "",
+                        SnippetMatch = snippet?.Match ?? "",
+                        SnippetAfter = snippet?.After ?? ""
                     };
                 })
                 .ToList();
@@ -520,48 +539,73 @@ public partial class AtlassianSearchView
 
         RefreshIncidentList();
         UpdateIncidentDetailPanel();
-        HighlightIncidentSearchMatch();
     }
 
-    // After a content search (a match found in the description/solution
-    // rather than the incident's own name) jumps straight to that
-    // incident, the matched word can still be buried in a paragraph of
-    // text -- selecting it makes it immediately visible instead of
-    // leaving the user to reread the whole field to find it.
-    private void
-    HighlightIncidentSearchMatch()
-    {
-        var query = IncidentSearchBox.Text.Trim();
+    // Context window kept small -- this is a one-line preview on the card
+    // itself, not a full reading pane.
+    private const int SnippetContextChars = 40;
 
-        if (string.IsNullOrEmpty(query))
-        {
-            return;
-        }
+    // Only called for the selected card (see RefreshIncidentList) -- shows
+    // where a content search actually matched, right on the card, instead
+    // of requiring a trip into the description/solution editor to find it.
+    // Name matches aren't snippet-ed: the name is already the card's own
+    // title, right above.
+    private static (string Before, string Match, string After)?
+    BuildIncidentSnippet(
+        IncidentEntry entry,
+        string query) =>
+        FindSnippet(entry.Description, query)
+        ?? FindSnippet(entry.Solution, query)
+        ?? BuildLinkSnippet(entry, query);
 
-        if (TryHighlightMatch(IncidentDescriptionTextBox, query))
-        {
-            return;
-        }
-
-        TryHighlightMatch(IncidentSolutionTextBox, query);
-    }
-
-    private static bool
-    TryHighlightMatch(
-        TextBox textBox,
+    private static (string Before, string Match, string After)?
+    BuildLinkSnippet(
+        IncidentEntry entry,
         string query)
     {
-        var index = textBox.Text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        var link =
+            entry.Links.FirstOrDefault(l =>
+                l.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || l.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        if (link == null)
+        {
+            return null;
+        }
+
+        var text =
+            !string.IsNullOrEmpty(link.Key) && !string.IsNullOrEmpty(link.Title)
+                ? $"{link.Key} — {link.Title}"
+                : (string.IsNullOrEmpty(link.Key) ? link.Title : link.Key);
+
+        return FindSnippet(text, query) ?? ("", text, "");
+    }
+
+    private static (string Before, string Match, string After)?
+    FindSnippet(
+        string text,
+        string query)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        var index = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
 
         if (index < 0)
         {
-            return false;
+            return null;
         }
 
-        textBox.Focus();
-        textBox.Select(index, query.Length);
+        var start = Math.Max(0, index - SnippetContextChars);
+        var end = Math.Min(text.Length, index + query.Length + SnippetContextChars);
 
-        return true;
+        var before = (start > 0 ? "…" : "") + text[start..index].TrimStart();
+        var match = text.Substring(index, query.Length);
+        var after = text[(index + query.Length)..end].TrimEnd() + (end < text.Length ? "…" : "");
+
+        return (before, match, after);
     }
 
     // Incident rows are plain Borders (not Focusable), so clicking one to

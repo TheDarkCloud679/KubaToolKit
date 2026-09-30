@@ -287,6 +287,19 @@
                                                     FontSize="10.5"
                                                     Margin="0,2,0,0"
                                                     Foreground="{Binding CountForeground}"/>
+                                                <TextBlock
+                                                    FontSize="10.5"
+                                                    Margin="0,4,0,0"
+                                                    TextWrapping="Wrap"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                    Visibility="{Binding SnippetVisibility}">
+                                                    <Run Text="{Binding SnippetBefore, Mode=OneWay}"/><Run
+                                                        Text="{Binding SnippetMatch, Mode=OneWay}"
+                                                        FontWeight="Bold"
+                                                        Background="{StaticResource AccentSoftBrush}"
+                                                        Foreground="{StaticResource AccentPressedBrush}"/><Run
+                                                        Text="{Binding SnippetAfter, Mode=OneWay}"/>
+                                                </TextBlock>
                                             </StackPanel>
                                             <Button
                                                 Grid.Column="1"
