@@ -9,15 +9,19 @@ namespace KubaToolKit.Modules.CloudWatchLogs;
 public sealed class LogGroupNameConverter
     : IValueConverter
 {
-    public object
-    Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public static string
+    Strip(string? raw)
     {
-        var raw = value as string ?? "";
+        raw ??= "";
 
         var separatorIndex = raw.IndexOf(':');
 
         return separatorIndex >= 0 ? raw[(separatorIndex + 1)..] : raw;
     }
+
+    public object
+    Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        Strip(value as string);
 
     public object
     ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

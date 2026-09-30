@@ -192,6 +192,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     x:Name="ProgressTextBlock"
@@ -208,6 +209,23 @@
                     Maximum="100"
                     Value="0"
                     VerticalAlignment="Center"/>
+                <Button
+                    x:Name="DownloadAllLogsButton"
+                    Grid.Column="2"
+                    Padding="10,2"
+                    IsEnabled="False"
+                    Click="DownloadAllLogsButton_Click"
+                    ToolTip="Download every result group below as a local .log file, all in one go">
+                    <StackPanel Orientation="Horizontal">
+                        <Path
+                            Data="M12,3 L12,15 M7,10 L12,15 L17,10 M4,17 L4,19 A2,2 0 0 0 6,21 L18,21 A2,2 0 0 0 20,19 L20,17"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            Width="12" Height="12" Stretch="Uniform"
+                            VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Download all" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
             <!-- Results -->
@@ -255,6 +273,23 @@
                                                 FontSize="13"
                                                 Foreground="{StaticResource AccentBrush}"
                                                 VerticalAlignment="Center"/>
+                                            <Button
+                                                Margin="10,0,0,0"
+                                                Padding="6,1"
+                                                FontSize="10.5"
+                                                Click="DownloadLogGroupButton_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Download this group's matched logs to a local file">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Path
+                                                        Data="M12,3 L12,15 M7,10 L12,15 L17,10 M4,17 L4,19 A2,2 0 0 0 6,21 L18,21 A2,2 0 0 0 20,19 L20,17"
+                                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                        StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                        Width="9" Height="9" Stretch="Uniform"
+                                                        VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="Download" FontSize="10.5" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
                                         </StackPanel>
                                     </Expander.Header>
                                     <DataGrid

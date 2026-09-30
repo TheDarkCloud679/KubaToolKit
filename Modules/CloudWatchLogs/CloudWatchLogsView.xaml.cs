@@ -2,6 +2,7 @@ using KubaToolKit.Modules.CloudWatchLogs.Models;
 using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -729,7 +730,128 @@ SearchAllLogsCheckBox_Changed(
 
         _hasResults = groupedResults.Count > 0;
 
+        DownloadAllLogsButton.IsEnabled = _hasResults;
+
         AnimateSectionRows();
+    }
+
+    // ===================================================================
+    // Bulk download -- same idea as S3 Explorer's multi-file Download:
+    // save the matched logs locally instead of only reading them on
+    // screen. Scoped per result group rather than per individual log line
+    // (DownloadLogGroupButton_Click, one per Expander) or across every
+    // group currently shown at once (DownloadAllLogsButton_Click).
+    // ===================================================================
+
+    private CancellationTokenSource? _exportCancellation;
+
+    private void
+    DownloadAllLogsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups || groups.Count == 0)
+        {
+            return;
+        }
+
+        _ = ExportLogGroupsAsync(groups);
+    }
+
+    private void
+    DownloadLogGroupButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: LogGroupResult group })
+        {
+            return;
+        }
+
+        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group });
+    }
+
+    private async Task
+    ExportLogGroupsAsync(
+        List<LogGroupResult> groups)
+    {
+        if (_exportCancellation != null)
+        {
+            return;
+        }
+
+        DownloadAllLogsButton.IsEnabled = false;
+
+        try
+        {
+            _exportCancellation = new CancellationTokenSource();
+
+            var exportFolder =
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "Downloads",
+                    "KubaToolKit",
+                    "CloudWatchLogs",
+                    DateTime.Now.ToString("yyyy-MM-dd_HHmmss"));
+
+            Directory.CreateDirectory(exportFolder);
+
+            var total = groups.Count;
+
+            for (var i = 0; i < total; i++)
+            {
+                _exportCancellation.Token.ThrowIfCancellationRequested();
+
+                var group = groups[i];
+                var displayName = LogGroupNameConverter.Strip(group.LogGroup);
+
+                ProgressTextBlock.Text = $"Downloading {i + 1}/{total}  •  {displayName}";
+                SearchProgressBar.Value = (i + 1) * 100.0 / total;
+
+                var filePath = Path.Combine(exportFolder, SanitizeFileName(displayName) + ".log");
+
+                await File.WriteAllLinesAsync(
+                    filePath,
+                    group.Logs
+                        .OrderBy(entry => entry.Timestamp)
+                        .Select(entry => $"{entry.Timestamp}  {entry.Message}"),
+                    _exportCancellation.Token);
+            }
+
+            ProgressTextBlock.Text = $"Downloaded {total} log group(s) to {exportFolder}";
+            SearchProgressBar.Value = 0;
+
+            Process.Start(new ProcessStartInfo { FileName = exportFolder, UseShellExecute = true });
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Debug("CloudWatchLogsView: log download cancelled.");
+
+            ProgressTextBlock.Text = "Download cancelled";
+            SearchProgressBar.Value = 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("CloudWatchLogsView: failed to download logs.", ex);
+
+            AppMessageBox.Show(ex.ToString(), "Download error");
+        }
+        finally
+        {
+            _exportCancellation = null;
+
+            DownloadAllLogsButton.IsEnabled = _hasResults;
+        }
+    }
+
+    private static string
+    SanitizeFileName(
+        string name)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = new string(name.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "log-group" : sanitized;
     }
 
     public void
