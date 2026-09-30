@@ -41,18 +41,18 @@ public class S3ObjectItem
                 < 1024)
             {
                 return
-                    $"{Size} B";
+                    $"{Size} o";
             }
 
             if (Size
                 < 1024 * 1024)
             {
                 return
-                    $"{Size / 1024d:0.0} KB";
+                    $"{Size / 1024d:0.0} Ko";
             }
 
             return
-                $"{Size / 1024d / 1024d:0.0} MB";
+                $"{Size / 1024d / 1024d:0.0} Mo";
         }
     }
 

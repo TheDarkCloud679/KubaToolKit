@@ -1151,7 +1151,7 @@ S3FilesGrid_Drop(
             if (info.Length > maxSize)
             {
                 AppMessageBox.Show(
-                    $"{info.Name} is larger than 100 MB.",
+                    $"{info.Name} is larger than 100 Mo.",
                     "Upload",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -1165,7 +1165,7 @@ S3FilesGrid_Drop(
         if (totalSize > maxSize)
         {
             AppMessageBox.Show(
-                "Total upload size exceeds 100 MB.",
+                "Total upload size exceeds 100 Mo.",
                 "Upload",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -1179,7 +1179,7 @@ S3FilesGrid_Drop(
         var result =
             AppMessageBox.Show(
                 $"Upload {files.Length} file(s)\n\n" +
-                $"Total size : {sizeMb:F2} MB\n\n" +
+                $"Total size : {sizeMb:F2} Mo\n\n" +
                 $"Continue ?",
                 "Confirm upload",
                 MessageBoxButton.YesNo,
