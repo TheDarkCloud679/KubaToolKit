@@ -317,7 +317,7 @@ public partial class AtlassianSearchView
 
         var rows =
             _incidents
-                .Where(i => string.IsNullOrEmpty(query) || i.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Where(i => string.IsNullOrEmpty(query) || IncidentMatchesQuery(i, query))
                 .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(i =>
                 {
@@ -337,6 +337,21 @@ public partial class AtlassianSearchView
 
         IncidentListItemsControl.ItemsSource = rows;
     }
+
+    // Beyond the incident's own name, also matches its description/
+    // solution text and its linked Jira/Confluence items (key or title) --
+    // an incident is often found by a symptom described in the solution,
+    // or by the ticket key someone already has in hand, not just its name.
+    private static bool
+    IncidentMatchesQuery(
+        IncidentEntry incident,
+        string query) =>
+        incident.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || incident.Description.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || incident.Solution.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || incident.Links.Any(l =>
+            l.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || l.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
 
     private void
     IncidentSearchBox_TextChanged(

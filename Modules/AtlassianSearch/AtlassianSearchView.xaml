@@ -251,7 +251,7 @@
                                 x:Name="IncidentSearchBox"
                                 BorderThickness="0"
                                 Padding="26,0,6,0"
-                                ToolTip="Search incidents by name"
+                                ToolTip="Search incidents by name, description, solution, or linked Jira/Confluence key and title"
                                 TextChanged="IncidentSearchBox_TextChanged"/>
                         </Grid>
                     </Border>
