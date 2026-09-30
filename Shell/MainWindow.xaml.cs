@@ -77,12 +77,6 @@ public partial class MainWindow
         _cloudWatchView.GetDateRange =
             () => (StartDatePicker.SelectedDate, StartTimeTextBox.Text, EndDatePicker.SelectedDate, EndTimeTextBox.Text);
 
-        // AtlassianSearchModeRadio only ever fires ModeRadio_Checked for the
-        // Dashboard/CloudWatch/.../Atlassian switch itself -- switching
-        // between Library/Wiki/Project Info once already in Atlassian mode
-        // needs its own signal to know when to show/hide the Profile combo.
-        _atlassianSearchView.ActiveTabChanged += (_, __) => UpdateProfileRowVisibility();
-
         Loaded += MainWindow_Loaded;
         PreviewMouseWheel += MainWindow_PreviewMouseWheel;
         Closing += MainWindow_Closing;
@@ -690,18 +684,17 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
     // The main Profile combo is shared by every profile-scoped module --
     // shown (in its usual left-aligned spot) for all of them except API
-    // Client (not profile-scoped at all) and Atlassian's Library/Wiki tabs
-    // (only Project Info, within Atlassian, is).
+    // Client, which isn't profile-scoped at all. Kept visible for all
+    // three Atlassian tabs (Library/Wiki don't actually use it, only
+    // Project Info does) rather than toggled per-tab, so the header
+    // doesn't jump around when switching between them.
     private void
     UpdateProfileRowVisibility()
     {
         var isApiClient = ApiClientModeRadio?.IsChecked == true;
-        var isAtlassianSearch = AtlassianSearchModeRadio?.IsChecked == true;
 
         ProfilePatternSearchRow.Visibility =
-            isApiClient || (isAtlassianSearch && !_atlassianSearchView.IsProjectInfoTabActive)
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            isApiClient ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void

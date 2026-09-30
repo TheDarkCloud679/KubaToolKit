@@ -50,9 +50,9 @@ public partial class AtlassianSearchView
 
     // Project Info stays scoped per AWS profile (unlike the Wiki, which
     // went generic) -- kept in sync with the main nav's own Profile combo
-    // (MainWindow shows that combo in Project Info's place whenever this
-    // tab is active, see IsProjectInfoTabActive/ActiveTabChanged) rather
-    // than keeping a second, separately-selected copy of it in here.
+    // (MainWindow shows that combo for Atlassian mode same as everywhere
+    // else, see MainWindow.UpdateProfileRowVisibility) rather than keeping
+    // a second, separately-selected copy of it in here.
     private string _projectInfoProfile = "";
 
     public AtlassianSearchView()
@@ -84,20 +84,6 @@ public partial class AtlassianSearchView
 
         _projectInfoView?.ChangeProfile(_projectInfoProfile);
     }
-
-    // MainWindow shows its own Profile combo (in the same left-aligned
-    // spot every other module uses it) only while this is true, since
-    // Library/Wiki aren't scoped to a profile at all.
-    public bool
-    IsProjectInfoTabActive =>
-        ProjectInfoTabRadio.IsChecked == true;
-
-    // Raised whenever the active Atlassian tab changes, so MainWindow can
-    // re-check IsProjectInfoTabActive and show/hide its Profile combo
-    // accordingly -- ModeRadio_Checked alone only reacts to the outer
-    // Dashboard/CloudWatch/.../Atlassian switch, not to switching tabs
-    // within Atlassian itself.
-    public event EventHandler? ActiveTabChanged;
 
     private static readonly NameValue AnyOption = new("", "(Any)");
 
@@ -143,8 +129,6 @@ public partial class AtlassianSearchView
             _projectInfoView = new ProjectInfoView(_projectInfoProfile);
             ProjectInfoTabContent.Content = _projectInfoView;
         }
-
-        ActiveTabChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ===================================================================
