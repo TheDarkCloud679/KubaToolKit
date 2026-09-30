@@ -209,23 +209,49 @@
                     Maximum="100"
                     Value="0"
                     VerticalAlignment="Center"/>
-                <Button
-                    x:Name="DownloadAllLogsButton"
+                <StackPanel
                     Grid.Column="2"
-                    Padding="10,2"
-                    IsEnabled="False"
-                    Click="DownloadAllLogsButton_Click"
-                    ToolTip="Download every result group below as a local .log file, all in one go">
-                    <StackPanel Orientation="Horizontal">
-                        <Path
-                            Data="M12,3 L12,15 M7,10 L12,15 L17,10 M4,17 L4,19 A2,2 0 0 0 6,21 L18,21 A2,2 0 0 0 20,19 L20,17"
-                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                            StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                            Width="12" Height="12" Stretch="Uniform"
-                            VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="Download all" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                    Orientation="Horizontal">
+                    <Button
+                        x:Name="DownloadSingleFileButton"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Height="28"
+                        Padding="10,0"
+                        Margin="0,0,8,0"
+                        FontSize="11.5"
+                        IsEnabled="False"
+                        Click="DownloadSingleFileButton_Click"
+                        ToolTip="Download every matched log below into one combined local file">
+                        <StackPanel Orientation="Horizontal">
+                            <Path
+                                Data="M12,3 L12,13 M8,9 L12,13 L16,9 M5,15 L5,17 A2,2 0 0 0 7,19 L17,19 A2,2 0 0 0 19,17 L19,15"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"
+                                VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Single file" FontSize="11.5" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        x:Name="DownloadPerGroupButton"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Height="28"
+                        Padding="10,0"
+                        FontSize="11.5"
+                        IsEnabled="False"
+                        Click="DownloadPerGroupButton_Click"
+                        ToolTip="Download each result group below as its own local .log file">
+                        <StackPanel Orientation="Horizontal">
+                            <Path
+                                Data="M4,3 L14,3 L14,8 M4,7 L14,7 M4,3 L4,17 L14,17 L14,11 M17,9 L17,17 M13.5,13.5 L17,17 L20.5,13.5"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"
+                                VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="One file per group" FontSize="11.5" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!-- Results -->
@@ -274,15 +300,17 @@
                                                 Foreground="{StaticResource AccentBrush}"
                                                 VerticalAlignment="Center"/>
                                             <Button
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                Height="22"
                                                 Margin="10,0,0,0"
-                                                Padding="6,1"
+                                                Padding="7,0"
                                                 FontSize="10.5"
                                                 Click="DownloadLogGroupButton_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="Download this group's matched logs to a local file">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Path
-                                                        Data="M12,3 L12,15 M7,10 L12,15 L17,10 M4,17 L4,19 A2,2 0 0 0 6,21 L18,21 A2,2 0 0 0 20,19 L20,17"
+                                                        Data="M12,3 L12,13 M8,9 L12,13 L16,9 M5,15 L5,17 A2,2 0 0 0 7,19 L17,19 A2,2 0 0 0 19,17 L19,15"
                                                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                         StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                         Width="9" Height="9" Stretch="Uniform"

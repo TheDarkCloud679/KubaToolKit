@@ -730,7 +730,7 @@ SearchAllLogsCheckBox_Changed(
 
         _hasResults = groupedResults.Count > 0;
 
-        DownloadAllLogsButton.IsEnabled = _hasResults;
+        SetDownloadButtonsEnabled(_hasResults);
 
         AnimateSectionRows();
     }
@@ -738,15 +738,17 @@ SearchAllLogsCheckBox_Changed(
     // ===================================================================
     // Bulk download -- same idea as S3 Explorer's multi-file Download:
     // save the matched logs locally instead of only reading them on
-    // screen. Scoped per result group rather than per individual log line
-    // (DownloadLogGroupButton_Click, one per Expander) or across every
-    // group currently shown at once (DownloadAllLogsButton_Click).
+    // screen. Three entry points sharing one export core: one combined
+    // file across every group currently shown (DownloadSingleFileButton),
+    // one file per group across all of them (DownloadPerGroupButton), or
+    // just the one group under a given Expander (DownloadLogGroupButton,
+    // per-instance in the DataTemplate).
     // ===================================================================
 
     private CancellationTokenSource? _exportCancellation;
 
     private void
-    DownloadAllLogsButton_Click(
+    DownloadSingleFileButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -755,7 +757,20 @@ SearchAllLogsCheckBox_Changed(
             return;
         }
 
-        _ = ExportLogGroupsAsync(groups);
+        _ = ExportLogGroupsAsync(groups, singleFile: true);
+    }
+
+    private void
+    DownloadPerGroupButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups || groups.Count == 0)
+        {
+            return;
+        }
+
+        _ = ExportLogGroupsAsync(groups, singleFile: false);
     }
 
     private void
@@ -768,19 +783,20 @@ SearchAllLogsCheckBox_Changed(
             return;
         }
 
-        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group });
+        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group }, singleFile: false);
     }
 
     private async Task
     ExportLogGroupsAsync(
-        List<LogGroupResult> groups)
+        List<LogGroupResult> groups,
+        bool singleFile)
     {
         if (_exportCancellation != null)
         {
             return;
         }
 
-        DownloadAllLogsButton.IsEnabled = false;
+        SetDownloadButtonsEnabled(false);
 
         try
         {
@@ -796,29 +812,15 @@ SearchAllLogsCheckBox_Changed(
 
             Directory.CreateDirectory(exportFolder);
 
-            var total = groups.Count;
-
-            for (var i = 0; i < total; i++)
+            if (singleFile)
             {
-                _exportCancellation.Token.ThrowIfCancellationRequested();
-
-                var group = groups[i];
-                var displayName = LogGroupNameConverter.Strip(group.LogGroup);
-
-                ProgressTextBlock.Text = $"Downloading {i + 1}/{total}  •  {displayName}";
-                SearchProgressBar.Value = (i + 1) * 100.0 / total;
-
-                var filePath = Path.Combine(exportFolder, SanitizeFileName(displayName) + ".log");
-
-                await File.WriteAllLinesAsync(
-                    filePath,
-                    group.Logs
-                        .OrderBy(entry => entry.Timestamp)
-                        .Select(entry => $"{entry.Timestamp}  {entry.Message}"),
-                    _exportCancellation.Token);
+                await ExportAsSingleFileAsync(groups, exportFolder, _exportCancellation.Token);
+            }
+            else
+            {
+                await ExportAsOneFilePerGroupAsync(groups, exportFolder, _exportCancellation.Token);
             }
 
-            ProgressTextBlock.Text = $"Downloaded {total} log group(s) to {exportFolder}";
             SearchProgressBar.Value = 0;
 
             Process.Start(new ProcessStartInfo { FileName = exportFolder, UseShellExecute = true });
@@ -840,8 +842,96 @@ SearchAllLogsCheckBox_Changed(
         {
             _exportCancellation = null;
 
-            DownloadAllLogsButton.IsEnabled = _hasResults;
+            SetDownloadButtonsEnabled(_hasResults);
         }
+    }
+
+    private async Task
+    ExportAsOneFilePerGroupAsync(
+        List<LogGroupResult> groups,
+        string exportFolder,
+        CancellationToken cancellationToken)
+    {
+        var total = groups.Count;
+
+        for (var i = 0; i < total; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var group = groups[i];
+            var displayName = LogGroupNameConverter.Strip(group.LogGroup);
+
+            ProgressTextBlock.Text = $"Downloading {i + 1}/{total}  •  {displayName}";
+            SearchProgressBar.Value = (i + 1) * 100.0 / total;
+
+            var filePath = Path.Combine(exportFolder, SanitizeFileName(displayName) + ".log");
+
+            await File.WriteAllLinesAsync(filePath, FormatGroupLines(group), cancellationToken);
+        }
+
+        ProgressTextBlock.Text = $"Downloaded {total} log group(s) to {exportFolder}";
+    }
+
+    // A single combined file, each group's lines under its own "====
+    // <group> ====" header so the file stays readable without the
+    // Expanders' own grouping to lean on.
+    private async Task
+    ExportAsSingleFileAsync(
+        List<LogGroupResult> groups,
+        string exportFolder,
+        CancellationToken cancellationToken)
+    {
+        var filePath = Path.Combine(exportFolder, "cloudwatch-logs.log");
+
+        await using var writer = new StreamWriter(filePath);
+
+        var total = groups.Count;
+
+        for (var i = 0; i < total; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var group = groups[i];
+            var displayName = LogGroupNameConverter.Strip(group.LogGroup);
+
+            ProgressTextBlock.Text = $"Downloading {i + 1}/{total}  •  {displayName}";
+            SearchProgressBar.Value = (i + 1) * 100.0 / total;
+
+            if (i > 0)
+            {
+                await writer.WriteLineAsync();
+            }
+
+            await writer.WriteLineAsync($"==== {displayName} ====");
+
+            foreach (var line in FormatGroupLines(group))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await writer.WriteLineAsync(line);
+            }
+        }
+
+        await writer.FlushAsync();
+
+        var totalLines = groups.Sum(group => group.Logs.Count);
+
+        ProgressTextBlock.Text = $"Downloaded {totalLines} log(s) from {total} group(s) to {filePath}";
+    }
+
+    private static IEnumerable<string>
+    FormatGroupLines(
+        LogGroupResult group) =>
+        group.Logs
+            .OrderBy(entry => entry.Timestamp)
+            .Select(entry => $"{entry.Timestamp}  {entry.Message}");
+
+    private void
+    SetDownloadButtonsEnabled(
+        bool enabled)
+    {
+        DownloadSingleFileButton.IsEnabled = enabled;
+        DownloadPerGroupButton.IsEnabled = enabled;
     }
 
     private static string
