@@ -239,14 +239,14 @@
                         </StackPanel>
                     </Button>
                     <Button
-                        x:Name="DownloadPerGroupButton"
+                        x:Name="DownloadPerEntryButton"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Height="28"
                         Padding="10,0"
                         FontSize="11.5"
                         IsEnabled="False"
-                        Click="DownloadPerGroupButton_Click"
-                        ToolTip="Download the selected group(s) below (or every group, if none are selected), each as its own local .log file">
+                        Click="DownloadPerEntryButton_Click"
+                        ToolTip="Download the selected group(s) below (or every group, if none are selected), each matched log line as its own local .log file">
                         <StackPanel Orientation="Horizontal">
                             <Path
                                 Data="M4,3 L14,3 L14,8 M4,7 L14,7 M4,3 L4,17 L14,17 L14,11 M17,9 L17,17 M13.5,13.5 L17,17 L20.5,13.5"
@@ -254,7 +254,7 @@
                                 StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                 Width="12" Height="12" Stretch="Uniform"
                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="One file per group" FontSize="11.5" VerticalAlignment="Center"/>
+                            <TextBlock Text="One file per entry" FontSize="11.5" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

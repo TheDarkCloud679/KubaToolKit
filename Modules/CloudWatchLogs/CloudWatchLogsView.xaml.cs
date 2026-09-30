@@ -741,8 +741,9 @@ SearchAllLogsCheckBox_Changed(
     // save the matched logs locally instead of only reading them on
     // screen. Three entry points sharing one export core: one combined
     // file across every group currently shown (DownloadSingleFileButton),
-    // one file per group across all of them (DownloadPerGroupButton), or
-    // just the one group under a given Expander (DownloadLogGroupButton,
+    // one file per individual log line/entry across all of them
+    // (DownloadPerEntryButton), or just the one group under a given
+    // Expander, as its own single combined file (DownloadLogGroupButton,
     // per-instance in the DataTemplate).
     // ===================================================================
 
@@ -804,7 +805,7 @@ SearchAllLogsCheckBox_Changed(
     }
 
     private void
-    DownloadPerGroupButton_Click(
+    DownloadPerEntryButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -818,6 +819,10 @@ SearchAllLogsCheckBox_Changed(
         _ = ExportLogGroupsAsync(groups, singleFile: false);
     }
 
+    // The small per-group Download button always means "this group's own
+    // logs, as one file" -- singleFile: true here, not false, since
+    // "false" now means one file per individual log line rather than one
+    // file per group.
     private void
     DownloadLogGroupButton_Click(
         object sender,
@@ -828,7 +833,7 @@ SearchAllLogsCheckBox_Changed(
             return;
         }
 
-        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group }, singleFile: false);
+        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group }, singleFile: true);
     }
 
     private async Task
@@ -863,7 +868,7 @@ SearchAllLogsCheckBox_Changed(
             }
             else
             {
-                await ExportAsOneFilePerGroupAsync(groups, exportFolder, _exportCancellation.Token);
+                await ExportAsOneFilePerEntryAsync(groups, exportFolder, _exportCancellation.Token);
             }
 
             SearchProgressBar.Value = 0;
@@ -891,30 +896,60 @@ SearchAllLogsCheckBox_Changed(
         }
     }
 
+    // One local file per individual log line -- each group gets its own
+    // subfolder (so two groups can't collide on the same file names, and
+    // so hundreds/thousands of per-line files don't all land loose in one
+    // folder), named 0001_<timestamp>.log, 0002_<timestamp>.log, etc.
+    // Progress text is throttled to every few entries; updating it on
+    // every single one would otherwise dominate the time this takes when
+    // there are a lot of them.
     private async Task
-    ExportAsOneFilePerGroupAsync(
+    ExportAsOneFilePerEntryAsync(
         List<LogGroupResult> groups,
         string exportFolder,
         CancellationToken cancellationToken)
     {
-        var total = groups.Count;
+        var totalEntries = groups.Sum(group => group.Logs.Count);
+        var written = 0;
 
-        for (var i = 0; i < total; i++)
+        foreach (var group in groups)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var group = groups[i];
             var displayName = LogGroupNameConverter.Strip(group.LogGroup);
 
-            ProgressTextBlock.Text = $"Downloading {i + 1}/{total}  •  {displayName}";
-            SearchProgressBar.Value = (i + 1) * 100.0 / total;
+            var groupFolder =
+                groups.Count > 1
+                    ? Path.Combine(exportFolder, SanitizeFileName(displayName))
+                    : exportFolder;
 
-            var filePath = Path.Combine(exportFolder, SanitizeFileName(displayName) + ".log");
+            Directory.CreateDirectory(groupFolder);
 
-            await File.WriteAllLinesAsync(filePath, FormatGroupLines(group), cancellationToken);
+            var entries = group.Logs.OrderBy(entry => entry.Timestamp).ToList();
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var entry = entries[i];
+
+                written++;
+
+                if (written % 10 == 0 || written == totalEntries)
+                {
+                    ProgressTextBlock.Text = $"Downloading {written}/{totalEntries}  •  {displayName}";
+                    SearchProgressBar.Value = totalEntries == 0 ? 0 : written * 100.0 / totalEntries;
+                }
+
+                var fileName = $"{i + 1:D5}_{SanitizeFileName(entry.Timestamp)}.log";
+                var filePath = Path.Combine(groupFolder, fileName);
+
+                await File.WriteAllTextAsync(
+                    filePath,
+                    $"{entry.Timestamp}  {entry.Message}",
+                    cancellationToken);
+            }
         }
 
-        ProgressTextBlock.Text = $"Downloaded {total} log group(s) to {exportFolder}";
+        ProgressTextBlock.Text = $"Downloaded {totalEntries} log(s) to {exportFolder}";
     }
 
     // A single combined file, each group's lines under its own "====
@@ -976,7 +1011,7 @@ SearchAllLogsCheckBox_Changed(
         bool enabled)
     {
         DownloadSingleFileButton.IsEnabled = enabled;
-        DownloadPerGroupButton.IsEnabled = enabled;
+        DownloadPerEntryButton.IsEnabled = enabled;
     }
 
     private static string
@@ -986,7 +1021,7 @@ SearchAllLogsCheckBox_Changed(
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = new string(name.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
 
-        return string.IsNullOrWhiteSpace(sanitized) ? "log-group" : sanitized;
+        return string.IsNullOrWhiteSpace(sanitized) ? "untitled" : sanitized;
     }
 
     public void
