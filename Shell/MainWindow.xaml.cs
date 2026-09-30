@@ -77,6 +77,12 @@ public partial class MainWindow
         _cloudWatchView.GetDateRange =
             () => (StartDatePicker.SelectedDate, StartTimeTextBox.Text, EndDatePicker.SelectedDate, EndTimeTextBox.Text);
 
+        // AtlassianSearchModeRadio only ever fires ModeRadio_Checked for the
+        // Dashboard/CloudWatch/.../Atlassian switch itself -- switching
+        // between Library/Wiki/Project Info once already in Atlassian mode
+        // needs its own signal to know when to show/hide the Profile combo.
+        _atlassianSearchView.ActiveTabChanged += (_, __) => UpdateProfileRowVisibility();
+
         Loaded += MainWindow_Loaded;
         PreviewMouseWheel += MainWindow_PreviewMouseWheel;
         Closing += MainWindow_Closing;
@@ -119,7 +125,7 @@ MainWindow_Loaded(
             var profile =
     ProfileCombo.SelectedItem?.ToString();
 
-            _atlassianSearchView.SetDefaultProjectInfoProfile(profile);
+            _atlassianSearchView.SetProjectInfoProfile(profile);
 
             if (!string.IsNullOrWhiteSpace(profile))
             {
@@ -237,7 +243,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         var profile =
             ProfileCombo.SelectedItem?.ToString();
 
-        _atlassianSearchView.SetDefaultProjectInfoProfile(profile);
+        _atlassianSearchView.SetProjectInfoProfile(profile);
 
         if (S3ModeRadio?.IsChecked == true)
         {
@@ -627,8 +633,7 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         _atlassianSearchView.Visibility =
             isAtlassianSearch ? Visibility.Visible : Visibility.Collapsed;
 
-        ProfilePatternSearchRow.Visibility =
-            isApiClient || isAtlassianSearch ? Visibility.Collapsed : Visibility.Visible;
+        UpdateProfileRowVisibility();
 
         DateRangeRow.Visibility =
             isCloudWatch || isCloudTrail ? Visibility.Visible : Visibility.Collapsed;
@@ -676,6 +681,27 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             await LoadCloudWatchLogGroupsAsync(
                 ProfileCombo.SelectedItem?.ToString());
         }
+        else if (isAtlassianSearch)
+        {
+            _atlassianSearchView.SetProjectInfoProfile(
+                ProfileCombo.SelectedItem?.ToString());
+        }
+    }
+
+    // The main Profile combo is shared by every profile-scoped module --
+    // shown (in its usual left-aligned spot) for all of them except API
+    // Client (not profile-scoped at all) and Atlassian's Library/Wiki tabs
+    // (only Project Info, within Atlassian, is).
+    private void
+    UpdateProfileRowVisibility()
+    {
+        var isApiClient = ApiClientModeRadio?.IsChecked == true;
+        var isAtlassianSearch = AtlassianSearchModeRadio?.IsChecked == true;
+
+        ProfilePatternSearchRow.Visibility =
+            isApiClient || (isAtlassianSearch && !_atlassianSearchView.IsProjectInfoTabActive)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
     }
 
     private void

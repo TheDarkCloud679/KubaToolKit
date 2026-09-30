@@ -1,4 +1,3 @@
-using Amazon.Runtime.CredentialManagement;
 using KubaToolKit.Modules.ApiClient;
 using KubaToolKit.Modules.AtlassianSearch.Models;
 using KubaToolKit.Modules.ProjectInfo;
@@ -49,6 +48,13 @@ public partial class AtlassianSearchView
     private WikiView? _wikiView;
     private ProjectInfoView? _projectInfoView;
 
+    // Project Info stays scoped per AWS profile (unlike the Wiki, which
+    // went generic) -- kept in sync with the main nav's own Profile combo
+    // (MainWindow shows that combo in Project Info's place whenever this
+    // tab is active, see IsProjectInfoTabActive/ActiveTabChanged) rather
+    // than keeping a second, separately-selected copy of it in here.
+    private string _projectInfoProfile = "";
+
     public AtlassianSearchView()
     {
         InitializeComponent();
@@ -63,97 +69,35 @@ public partial class AtlassianSearchView
         }
 
         LoadIncidents();
-
-        PopulateProjectInfoProfileCombo();
     }
 
-    // Project Info stays scoped per AWS profile (unlike the Wiki, which
-    // went generic) -- the main nav's profile picker is deliberately hidden
-    // in Atlassian mode, so this tab needs its own. It defaults to
-    // whatever's selected in the main nav (see SetDefaultProjectInfoProfile)
-    // until the user explicitly picks something else here, after which it
-    // stops following.
-    private bool _projectInfoProfileFollowsMainProfile = true;
-    private bool _settingProjectInfoProfileProgrammatically;
-
-    private void
-    PopulateProjectInfoProfileCombo()
-    {
-        try
-        {
-            var chain = new CredentialProfileStoreChain();
-
-            var profiles =
-                chain.ListProfiles()
-                    .Select(x => x.Name)
-                    .Where(x => x != "default")
-                    .OrderBy(x => x)
-                    .ToList();
-
-            ProjectInfoProfileCombo.ItemsSource = profiles;
-
-            if (profiles.Count > 0)
-            {
-                ProjectInfoProfileCombo.SelectedIndex = 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("AtlassianSearchView: failed to load AWS profiles for Project Info.", ex);
-        }
-    }
-
-    // Called by MainWindow whenever the main nav's own profile changes
-    // (which is what the Dashboard/S3/Sqs/StepFunctions tabs are scoped
-    // to) -- Project Info keeps its own separate combo, but should still
-    // default to that same profile rather than just the alphabetically
-    // first one, right up until the user overrides it here.
+    // Called by MainWindow whenever the main nav's Profile combo changes
+    // (or, on startup/tab switch, to push its current value) so Project
+    // Info always reflects whatever profile is already selected elsewhere
+    // in the app, with no separate selection of its own to fall out of
+    // sync.
     public void
-    SetDefaultProjectInfoProfile(
+    SetProjectInfoProfile(
         string? profile)
     {
-        if (!_projectInfoProfileFollowsMainProfile
-            || string.IsNullOrWhiteSpace(profile)
-            || ProjectInfoProfileCombo.ItemsSource is not IEnumerable<string> profiles
-            || !profiles.Contains(profile, StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
+        _projectInfoProfile = profile ?? "";
 
-        _settingProjectInfoProfileProgrammatically = true;
-
-        try
-        {
-            ProjectInfoProfileCombo.SelectedItem = profile;
-        }
-        finally
-        {
-            _settingProjectInfoProfileProgrammatically = false;
-        }
+        _projectInfoView?.ChangeProfile(_projectInfoProfile);
     }
 
-    private void
-    ProjectInfoProfileCombo_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        if (ProjectInfoProfileCombo.SelectedItem is not string profileName)
-        {
-            return;
-        }
+    // MainWindow shows its own Profile combo (in the same left-aligned
+    // spot every other module uses it) only while this is true, since
+    // Library/Wiki aren't scoped to a profile at all.
+    public bool
+    IsProjectInfoTabActive =>
+        ProjectInfoTabRadio.IsChecked == true;
 
-        if (!_settingProjectInfoProfileProgrammatically)
-        {
-            _projectInfoProfileFollowsMainProfile = false;
-        }
-
-        if (_projectInfoView == null)
-        {
-            return;
-        }
-
-        _projectInfoView.ChangeProfile(profileName);
-    }
+    // Raised whenever the active Atlassian tab changes, so MainWindow can
+    // re-check IsProjectInfoTabActive and show/hide its Profile combo
+    // accordingly -- ModeRadio_Checked alone only reacts to the outer
+    // Dashboard/CloudWatch/.../Atlassian switch, not to switching tabs
+    // within Atlassian itself.
+    public event EventHandler? ActiveTabChanged;
 
     private static readonly NameValue AnyOption = new("", "(Any)");
 
@@ -188,9 +132,6 @@ public partial class AtlassianSearchView
         ProjectInfoTabContent.Visibility =
             ProjectInfoTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
-        ProfilePickerPanel.Visibility =
-            ProjectInfoTabRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-
         if (WikiTabRadio.IsChecked == true && _wikiView == null)
         {
             _wikiView = new WikiView();
@@ -199,11 +140,11 @@ public partial class AtlassianSearchView
 
         if (ProjectInfoTabRadio.IsChecked == true && _projectInfoView == null)
         {
-            var profileName = ProjectInfoProfileCombo.SelectedItem as string ?? "";
-
-            _projectInfoView = new ProjectInfoView(profileName);
+            _projectInfoView = new ProjectInfoView(_projectInfoProfile);
             ProjectInfoTabContent.Content = _projectInfoView;
         }
+
+        ActiveTabChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ===================================================================

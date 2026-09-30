@@ -75,25 +75,6 @@
                     Foreground="{StaticResource TextSecondaryBrush}"
                     TextWrapping="Wrap"/>
 
-                <StackPanel
-                    x:Name="ProfilePickerPanel"
-                    Grid.Column="2"
-                    Orientation="Horizontal"
-                    Margin="0,0,10,0"
-                    Visibility="Collapsed">
-                    <TextBlock
-                        Text="Profile"
-                        VerticalAlignment="Center"
-                        Margin="0,0,6,0"
-                        FontSize="11"
-                        Foreground="{StaticResource TextMutedBrush}"/>
-                    <ComboBox
-                        x:Name="ProjectInfoProfileCombo"
-                        Width="160"
-                        ToolTip="AWS profile Project Info is scoped to"
-                        SelectionChanged="ProjectInfoProfileCombo_SelectionChanged"/>
-                </StackPanel>
-
                 <Button
                     x:Name="SettingsButton"
                     Grid.Column="3"
