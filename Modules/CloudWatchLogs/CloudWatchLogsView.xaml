@@ -318,9 +318,9 @@
                                                 Margin="10,0,0,0"
                                                 Padding="7,0"
                                                 FontSize="10.5"
-                                                Click="DownloadLogGroupButton_Click"
+                                                Click="DownloadGroupSingleFileButton_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Download this group's matched logs to a local file">
+                                                ToolTip="Download this group's matched logs into one combined local file">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Path
                                                         Data="M12,3 L12,13 M8,9 L12,13 L16,9 M5,15 L5,17 A2,2 0 0 0 7,19 L17,19 A2,2 0 0 0 19,17 L19,15"
@@ -328,7 +328,26 @@
                                                         StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                         Width="9" Height="9" Stretch="Uniform"
                                                         VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                                    <TextBlock Text="Download" FontSize="10.5" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Single file" FontSize="10.5" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                Height="22"
+                                                Margin="6,0,0,0"
+                                                Padding="7,0"
+                                                FontSize="10.5"
+                                                Click="DownloadGroupPerEntryButton_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Download this group's matched logs, each log line as its own local .log file">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Path
+                                                        Data="M4,3 L14,3 L14,8 M4,7 L14,7 M4,3 L4,17 L14,17 L14,11 M17,9 L17,17 M13.5,13.5 L17,17 L20.5,13.5"
+                                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                        StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                        Width="9" Height="9" Stretch="Uniform"
+                                                        VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="Per entry" FontSize="10.5" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                         </StackPanel>

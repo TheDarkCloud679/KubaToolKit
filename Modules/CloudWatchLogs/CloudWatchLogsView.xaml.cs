@@ -739,11 +739,11 @@ SearchAllLogsCheckBox_Changed(
     // ===================================================================
     // Bulk download -- same idea as S3 Explorer's multi-file Download:
     // save the matched logs locally instead of only reading them on
-    // screen. Three entry points sharing one export core: one combined
-    // file across every group currently shown (DownloadSingleFileButton),
-    // one file per individual log line/entry across all of them
-    // (DownloadPerEntryButton), or just the one group under a given
-    // Expander, as its own single combined file (DownloadLogGroupButton,
+    // screen. Same Single file / Per entry choice at two scopes: across
+    // every group currently shown, or selected (DownloadSingleFileButton/
+    // DownloadPerEntryButton above the results), and per group, scoped to
+    // just the one group under a given Expander
+    // (DownloadGroupSingleFileButton/DownloadGroupPerEntryButton,
     // per-instance in the DataTemplate).
     // ===================================================================
 
@@ -819,12 +819,12 @@ SearchAllLogsCheckBox_Changed(
         _ = ExportLogGroupsAsync(groups, singleFile: false);
     }
 
-    // The small per-group Download button always means "this group's own
-    // logs, as one file" -- singleFile: true here, not false, since
-    // "false" now means one file per individual log line rather than one
-    // file per group.
+    // Each group's own header carries the same Single file / Per entry
+    // choice as the bulk buttons above, just scoped to that one group --
+    // same two Click handlers pattern, only the group list passed down
+    // differs (always exactly one group, read off the sender's Tag).
     private void
-    DownloadLogGroupButton_Click(
+    DownloadGroupSingleFileButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -834,6 +834,19 @@ SearchAllLogsCheckBox_Changed(
         }
 
         _ = ExportLogGroupsAsync(new List<LogGroupResult> { group }, singleFile: true);
+    }
+
+    private void
+    DownloadGroupPerEntryButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: LogGroupResult group })
+        {
+            return;
+        }
+
+        _ = ExportLogGroupsAsync(new List<LogGroupResult> { group }, singleFile: false);
     }
 
     private async Task
