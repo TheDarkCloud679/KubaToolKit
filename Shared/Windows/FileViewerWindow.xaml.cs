@@ -93,7 +93,10 @@ public partial class
             // has already wired up ContentEditor/CardsScrollViewer -- doing
             // it from XAML fired the Checked event mid-parse, before those
             // fields existed yet, and crashed with a NullReferenceException.
-            CardsViewRadio.IsChecked =
+            // Defaults to Raw -- Cards is still one click away for whoever
+            // wants it, but the raw text is what most people want to see
+            // first.
+            RawViewRadio.IsChecked =
                 true;
         }
 

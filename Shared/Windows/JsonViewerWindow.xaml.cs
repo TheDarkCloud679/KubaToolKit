@@ -122,8 +122,10 @@ public partial class JsonViewerWindow
                 // JsonTextBox/CardsScrollViewer -- doing it from XAML fires
                 // the Checked event mid-parse, before those fields exist
                 // yet, and crashes with a NullReferenceException (same bug
-                // as FileViewerWindow hit).
-                CardsViewRadio.IsChecked =
+                // as FileViewerWindow hit). Defaults to Raw -- Cards is
+                // still one click away for whoever wants it, but the raw
+                // text is what most people want to see first.
+                RawViewRadio.IsChecked =
                     true;
             }
         }
