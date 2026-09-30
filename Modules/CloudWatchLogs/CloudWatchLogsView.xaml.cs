@@ -731,6 +731,7 @@ SearchAllLogsCheckBox_Changed(
         _hasResults = groupedResults.Count > 0;
 
         SetDownloadButtonsEnabled(_hasResults);
+        SelectedGroupsCountText.Text = "";
 
         AnimateSectionRows();
     }
@@ -747,12 +748,54 @@ SearchAllLogsCheckBox_Changed(
 
     private CancellationTokenSource? _exportCancellation;
 
+    // Each group's header carries its own checkbox (LogGroupResult.IsSelected)
+    // -- with at least one checked, the two bulk buttons below limit
+    // themselves to just the checked group(s), same idea as S3 Explorer's
+    // grid selection driving its own Download button. With none checked,
+    // they fall back to every group currently shown, same as before this
+    // was added.
+    private List<LogGroupResult>?
+    GetGroupsForBulkDownload()
+    {
+        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups || groups.Count == 0)
+        {
+            return null;
+        }
+
+        var selected = groups.Where(group => group.IsSelected).ToList();
+
+        return selected.Count > 0 ? selected : groups;
+    }
+
+    private void
+    GroupSelectionCheckBox_Changed(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups)
+        {
+            return;
+        }
+
+        var selectedCount = groups.Count(group => group.IsSelected);
+
+        SelectedGroupsCountText.Text =
+            selectedCount switch
+            {
+                0 => "",
+                1 => "1 group selected",
+                _ => $"{selectedCount} groups selected"
+            };
+    }
+
     private void
     DownloadSingleFileButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups || groups.Count == 0)
+        var groups = GetGroupsForBulkDownload();
+
+        if (groups == null)
         {
             return;
         }
@@ -765,7 +808,9 @@ SearchAllLogsCheckBox_Changed(
         object sender,
         RoutedEventArgs e)
     {
-        if (LogsGroupedItemsControl.ItemsSource is not List<LogGroupResult> groups || groups.Count == 0)
+        var groups = GetGroupsForBulkDownload();
+
+        if (groups == null)
         {
             return;
         }
