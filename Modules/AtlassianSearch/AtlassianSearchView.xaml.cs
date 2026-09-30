@@ -520,6 +520,48 @@ public partial class AtlassianSearchView
 
         RefreshIncidentList();
         UpdateIncidentDetailPanel();
+        HighlightIncidentSearchMatch();
+    }
+
+    // After a content search (a match found in the description/solution
+    // rather than the incident's own name) jumps straight to that
+    // incident, the matched word can still be buried in a paragraph of
+    // text -- selecting it makes it immediately visible instead of
+    // leaving the user to reread the whole field to find it.
+    private void
+    HighlightIncidentSearchMatch()
+    {
+        var query = IncidentSearchBox.Text.Trim();
+
+        if (string.IsNullOrEmpty(query))
+        {
+            return;
+        }
+
+        if (TryHighlightMatch(IncidentDescriptionTextBox, query))
+        {
+            return;
+        }
+
+        TryHighlightMatch(IncidentSolutionTextBox, query);
+    }
+
+    private static bool
+    TryHighlightMatch(
+        TextBox textBox,
+        string query)
+    {
+        var index = textBox.Text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+
+        if (index < 0)
+        {
+            return false;
+        }
+
+        textBox.Focus();
+        textBox.Select(index, query.Length);
+
+        return true;
     }
 
     // Incident rows are plain Borders (not Focusable), so clicking one to
