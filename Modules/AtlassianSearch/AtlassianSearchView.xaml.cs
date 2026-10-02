@@ -180,19 +180,19 @@ public partial class AtlassianSearchView
     private void
     RefreshIncidentList()
     {
-        var query = IncidentSearchBox.Text.Trim();
+        var keywords = ParseSearchKeywords(IncidentSearchBox.Text);
 
         var rows =
             _incidents
-                .Where(i => string.IsNullOrEmpty(query) || IncidentMatchesQuery(i, query))
+                .Where(i => keywords.Count == 0 || keywords.All(keyword => IncidentMatchesQuery(i, keyword)))
                 .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(i =>
                 {
                     var isSelected = ReferenceEquals(i, _selectedIncident);
 
                     var snippet =
-                        isSelected && !string.IsNullOrEmpty(query)
-                            ? BuildIncidentSnippet(i, query)
+                        isSelected && keywords.Count > 0
+                            ? BuildIncidentSnippet(i, keywords)
                             : null;
 
                     return new IncidentListRow
@@ -213,6 +213,18 @@ public partial class AtlassianSearchView
 
         IncidentListItemsControl.ItemsSource = rows;
     }
+
+    // Comma-separated words act as a list of required keywords (AND'd
+    // together via IncidentMatchesQuery, one call per keyword) rather than
+    // one literal phrase -- "server, 4g, réseau" finds incidents that
+    // mention all three, wherever each one happens to appear, not just
+    // ones containing that exact comma-joined string.
+    private static List<string>
+    ParseSearchKeywords(
+        string rawQuery) =>
+        rawQuery
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
 
     // Beyond the incident's own name, also matches its description/
     // solution text and its linked Jira/Confluence items (key or title) --
@@ -406,14 +418,29 @@ public partial class AtlassianSearchView
     // where a content search actually matched, right on the card, instead
     // of requiring a trip into the description/solution editor to find it.
     // Name matches aren't snippet-ed: the name is already the card's own
-    // title, right above.
+    // title, right above. With several comma-separated keywords, shows
+    // wherever the first one of them (in typed order) happens to match --
+    // showing all of them at once would crowd the card more than it helps.
     private static (string Before, string Match, string After)?
     BuildIncidentSnippet(
         IncidentEntry entry,
-        string query) =>
-        FindSnippet(entry.Description, query)
-        ?? FindSnippet(entry.Solution, query)
-        ?? BuildLinkSnippet(entry, query);
+        List<string> keywords)
+    {
+        foreach (var keyword in keywords)
+        {
+            var snippet =
+                FindSnippet(entry.Description, keyword)
+                ?? FindSnippet(entry.Solution, keyword)
+                ?? BuildLinkSnippet(entry, keyword);
+
+            if (snippet != null)
+            {
+                return snippet;
+            }
+        }
+
+        return null;
+    }
 
     private static (string Before, string Match, string After)?
     BuildLinkSnippet(
