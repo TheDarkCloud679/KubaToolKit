@@ -22,7 +22,7 @@
             Text="API token"
             FontWeight="SemiBold"
             Margin="0,0,0,4"
-            ToolTip="Generate one at id.atlassian.com/manage-profile/security/api-tokens — tied to your account, kept only on this machine, never committed."/>
+            ToolTip="API Token - Generate at id.atlassian.com/manage-profile/security/api-tokens"/>
         <TextBox x:Name="ApiTokenTextBox" Margin="0,0,0,10"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">

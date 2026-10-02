@@ -28,7 +28,7 @@
                 Grid.Column="1"
                 Style="{StaticResource SecondaryButtonStyle}"
                 Click="OpenProjectFolderButton_Click"
-                ToolTip="Opens (and creates if needed) a shared folder for this project, to drop files alongside this glossary.">
+                ToolTip="Files Folder - Opens (creates if needed)">
                 <StackPanel Orientation="Horizontal">
                     <Path
                         Data="M1,3.5 L6,3.5 L7.5,5.5 L15,5.5 L15,13 L1,13 Z"
@@ -58,7 +58,7 @@
                 Width="240"
                 VerticalContentAlignment="Center"
                 KeyDown="SearchTextBox_KeyDown"
-                ToolTip="Searches across all sections/columns of this project. Enter = next result, Shift+Enter = previous."/>
+                ToolTip="Search Project - Enter for next result"/>
 
             <Button
                 Style="{StaticResource SecondaryButtonStyle}"

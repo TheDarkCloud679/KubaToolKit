@@ -147,7 +147,7 @@
                                 Padding="6,0"
                                 BorderThickness="0"
                                 VerticalContentAlignment="Center"
-                                ToolTip="Search for a request by name (Enter: next, Shift+Enter: previous, Esc: clear)"
+                                ToolTip="Search Requests - Enter for next, Esc to clear"
                                 TextChanged="RequestSearchBox_TextChanged"
                                 PreviewKeyDown="RequestSearchBox_PreviewKeyDown"/>
 
@@ -514,7 +514,7 @@
                             Height="28"
                             Padding="0"
                             Margin="4,0,0,0"
-                            ToolTip="Edit the variables of the selected environment"
+                            ToolTip="Edit Environment Variables"
                             Click="EditEnvironment_Click">
                             <Path
                                 Data="M4,20 L4,16 L15,5 A2,2 0 0 1 18,5 L19,6 A2,2 0 0 1 19,9 L8,20 Z"
@@ -560,7 +560,7 @@
                             Height="28"
                             Padding="10,0"
                             Margin="4,0,0,0"
-                            ToolTip="Send the configured token request and store the resulting token in this environment's variables"
+                            ToolTip="Get Token - Sends the request, stores the result"
                             Click="GetToken_Click">
                             <StackPanel Orientation="Horizontal">
                                 <Path
@@ -578,7 +578,7 @@
                                 Width="28"
                                 Height="28"
                                 Padding="0"
-                                ToolTip="Open the technical code label file (ValueLabels.json) for the Cards view"
+                                ToolTip="Edit Value Labels - Used by the Cards view"
                                 Click="OpenValueLabels_Click">
                                 <Path
                                     Data="M3,12 L12,3 L19,3 L19,10 L10,19 L3,12 Z M15,7 A1.4,1.4 0 1 0 15,7.01"
@@ -1458,7 +1458,7 @@
                                 FontSize="11"
                                 Padding="6,0"
                                 VerticalContentAlignment="Center"
-                                ToolTip="Search in the response (Enter: next, Shift+Enter: previous, Esc: clear)"
+                                ToolTip="Search Response - Enter for next, Esc to clear"
                                 TextChanged="ResponseSearchBox_TextChanged"
                                 PreviewKeyDown="ResponseSearchBox_PreviewKeyDown"/>
 

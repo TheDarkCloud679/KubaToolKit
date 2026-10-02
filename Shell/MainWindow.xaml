@@ -96,7 +96,7 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Content="Team Sharing..."
-                    ToolTip="Share the incident Library, Wiki, Project Info, and API Client collections with your team via a synced folder (Google Drive, OneDrive...)"
+                    ToolTip="Team Sharing - Sync via Google Drive, OneDrive, etc."
                     Click="TeamSharingButton_Click"/>
 
                 <!-- Module switcher: pill-highlighted radio labels
@@ -300,7 +300,7 @@
                                             Margin="0,0,8,0"
                                             VerticalAlignment="Center"
                                             Fill="{Binding Converter={StaticResource ProfileRiskBrushConverter}}"
-                                            ToolTip="Best-effort guess from the profile's name -- red usually means production"/>
+                                            ToolTip="Guessed from Profile Name - Red usually means production"/>
                                         <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </DataTemplate>

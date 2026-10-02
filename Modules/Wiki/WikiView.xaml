@@ -42,7 +42,7 @@
                 Width="260"
                 VerticalContentAlignment="Center"
                 KeyDown="SearchTextBox_KeyDown"
-                ToolTip="Searches page names and text (Ctrl+F to focus). Enter = next result, Shift+Enter = previous."/>
+                ToolTip="Search Pages - Ctrl+F to focus, Enter for next"/>
 
             <Button
                 Content="▲"
@@ -320,7 +320,7 @@
                                 MouseLeftButtonDown="FeaturedImageOverlay_MouseLeftButtonDown"
                                 MouseMove="FeaturedImageOverlay_MouseMove"
                                 MouseLeftButtonUp="FeaturedImageOverlay_MouseLeftButtonUp"
-                                ToolTip="Scroll to zoom (Ctrl+Scroll to pan up/down), drag to pan, double-click to reset"/>
+                                ToolTip="Scroll to Zoom - Drag to pan, double-click to reset"/>
                             <wv2:WebView2
                                 x:Name="PdfPreview"
                                 Visibility="Collapsed"/>

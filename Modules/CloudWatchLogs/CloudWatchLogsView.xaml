@@ -227,7 +227,7 @@
                         FontSize="11.5"
                         IsEnabled="False"
                         Click="DownloadSingleFileButton_Click"
-                        ToolTip="Download the selected group(s) below (or every group, if none are selected) into one combined local file">
+                        ToolTip="Single File - Selected groups, or all if none selected">
                         <StackPanel Orientation="Horizontal">
                             <Path
                                 Data="M12,3 L12,13 M8,9 L12,13 L16,9 M5,15 L5,17 A2,2 0 0 0 7,19 L17,19 A2,2 0 0 0 19,17 L19,15"
@@ -246,7 +246,7 @@
                         FontSize="11.5"
                         IsEnabled="False"
                         Click="DownloadPerEntryButton_Click"
-                        ToolTip="Download the selected group(s) below (or every group, if none are selected), each matched log line as its own local .log file">
+                        ToolTip="Per Entry - One file per log line">
                         <StackPanel Orientation="Horizontal">
                             <Path
                                 Data="M4,3 L14,3 L14,8 M4,7 L14,7 M4,3 L4,17 L14,17 L14,11 M17,9 L17,17 M13.5,13.5 L17,17 L20.5,13.5"
@@ -293,7 +293,7 @@
                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                 Checked="GroupSelectionCheckBox_Changed"
                                                 Unchecked="GroupSelectionCheckBox_Changed"
-                                                ToolTip="Select this group to limit the download buttons above to just the selected group(s)"/>
+                                                ToolTip="Select Group - Limits downloads above to this group"/>
                                             <Border
                                                 Padding="7,2"
                                                 CornerRadius="{StaticResource RadiusMedium}"
@@ -320,7 +320,7 @@
                                                 FontSize="10.5"
                                                 Click="DownloadGroupSingleFileButton_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Download this group's matched logs into one combined local file">
+                                                ToolTip="Single File - This group's logs in one file">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Path
                                                         Data="M12,3 L12,13 M8,9 L12,13 L16,9 M5,15 L5,17 A2,2 0 0 0 7,19 L17,19 A2,2 0 0 0 19,17 L19,15"
@@ -339,7 +339,7 @@
                                                 FontSize="10.5"
                                                 Click="DownloadGroupPerEntryButton_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Download this group's matched logs, each log line as its own local .log file">
+                                                ToolTip="Per Entry - One file per log line">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Path
                                                         Data="M4,3 L14,3 L14,8 M4,7 L14,7 M4,3 L4,17 L14,17 L14,11 M17,9 L17,17 M13.5,13.5 L17,17 L20.5,13.5"
