@@ -92,11 +92,25 @@ public partial class JsonViewerWindow
                 .LineTransformers
                 .Clear();
 
-            JsonTextBox.TextArea
-                .TextView
-                .LineTransformers
-                .Add(
-                    new JsonFormattingHelper.JsonColorizer());
+            // _cardsView == null here doubles as "this message didn't
+            // actually parse as JSON" (JsonCardViewBuilder.Build returns
+            // null on a JsonException) -- a non-JSON log line (a plain
+            // command, a stack trace...) must not get JsonColorizer's
+            // regex-based highlighting at all, since it'll happily tint
+            // any bare number purple and any "word": pair blue regardless
+            // of whether the text is actually JSON, which reads as broken
+            // formatting rather than no formatting.
+            _cardsView =
+                JsonCardViewBuilder.Build(JsonTextBox.Text);
+
+            if (_cardsView != null)
+            {
+                JsonTextBox.TextArea
+                    .TextView
+                    .LineTransformers
+                    .Add(
+                        new JsonFormattingHelper.JsonColorizer());
+            }
 
             JsonTextBox.TextArea
                 .TextView
@@ -104,9 +118,6 @@ public partial class JsonViewerWindow
 
             JsonInfoText.Text =
                 $"{JsonTextBox.LineCount} lines • {JsonTextBox.Text.Length:N0} chars";
-
-            _cardsView =
-                JsonCardViewBuilder.Build(JsonTextBox.Text);
 
             if (_cardsView != null)
             {

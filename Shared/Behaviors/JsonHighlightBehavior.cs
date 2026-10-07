@@ -72,6 +72,23 @@ public static class JsonHighlightBehavior
             return;
         }
 
+        // Cheap "is this even JSON-shaped" gate, same heuristic
+        // FileViewerWindow uses for .log/.txt files -- without it, a
+        // plain-text message (a shell command, a stack trace...) still
+        // gets its bare numbers/"word": pairs tinted by TokenPattern
+        // below, which reads as broken formatting rather than none. A
+        // full JsonDocument.Parse per row would be overkill here (this
+        // runs on every realized grid row), so this only checks the
+        // outermost shape.
+        var trimmed = text.TrimStart();
+
+        if (trimmed.Length == 0 || (trimmed[0] != '{' && trimmed[0] != '['))
+        {
+            textBlock.Inlines.Add(new Run(text));
+
+            return;
+        }
+
         var lastIndex = 0;
 
         foreach (Match match in TokenPattern.Matches(text))
