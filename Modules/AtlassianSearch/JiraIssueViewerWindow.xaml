@@ -372,6 +372,7 @@
                 <TextBox
                     x:Name="NewCommentTextBox"
                     Grid.Row="0"
+                    Style="{StaticResource MultilineTextBoxStyle}"
                     Height="60"
                     AcceptsReturn="True"
                     TextWrapping="Wrap"

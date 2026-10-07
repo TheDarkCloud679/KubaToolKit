@@ -1193,6 +1193,7 @@
                                         <TextBox
                                             x:Name="BodyTextBox"
                                             Grid.Row="0"
+                                            Style="{StaticResource MultilineTextBoxStyle}"
                                             AcceptsReturn="True"
                                             AcceptsTab="True"
                                             TextWrapping="NoWrap"
@@ -1245,6 +1246,7 @@
 
                                     <TextBox
                                         x:Name="GraphQlQueryTextBox"
+                                        Style="{StaticResource MultilineTextBoxStyle}"
                                         AcceptsReturn="True"
                                         AcceptsTab="True"
                                         TextWrapping="NoWrap"
@@ -1265,6 +1267,7 @@
 
                                     <TextBox
                                         x:Name="GraphQlVariablesTextBox"
+                                        Style="{StaticResource MultilineTextBoxStyle}"
                                         AcceptsReturn="True"
                                         AcceptsTab="True"
                                         TextWrapping="NoWrap"
