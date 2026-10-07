@@ -1035,6 +1035,37 @@ public partial class ApiClientView
                 : $"{_requestSearchMatchIndex + 1}/{_requestSearchMatches.Count}";
     }
 
+    // Folds every currently-expanded folder back up -- handy after a
+    // search (or AddRequest/AddFolder's own auto-expand-to-reveal) has
+    // left a lot of the tree open. Only ever touches realized
+    // TreeViewItem containers (i.e. folders that are actually expanded);
+    // a folder that was never opened has no container and is already
+    // collapsed, nothing to do there. Recurses into each item's children
+    // before collapsing the item itself, since collapsing a parent first
+    // can make its children's containers unreachable.
+    private void
+    CollapseAllCollections_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        CollapseAllTreeItems(CollectionsTreeView);
+
+    private static void
+    CollapseAllTreeItems(
+        ItemsControl container)
+    {
+        foreach (var item in container.Items)
+        {
+            if (container.ItemContainerGenerator.ContainerFromItem(item) is not TreeViewItem treeViewItem)
+            {
+                continue;
+            }
+
+            CollapseAllTreeItems(treeViewItem);
+
+            treeViewItem.IsExpanded = false;
+        }
+    }
+
     private void
     ExpandAndSelectTreeNode(
         CollectionNode node)
