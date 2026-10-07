@@ -277,7 +277,9 @@
                         VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled"
                         FontSize="13"
-                        TextChanged="ContentTextBox_TextChanged"/>
+                        ToolTip="Ctrl+Click a Link - Opens it in your browser"
+                        TextChanged="ContentTextBox_TextChanged"
+                        PreviewMouseLeftButtonDown="ContentTextBox_PreviewMouseLeftButtonDown"/>
 
                     <Border
                         x:Name="FeaturedImageBorder"

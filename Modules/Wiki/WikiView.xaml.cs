@@ -3,6 +3,7 @@ using KubaToolKit.Modules.Wiki.Models;
 using KubaToolKit.Shared.Services;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -713,6 +714,73 @@ public partial class WikiView
         _currentSection.Text = ContentTextBox.Text;
 
         ScheduleSave();
+    }
+
+    private static readonly Regex UrlPattern =
+        new(@"https?://[^\s""<>]+", RegexOptions.Compiled);
+
+    // ContentTextBox is a plain editable TextBox, not a RichTextBox -- it
+    // can't render an actual inline hyperlink, so a link only acts as one
+    // while Ctrl is held (same convention as VS Code and most code
+    // editors). A plain click still just places the caret/selects text as
+    // normal, which matters since URLs show up constantly in notes.
+    private void
+    ContentTextBox_PreviewMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control)
+        {
+            return;
+        }
+
+        var index = ContentTextBox.GetCharacterIndexFromPoint(e.GetPosition(ContentTextBox), true);
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        var url = FindUrlAt(ContentTextBox.Text, index);
+
+        if (url == null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"WikiView: failed to open link '{url}'.", ex);
+
+            AppMessageBox.Show(ex.ToString(), "Wiki - open link");
+        }
+    }
+
+    // Trailing punctuation (a period ending the sentence, a comma, a
+    // closing parenthesis around the URL...) is almost never actually
+    // part of the link.
+    private static string?
+    FindUrlAt(
+        string text,
+        int index)
+    {
+        foreach (Match match in UrlPattern.Matches(text))
+        {
+            if (index < match.Index || index > match.Index + match.Length)
+            {
+                continue;
+            }
+
+            return match.Value.TrimEnd('.', ',', ')', ']', '}', ';', '!', '?');
+        }
+
+        return null;
     }
 
     // Moved out of the page editor itself (a "type a folder name" combo
