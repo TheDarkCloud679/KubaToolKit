@@ -19,6 +19,12 @@ public class AtlassianService
 {
     private static readonly HttpClient Client = new();
 
+    // A standard Jira issue key: one or more letters, then a dash, then
+    // digits (e.g. "CUST-193325"). Used by SearchJira to tell "find this
+    // specific ticket" apart from an ordinary keyword search.
+    private static readonly Regex JiraIssueKeyPattern =
+        new(@"^[A-Za-z][A-Za-z0-9]*-\d+$", RegexOptions.Compiled);
+
     private static AuthenticationHeaderValue
     BuildAuthHeader(
         AtlassianSettings settings)
@@ -913,10 +919,24 @@ public class AtlassianService
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            // Without the trailing "*", JQL's fuzzy "~" match won't catch
-            // a short fragment against a longer word once they're more
-            // than ~2 edits apart.
-            conditions.Add($"text ~ \"{EscapeForQuery(query)}*\"");
+            var trimmedQuery = query.Trim();
+
+            if (JiraIssueKeyPattern.IsMatch(trimmedQuery))
+            {
+                // "text ~" only searches summary/description/comments, never
+                // the issue key itself -- a query that's shaped exactly like
+                // one ("CUST-193325") almost certainly means "find this
+                // specific ticket", so look it up directly instead of a
+                // fuzzy text match that would otherwise come back empty.
+                conditions.Add($"key = \"{EscapeForQuery(trimmedQuery.ToUpperInvariant())}\"");
+            }
+            else
+            {
+                // Without the trailing "*", JQL's fuzzy "~" match won't
+                // catch a short fragment against a longer word once they're
+                // more than ~2 edits apart.
+                conditions.Add($"text ~ \"{EscapeForQuery(trimmedQuery)}*\"");
+            }
         }
 
         AddJqlCondition(conditions, "project", project, allowComparison: false);
