@@ -28,6 +28,12 @@ public partial class AttachLinkWindow
     private string _filterProject = "";
     private string _filterStatus = "";
 
+    // Every project key this site has, kept around (beyond just
+    // FilterProjectCombo's ItemsSource) so a bare-number query can be
+    // resolved against all of them when no single project is selected --
+    // see SearchJira's knownProjectKeysForNumericLookup.
+    private List<string> _jiraProjectKeys = new();
+
     // Confluence's CQL space filter needs the space KEY, but every result
     // row only ever carries the space's display name (there's no reason
     // to fetch the key just to show it) -- both are tracked so the combo
@@ -79,6 +85,8 @@ public partial class AttachLinkWindow
             var spacesTask = _atlassianService.GetConfluenceSpaces(_settings);
 
             await Task.WhenAll(projectsTask, statusesTask, spacesTask);
+
+            _jiraProjectKeys = projectsTask.Result.Select(p => p.Value).ToList();
 
             FilterProjectCombo.ItemsSource = new List<NameValue> { AnyOption }.Concat(projectsTask.Result).ToList();
             FilterProjectCombo.SelectedIndex = 0;
@@ -164,7 +172,8 @@ public partial class AttachLinkWindow
                         JiraFieldFilter.Empty,
                         JiraFieldFilter.Empty,
                         statusFilter,
-                        cancellationToken)
+                        cancellationToken,
+                        knownProjectKeysForNumericLookup: _jiraProjectKeys)
                     : Task.FromResult(new List<JiraSearchResult>());
 
             var confluenceTask =

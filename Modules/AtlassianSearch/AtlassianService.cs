@@ -25,6 +25,11 @@ public class AtlassianService
     private static readonly Regex JiraIssueKeyPattern =
         new(@"^[A-Za-z][A-Za-z0-9]*-\d+$", RegexOptions.Compiled);
 
+    // Just the number part of a ticket ("191216"), without the project
+    // prefix -- how people usually remember/paste a ticket reference.
+    private static readonly Regex NumericQueryPattern =
+        new(@"^\d+$", RegexOptions.Compiled);
+
     private static AuthenticationHeaderValue
     BuildAuthHeader(
         AtlassianSettings settings)
@@ -907,7 +912,8 @@ public class AtlassianService
         JiraFieldFilter assignee,
         JiraFieldFilter priority,
         JiraFieldFilter status,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? knownProjectKeysForNumericLookup = null)
     {
         // A saved filter may carry no search text at all -- built as a
         // list of conditions instead of an always-present "text ~"
@@ -929,6 +935,29 @@ public class AtlassianService
                 // specific ticket", so look it up directly instead of a
                 // fuzzy text match that would otherwise come back empty.
                 conditions.Add($"key = \"{EscapeForQuery(trimmedQuery.ToUpperInvariant())}\"");
+            }
+            else if (NumericQueryPattern.IsMatch(trimmedQuery)
+                && !string.IsNullOrWhiteSpace(project.Value) && project.Operator == "=")
+            {
+                // People usually type/paste just the number ("191216"), not
+                // the full key -- with exactly one project already picked,
+                // that's enough to resolve the full key directly.
+                conditions.Add($"key = \"{EscapeForQuery(project.Value.ToUpperInvariant())}-{trimmedQuery}\"");
+            }
+            else if (NumericQueryPattern.IsMatch(trimmedQuery)
+                && knownProjectKeysForNumericLookup is { Count: > 0 })
+            {
+                // No single project to combine it with -- try the number
+                // against every project this site has instead of falling
+                // back to "text ~", which doesn't search the key at all and
+                // for a bare number tends to surface unrelated issues whose
+                // summary happens to contain that number somewhere.
+                var candidates =
+                    knownProjectKeysForNumericLookup
+                        .Take(100)
+                        .Select(key => $"\"{EscapeForQuery(key.ToUpperInvariant())}-{trimmedQuery}\"");
+
+                conditions.Add($"key in ({string.Join(", ", candidates)})");
             }
             else
             {
