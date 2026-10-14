@@ -75,12 +75,19 @@ public class CollectionStorageService
         }
     }
 
+    // Populated fresh by every LoadCollections() call -- a .json file that
+    // couldn't be read as a Postman collection used to just vanish with no
+    // feedback at all, which from the Collections folder's point of view
+    // looks exactly like "I dropped a file in here and nothing happened".
+    public List<string> LastCollectionLoadErrors { get; private set; } = new();
+
     public List<CollectionNode>
     LoadCollections()
     {
         EnsureFoldersExist();
 
         var roots = new List<CollectionNode>();
+        var errors = new List<string>();
 
         foreach (var file in Directory
                      .GetFiles(CollectionsFolder, "*.json")
@@ -95,6 +102,8 @@ public class CollectionStorageService
 
                 if (collection == null)
                 {
+                    errors.Add($"{Path.GetFileName(file)}: empty or not a JSON object");
+
                     continue;
                 }
 
@@ -114,10 +123,13 @@ public class CollectionStorageService
 
                 roots.Add(root);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                errors.Add($"{Path.GetFileName(file)}: {ex.Message}");
             }
         }
+
+        LastCollectionLoadErrors = errors;
 
         return roots;
     }

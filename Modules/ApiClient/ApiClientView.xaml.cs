@@ -670,6 +670,19 @@ public partial class ApiClientView
             EnvironmentCombo.SelectedItem = toReselect ?? environments[0];
 
             UpdateGetTokenButtonState();
+
+            if (_collectionStorage.LastCollectionLoadErrors.Count > 0)
+            {
+                Logger.Error(
+                    "ApiClientView: couldn't read "
+                    + $"{_collectionStorage.LastCollectionLoadErrors.Count} collection file(s): "
+                    + string.Join("; ", _collectionStorage.LastCollectionLoadErrors));
+
+                AppMessageBox.Show(
+                    "Couldn't read:\n\n" + string.Join("\n", _collectionStorage.LastCollectionLoadErrors)
+                    + "\n\nNot valid Postman Collection v2.1 JSON -- check the file and reload.",
+                    "Collections loading error");
+            }
         }
         catch (Exception ex)
         {
@@ -697,6 +710,12 @@ public partial class ApiClientView
         LoadCollectionsAndEnvironments();
     }
 
+    // Opens the actual Collections\ subfolder LoadCollections() scans --
+    // not RootFolder (its parent, which also holds Environments\): a
+    // .json file dropped one level too high because this opened the
+    // parent instead used to silently never show up, with no feedback
+    // that it had landed in the wrong place at all. Environments\ already
+    // has its own direct-opening button (AddEnvironment_Click).
     private void
     OpenCollectionsFolder_Click(
         object sender,
@@ -707,7 +726,7 @@ public partial class ApiClientView
         Process.Start(
             new ProcessStartInfo
             {
-                FileName = CollectionStorageService.RootFolder,
+                FileName = CollectionStorageService.CollectionsFolder,
                 UseShellExecute = true
             });
     }
