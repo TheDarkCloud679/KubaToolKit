@@ -121,10 +121,22 @@ MainWindow_Loaded(
 
             _atlassianSearchView.SetProjectInfoProfile(profile);
 
-            if (!string.IsNullOrWhiteSpace(profile))
+            // Kick off AWS SSO auth right away rather than waiting for the
+            // user to pick a profile in the main nav (nothing auto-selects
+            // one -- see LoadProfiles) or for some module's own AWS call to
+            // fail with "SSO expired" well after startup. The SSO session
+            // this authenticates (kuba-sso) is shared across every profile
+            // that references it, so any available profile works fine to
+            // probe/trigger it with -- it doesn't have to be a selected one.
+            var ssoProbeProfile =
+                !string.IsNullOrWhiteSpace(profile)
+                    ? profile
+                    : (ProfileCombo.ItemsSource as IEnumerable<string>)?.FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(ssoProbeProfile))
             {
                 await AwsSsoService
-                    .EnsureLoggedIn(profile);
+                    .EnsureLoggedIn(ssoProbeProfile);
             }
 
             LoadPatterns();
