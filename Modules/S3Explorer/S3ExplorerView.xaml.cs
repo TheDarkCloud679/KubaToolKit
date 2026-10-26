@@ -73,10 +73,6 @@ public partial class S3ExplorerView
             {
                 Logger.Debug("S3ExplorerView: SSO session expired, attempting reconnection.");
 
-                AppMessageBox.Show(
-                    "AWS authentication required.\nYour browser will open.",
-                    "AWS Login");
-
                 var success =
                     await AwsSsoService.Login();
 
