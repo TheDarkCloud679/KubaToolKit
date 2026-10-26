@@ -912,11 +912,18 @@ DeleteFile(
                 key);
     }
 
-    public async Task<List<S3ObjectItem>>
+    // One ListObjectsV2 page (AWS caps each call at 1000 keys) -- a
+    // folder/prefix with more than that used to silently show only the
+    // first 1000 with no indication anything was cut off, which for a
+    // large bucket is actively misleading (it just looks like "that's
+    // everything"). Callers page through via continuationToken instead of
+    // this ever trying to fetch an unbounded "everything" in one call.
+    public async Task<S3FilesPage>
     GetFiles(
         string profile,
         string bucketName,
-        string prefix)
+        string prefix,
+        string? continuationToken = null)
     {
         var chain = new CredentialProfileStoreChain();
 
@@ -933,31 +940,40 @@ DeleteFile(
             {
                 BucketName = bucketName,
                 Prefix = prefix,
-                Delimiter = "/"
+                Delimiter = "/",
+                ContinuationToken = continuationToken
             };
 
         var response = await client.ListObjectsV2Async(request);
 
-        return response
-    .S3Objects?
-    .Where(x => x.Key != prefix)
-    .Select(x => new S3ObjectItem
+        var items =
+            response
+                .S3Objects?
+                .Where(x => x.Key != prefix)
+                .Select(x => new S3ObjectItem
+                {
+                    Name =
+                        x.Key
+                            .Split('/')
+                            .Last(),
+                    Key =
+                        x.Key,
+                    Size =
+                        x.Size
+                        ?? 0,
+                    LastModified =
+                        x.LastModified
+                        ?? DateTime.MinValue
+                })
+                .OrderBy(x => x.Name)
+                .ToList()
+            ?? new List<S3ObjectItem>();
+
+        return new S3FilesPage
         {
-            Name =
-                x.Key
-                    .Split('/')
-                    .Last(),
-            Key =
-                x.Key,
-            Size =
-                x.Size
-                ?? 0,
-            LastModified =
-                x.LastModified
-                ?? DateTime.MinValue
-        })
-    .OrderBy(x => x.Name)
-    .ToList()
-    ?? new List<S3ObjectItem>();
+            Items = items,
+            NextContinuationToken =
+                response.IsTruncated == true ? response.NextContinuationToken : null
+        };
     }
 }

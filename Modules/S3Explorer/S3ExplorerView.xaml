@@ -411,6 +411,21 @@
                     </Border>
 
                     <Grid Grid.Row="1" Margin="{StaticResource CardPadding}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBox
+                            x:Name="S3FilterTextBox"
+                            Grid.Row="0"
+                            Margin="0,0,0,8"
+                            VerticalContentAlignment="Center"
+                            ToolTip="Filter Loaded Files - Narrows what's shown, no new AWS call"
+                            TextChanged="S3FilterTextBox_TextChanged"/>
+
+                    <Grid Grid.Row="1">
 
                         <DataGrid
                             x:Name="S3FilesGrid"
@@ -550,6 +565,32 @@
                                     HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
+                    </Grid>
+
+                        <DockPanel Grid.Row="2" Margin="0,8,0,0" LastChildFill="False">
+                            <TextBlock
+                                x:Name="S3FilesLoadedCountText"
+                                DockPanel.Dock="Left"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Foreground="{StaticResource TextMutedBrush}"/>
+                            <Button
+                                x:Name="S3LoadMoreButton"
+                                DockPanel.Dock="Right"
+                                Visibility="Collapsed"
+                                Click="LoadMoreS3Files_Click"
+                                ToolTip="Load the next page of files in this folder from S3">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path
+                                        Data="M12,5 L12,15 M7,10 L12,15 L17,10"
+                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                        StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                        Width="12" Height="12" Stretch="Uniform"
+                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Load more" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </DockPanel>
                     </Grid>
                 </Grid>
             </Border>

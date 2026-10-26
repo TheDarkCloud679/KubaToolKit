@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -23,6 +24,15 @@ public partial class S3ExplorerView
     private ArchiveExplorerWindow? _archiveExplorer;
     private CancellationTokenSource? _downloadCancellation;
     private CancellationTokenSource? _s3SearchCancellation;
+
+    // Set from the current folder listing's own NextContinuationToken --
+    // null once there's nothing left on the server to load. Drives the
+    // "Load more" button rather than this view (or GetFiles) ever trying
+    // to fetch an entire huge prefix in one shot.
+    private string? _s3NextContinuationToken;
+    private bool _s3LoadingMoreFiles;
+    private string? _s3LoadMoreBucket;
+    private string? _s3LoadMorePrefix;
 
     public S3ExplorerView()
     {
@@ -385,19 +395,7 @@ S3TreeView_SelectedItemChanged(
             _currentS3Prefix =
                 prefix;
 
-            var files =
-                await _s3Service
-                    .GetFiles(
-                        _currentProfile,
-                        bucket,
-                        prefix);
-
-            _s3Files.Clear();
-
-            foreach (var file in files)
-            {
-                _s3Files.Add(file);
-            }
+            await LoadFirstFilesPage(bucket, prefix);
 
             S3FilesGrid.ItemsSource =
                 _s3Files;
@@ -584,6 +582,12 @@ RunSearchAsync(
                 _s3Files.Add(file);
             }
 
+            // Search results are a self-contained, already-capped (100)
+            // set, not a folder-listing page -- clear any pending "Load
+            // more" left over from whichever folder was browsed last.
+            _s3NextContinuationToken = null;
+            UpdateLoadMoreState();
+
             S3FilesGrid.ItemsSource =
                 _s3Files;
 
@@ -731,27 +735,129 @@ RefreshCurrentFolder()
                 .SelectedItem?
                 .ToString();
 
-        var files =
-            await _s3Service
-                .GetFiles(
-                    _currentProfile!,
-                    bucket!,
-                    node.Prefix);
-
-        _s3Files.Clear();
-
-        foreach (var file
-                 in files)
+        if (string.IsNullOrWhiteSpace(bucket))
         {
-            _s3Files.Add(
-                file);
+            return;
         }
+
+        await LoadFirstFilesPage(bucket, node.Prefix);
 
         UpdateSelectionState();
 
         Dispatcher.BeginInvoke(
             new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
             System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    // Shared by RefreshCurrentFolder (tree selection) and NavigateToPrefix
+    // (breadcrumb click) -- always the FIRST page of a (new) folder, which
+    // is also the one moment it's safe to blow away whatever was loaded
+    // before. LoadMoreS3Files_Click appends on top of this instead.
+    private async Task
+    LoadFirstFilesPage(
+        string bucket,
+        string prefix)
+    {
+        // A filter left over from whichever folder was open before would
+        // otherwise silently hide everything in the new one.
+        S3FilterTextBox.Text = "";
+
+        var page =
+            await _s3Service.GetFiles(_currentProfile!, bucket, prefix);
+
+        _s3Files.Clear();
+
+        foreach (var file in page.Items)
+        {
+            _s3Files.Add(file);
+        }
+
+        _s3LoadMoreBucket = bucket;
+        _s3LoadMorePrefix = prefix;
+        _s3NextContinuationToken = page.NextContinuationToken;
+
+        UpdateLoadMoreState();
+    }
+
+    private void
+    UpdateLoadMoreState()
+    {
+        S3LoadMoreButton.Visibility =
+            _s3NextContinuationToken != null ? Visibility.Visible : Visibility.Collapsed;
+
+        S3FilesLoadedCountText.Text =
+            _s3Files.Count == 1 ? "1 file loaded" : $"{_s3Files.Count} files loaded";
+    }
+
+    private async void
+    LoadMoreS3Files_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_s3LoadingMoreFiles
+            || _s3NextContinuationToken == null
+            || _s3LoadMoreBucket == null
+            || _s3LoadMorePrefix == null
+            || string.IsNullOrWhiteSpace(_currentProfile))
+        {
+            return;
+        }
+
+        _s3LoadingMoreFiles = true;
+        S3LoadMoreButton.IsEnabled = false;
+
+        try
+        {
+            var page =
+                await _s3Service.GetFiles(
+                    _currentProfile,
+                    _s3LoadMoreBucket,
+                    _s3LoadMorePrefix,
+                    _s3NextContinuationToken);
+
+            foreach (var file in page.Items)
+            {
+                _s3Files.Add(file);
+            }
+
+            _s3NextContinuationToken = page.NextContinuationToken;
+
+            UpdateLoadMoreState();
+
+            Dispatcher.BeginInvoke(
+                new Action(() => DataGridSortHelper.RefreshColumnWidths(S3FilesGrid)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("S3ExplorerView: failed to load more files.", ex);
+
+            AppMessageBox.Show(ex.ToString(), "S3 - load more");
+        }
+        finally
+        {
+            _s3LoadingMoreFiles = false;
+            S3LoadMoreButton.IsEnabled = true;
+        }
+    }
+
+    // Filters whatever's currently loaded (this page plus any appended via
+    // Load More) -- instant, no extra AWS call. Separate from the deep
+    // Search (RunSearchAsync), which scans the server side across the
+    // whole prefix/bucket instead of just what's already on screen.
+    private void
+    S3FilterTextBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        var view = CollectionViewSource.GetDefaultView(_s3Files);
+        var filterText = S3FilterTextBox.Text.Trim();
+
+        view.Filter =
+            string.IsNullOrEmpty(filterText)
+                ? null
+                : item => item is S3ObjectItem file
+                    && file.Name.Contains(filterText, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task
