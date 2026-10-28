@@ -272,7 +272,6 @@
                                     x:Name="ResultsViewGridRadio"
                                     Content="Grid"
                                     GroupName="ResultsView"
-                                    IsChecked="True"
                                     Checked="ResultsViewMode_Changed"
                                     Style="{StaticResource NavPillRadioButtonStyle}"
                                     FontSize="11"

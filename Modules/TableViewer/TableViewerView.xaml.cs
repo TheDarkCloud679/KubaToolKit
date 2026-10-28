@@ -31,6 +31,13 @@ public partial class TableViewerView : UserControl
     public TableViewerView()
     {
         InitializeComponent();
+
+        // Not set via IsChecked="True" in XAML: that fires the Checked
+        // event (-> RefreshResultsView) while InitializeComponent is
+        // still connecting later-declared named elements, which crashed
+        // the whole app on startup (ResultsGrid/NotesPanel were still
+        // null at that point).
+        ResultsViewGridRadio.IsChecked = true;
     }
 
     private TableFileItem?
@@ -365,6 +372,15 @@ public partial class TableViewerView : UserControl
     private void
     RefreshResultsView()
     {
+        if (ResultsSummaryListBox == null
+            || ResultsGrid == null
+            || ResultsCardsContent == null
+            || ResultsCardsScroll == null
+            || NotesPanel == null)
+        {
+            return;
+        }
+
         var selected = ResultsSummaryListBox.SelectedItem as FileDecodeResultItem;
 
         if (selected == null)
