@@ -1,11 +1,14 @@
 namespace KubaToolKit.Shared.Services;
 
-// QTable is an external, native (non-.NET) tool each technician installs
-// locally -- its path varies per machine, hence a setting rather than a
-// hardcoded constant.
+// Mirrors QTable's own Parameters dialog: 3 XML definitions files, one
+// per file category (binary tables, stats files, memory dumps). Table
+// Viewer decodes files itself -- it never shells out to QTable.exe, so
+// unlike that dialog there's no tool path to configure here.
 public class TableViewerSettings
 {
-    public string QTableExePath { get; set; } = @"C:\Utilitaires\Qtable\QTable.exe";
+    public string TablesDefinitionsXmlPath { get; set; } = "";
 
-    public List<string> DefaultDefinitionFiles { get; set; } = new();
+    public string StatsDefinitionsXmlPath { get; set; } = "";
+
+    public string DumpsDefinitionsXmlPath { get; set; } = "";
 }

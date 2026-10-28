@@ -1,6 +1,7 @@
 using KubaToolKit.Shared.Services;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace KubaToolKit.Modules.TableViewer;
 
@@ -9,98 +10,53 @@ public partial class TableViewerSettingsWindow
 {
     private readonly TableViewerSettingsService _settingsService = new();
 
-    private readonly List<string> _definitionFiles;
-
     public TableViewerSettingsWindow()
     {
         InitializeComponent();
 
         var settings = _settingsService.Load();
 
-        QTableExePathTextBox.Text = settings.QTableExePath;
-
-        _definitionFiles = new List<string>(settings.DefaultDefinitionFiles);
-
-        RefreshDefinitionFilesList();
+        TablesXmlTextBox.Text = settings.TablesDefinitionsXmlPath;
+        StatsXmlTextBox.Text = settings.StatsDefinitionsXmlPath;
+        DumpsXmlTextBox.Text = settings.DumpsDefinitionsXmlPath;
     }
 
     private void
-    RefreshDefinitionFilesList()
-    {
-        DefinitionFilesListBox.ItemsSource = null;
-        DefinitionFilesListBox.ItemsSource = _definitionFiles;
-    }
-
-    private void
-    AddDefinitionFile_Click(
+    BrowseTablesXml_Click(
         object sender,
-        RoutedEventArgs e)
+        RoutedEventArgs e) =>
+        Browse(TablesXmlTextBox);
+
+    private void
+    BrowseStatsXml_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        Browse(StatsXmlTextBox);
+
+    private void
+    BrowseDumpsXml_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        Browse(DumpsXmlTextBox);
+
+    private void
+    Browse(
+        TextBox target)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Choose definition file(s)",
-            Filter = "XML definition files (*.xml)|*.xml|All files (*.*)|*.*",
-            Multiselect = true
+            Title = "Choose a definitions file",
+            Filter = "XML definitions (*.xml)|*.xml|All files (*.*)|*.*"
         };
 
-        var qtableFolder = Path.GetDirectoryName(QTableExePathTextBox.Text);
-        var xmlFolder = qtableFolder != null ? Path.Combine(qtableFolder, "xml") : null;
-
-        if (xmlFolder != null && Directory.Exists(xmlFolder))
+        if (File.Exists(target.Text))
         {
-            dialog.InitialDirectory = xmlFolder;
-        }
-
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        foreach (var file in dialog.FileNames)
-        {
-            if (!_definitionFiles.Contains(file))
-            {
-                _definitionFiles.Add(file);
-            }
-        }
-
-        RefreshDefinitionFilesList();
-    }
-
-    private void
-    RemoveDefinitionFile_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (DefinitionFilesListBox.SelectedItem is not string selected)
-        {
-            return;
-        }
-
-        _definitionFiles.Remove(selected);
-
-        RefreshDefinitionFilesList();
-    }
-
-    private void
-    BrowseButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Locate QTable.exe",
-            Filter = "QTable (QTable.exe)|QTable.exe|Executable files (*.exe)|*.exe|All files (*.*)|*.*"
-        };
-
-        if (File.Exists(QTableExePathTextBox.Text))
-        {
-            dialog.InitialDirectory = Path.GetDirectoryName(QTableExePathTextBox.Text);
+            dialog.InitialDirectory = Path.GetDirectoryName(target.Text);
         }
 
         if (dialog.ShowDialog(this) == true)
         {
-            QTableExePathTextBox.Text = dialog.FileName;
+            target.Text = dialog.FileName;
         }
     }
 
@@ -118,8 +74,9 @@ public partial class TableViewerSettingsWindow
         _settingsService.Save(
             new TableViewerSettings
             {
-                QTableExePath = QTableExePathTextBox.Text.Trim(),
-                DefaultDefinitionFiles = _definitionFiles
+                TablesDefinitionsXmlPath = TablesXmlTextBox.Text.Trim(),
+                StatsDefinitionsXmlPath = StatsXmlTextBox.Text.Trim(),
+                DumpsDefinitionsXmlPath = DumpsXmlTextBox.Text.Trim()
             });
 
         Close();
