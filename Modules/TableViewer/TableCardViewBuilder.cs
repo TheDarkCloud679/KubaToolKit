@@ -169,7 +169,7 @@ public static class TableCardViewBuilder
         {
             var group = scalars.GetRange(g * period.Value, period.Value);
 
-            var card = BeginGroupCard($"#{g + 1}", depth);
+            var card = BeginGroupCard(BuildGroupSummaryHeader(g + 1, group, valueLabels), depth);
 
             card.Content = BuildFieldsGrid(group, valueLabels);
             card.Margin = new Thickness(0, 0, 0, g == groupCount - 1 ? 0 : 4);
@@ -178,6 +178,44 @@ public static class TableCardViewBuilder
         }
 
         return panel;
+    }
+
+    // "#1" alone doesn't say anything -- e.g. a currency/denomination
+    // entry (Type/Mantisse/Exposant/Devise) reads as "#1 Coin 10 EUR"
+    // instead, so the entry's own gist shows without expanding it. Built
+    // from the entry's own non-zero, non-empty values (an entry's own
+    // zeroes are rarely what identifies it, and skipping them is what
+    // keeps this from reading as noise), label-translated the same way
+    // the grid itself would, capped so one entry with many fields can't
+    // blow out every header's width.
+    private static string
+    BuildGroupSummaryHeader(
+        int index,
+        List<FieldNode> group,
+        IReadOnlyDictionary<string, Dictionary<string, string>> valueLabels)
+    {
+        var parts = new List<string>();
+
+        foreach (var node in group)
+        {
+            var value = node.Field.Value;
+
+            if (string.IsNullOrWhiteSpace(value) || value == "0")
+            {
+                continue;
+            }
+
+            parts.Add(TryGetValueLabel(valueLabels, node.Field.Name, value) ?? value);
+        }
+
+        var summary = string.Join(" ", parts);
+
+        if (summary.Length > 60)
+        {
+            summary = summary[..60] + "...";
+        }
+
+        return summary.Length > 0 ? $"#{index} {summary}" : $"#{index}";
     }
 
     // The smallest period >1 whose field-name sequence tiles the whole
