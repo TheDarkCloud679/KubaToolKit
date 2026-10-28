@@ -99,7 +99,7 @@ public static class TableCardViewBuilder
 
         if (scalars.Count > 0)
         {
-            parent.Children.Add(BuildFieldsGrid(scalars, valueLabels));
+            parent.Children.Add(BuildScalarsSection(scalars, valueLabels));
         }
 
         foreach (var node in containers)
@@ -115,6 +115,104 @@ public static class TableCardViewBuilder
 
             parent.Children.Add(card);
         }
+    }
+
+    // A scalar-only array (e.g. 237 Translation entries, each just
+    // Signature id/Element id/String size/Translation) has no per-entry
+    // card of its own to land in, so every entry's fields used to land as
+    // one undifferentiated flat list -- unreadable past a handful of
+    // entries, with no visual cue for where one ends and the next
+    // starts. Entries repeat the same field names in the same order, so
+    // that's detected here and rendered as a run of small "#N" groups
+    // instead.
+    private static UIElement
+    BuildScalarsSection(
+        List<FieldNode> scalars,
+        IReadOnlyDictionary<string, Dictionary<string, string>> valueLabels)
+    {
+        var period = DetectRepeatPeriod(scalars);
+
+        if (period == null)
+        {
+            return BuildFieldsGrid(scalars, valueLabels);
+        }
+
+        var panel = new StackPanel();
+        var groupCount = scalars.Count / period.Value;
+
+        for (var g = 0; g < groupCount; g++)
+        {
+            var group = scalars.GetRange(g * period.Value, period.Value);
+
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text = $"#{g + 1}",
+                    FontSize = 10,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = TextMutedBrush,
+                    Margin = new Thickness(0, g == 0 ? 0 : 10, 0, 2)
+                });
+
+            panel.Children.Add(BuildFieldsGrid(group, valueLabels));
+        }
+
+        return panel;
+    }
+
+    // The smallest period >1 whose field-name sequence tiles the whole
+    // list exactly (e.g. 948 entries cycling Signature id/Element
+    // id/String size/Translation every 4 -> period 4). Only divisors of
+    // the count are tried, so this stays fast even for a few thousand
+    // entries; null when nothing repeats (an ordinary flat grid then).
+    private static int?
+    DetectRepeatPeriod(
+        List<FieldNode> scalars)
+    {
+        var n = scalars.Count;
+
+        if (n < 4)
+        {
+            return null;
+        }
+
+        for (var period = 2; period <= n / 2; period++)
+        {
+            if (n % period != 0)
+            {
+                continue;
+            }
+
+            var tiles = true;
+
+            for (var i = period; i < n; i++)
+            {
+                if (scalars[i].Field.Name != scalars[i % period].Field.Name)
+                {
+                    tiles = false;
+
+                    break;
+                }
+            }
+
+            if (!tiles)
+            {
+                continue;
+            }
+
+            // A period whose own template is just the same field name
+            // over and over (e.g. a run of unrelated repeated counters,
+            // not one record's several fields) isn't a "record" worth
+            // numbering -- an ordinary flat grid reads at least as well.
+            var distinctNamesInPeriod = scalars.Take(period).Select(s => s.Field.Name).Distinct().Count();
+
+            if (distinctNamesInPeriod > 1)
+            {
+                return period;
+            }
+        }
+
+        return null;
     }
 
     private static Grid
