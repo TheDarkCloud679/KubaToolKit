@@ -52,8 +52,18 @@ public partial class TableViewerView : UserControl
     private void
     AddTableFileButton_Click(
         object sender,
-        RoutedEventArgs e) =>
-        AddTableFileButton.ContextMenu.IsOpen = true;
+        RoutedEventArgs e)
+    {
+        var menu = AddTableFileButton.ContextMenu;
+
+        // Opening a Button's ContextMenu from a Click handler (rather than
+        // the usual right-click path) skips WPF's own placement logic, so
+        // without this it anchors to the screen origin instead of the
+        // button.
+        menu.PlacementTarget = AddTableFileButton;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
 
     private void
     AddTableFile_Click(

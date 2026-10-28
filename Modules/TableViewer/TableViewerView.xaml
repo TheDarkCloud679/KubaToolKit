@@ -65,7 +65,7 @@
                         CornerRadius="{StaticResource RadiusSmall}">
                         <ListBox
                             x:Name="TableFilesListBox"
-                            Height="84"
+                            Height="56"
                             BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
