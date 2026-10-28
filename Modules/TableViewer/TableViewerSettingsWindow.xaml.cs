@@ -9,11 +9,77 @@ public partial class TableViewerSettingsWindow
 {
     private readonly TableViewerSettingsService _settingsService = new();
 
+    private readonly List<string> _definitionFiles;
+
     public TableViewerSettingsWindow()
     {
         InitializeComponent();
 
-        QTableExePathTextBox.Text = _settingsService.Load().QTableExePath;
+        var settings = _settingsService.Load();
+
+        QTableExePathTextBox.Text = settings.QTableExePath;
+
+        _definitionFiles = new List<string>(settings.DefaultDefinitionFiles);
+
+        RefreshDefinitionFilesList();
+    }
+
+    private void
+    RefreshDefinitionFilesList()
+    {
+        DefinitionFilesListBox.ItemsSource = null;
+        DefinitionFilesListBox.ItemsSource = _definitionFiles;
+    }
+
+    private void
+    AddDefinitionFile_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Choose definition file(s)",
+            Filter = "XML definition files (*.xml)|*.xml|All files (*.*)|*.*",
+            Multiselect = true
+        };
+
+        var qtableFolder = Path.GetDirectoryName(QTableExePathTextBox.Text);
+        var xmlFolder = qtableFolder != null ? Path.Combine(qtableFolder, "xml") : null;
+
+        if (xmlFolder != null && Directory.Exists(xmlFolder))
+        {
+            dialog.InitialDirectory = xmlFolder;
+        }
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        foreach (var file in dialog.FileNames)
+        {
+            if (!_definitionFiles.Contains(file))
+            {
+                _definitionFiles.Add(file);
+            }
+        }
+
+        RefreshDefinitionFilesList();
+    }
+
+    private void
+    RemoveDefinitionFile_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (DefinitionFilesListBox.SelectedItem is not string selected)
+        {
+            return;
+        }
+
+        _definitionFiles.Remove(selected);
+
+        RefreshDefinitionFilesList();
     }
 
     private void
@@ -49,7 +115,12 @@ public partial class TableViewerSettingsWindow
         object sender,
         RoutedEventArgs e)
     {
-        _settingsService.Save(new TableViewerSettings { QTableExePath = QTableExePathTextBox.Text.Trim() });
+        _settingsService.Save(
+            new TableViewerSettings
+            {
+                QTableExePath = QTableExePathTextBox.Text.Trim(),
+                DefaultDefinitionFiles = _definitionFiles
+            });
 
         Close();
     }

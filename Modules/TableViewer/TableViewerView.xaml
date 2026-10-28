@@ -110,24 +110,11 @@
                 </Grid>
 
                 <!-- Definition file -->
-                <TextBlock Text="Definition file (XML, optional)" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox
-                        x:Name="DefinitionFilePathTextBox"
-                        Grid.Column="0"
-                        Margin="0,0,8,0"
-                        IsReadOnly="True"/>
-                    <Button
-                        Grid.Column="1"
-                        Content="Browse..."
-                        Width="90"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        Click="BrowseDefinitionFile_Click"/>
-                </Grid>
+                <TextBlock Text="Definition file (optional)" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <ComboBox
+                    x:Name="DefinitionFileCombo"
+                    Margin="0,0,0,12"
+                    DisplayMemberPath="Display"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <Button

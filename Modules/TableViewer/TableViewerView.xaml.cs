@@ -29,6 +29,32 @@ public partial class TableViewerView : UserControl
     public TableViewerView()
     {
         InitializeComponent();
+
+        RefreshDefinitionFilesCombo();
+    }
+
+    private sealed class DefinitionFileOption
+    {
+        public required string Display { get; init; }
+
+        public string? Path { get; init; }
+    }
+
+    private void
+    RefreshDefinitionFilesCombo()
+    {
+        var options = new List<DefinitionFileOption> { new() { Display = "(none)", Path = null } };
+
+        options.AddRange(
+            _settingsService.Load().DefaultDefinitionFiles
+                .Select(path => new DefinitionFileOption { Display = Path.GetFileName(path), Path = path }));
+
+        var previouslySelected = (DefinitionFileCombo.SelectedItem as DefinitionFileOption)?.Path;
+
+        DefinitionFileCombo.ItemsSource = options;
+
+        DefinitionFileCombo.SelectedItem =
+            options.FirstOrDefault(o => o.Path == previouslySelected) ?? options[0];
     }
 
     private string?
@@ -148,33 +174,8 @@ public partial class TableViewerView : UserControl
         var window = new TableViewerSettingsWindow { Owner = Window.GetWindow(this) };
 
         window.ShowDialog();
-    }
 
-    private void
-    BrowseDefinitionFile_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Choose a definition file",
-            Filter = "XML definition files (*.xml)|*.xml|All files (*.*)|*.*"
-        };
-
-        var qtableFolder = Path.GetDirectoryName(_settingsService.Load().QTableExePath);
-        var xmlFolder = qtableFolder != null ? Path.Combine(qtableFolder, "xml") : null;
-
-        if (xmlFolder != null && Directory.Exists(xmlFolder))
-        {
-            dialog.InitialDirectory = xmlFolder;
-        }
-
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-
-        DefinitionFilePathTextBox.Text = dialog.FileName;
+        RefreshDefinitionFilesCombo();
     }
 
     private void
@@ -232,10 +233,12 @@ public partial class TableViewerView : UserControl
 
         var args = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(DefinitionFilePathTextBox.Text))
+        var definitionFilePath = (DefinitionFileCombo.SelectedItem as DefinitionFileOption)?.Path;
+
+        if (!string.IsNullOrWhiteSpace(definitionFilePath))
         {
             args.Add("--def-file");
-            args.Add(DefinitionFilePathTextBox.Text);
+            args.Add(definitionFilePath);
         }
 
         args.Add("--text");

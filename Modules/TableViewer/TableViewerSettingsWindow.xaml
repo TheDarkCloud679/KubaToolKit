@@ -32,6 +32,62 @@
                 Click="BrowseButton_Click"/>
         </Grid>
 
+        <TextBlock
+            Text="Default definition files"
+            FontWeight="SemiBold"
+            Margin="0,0,0,4"/>
+        <TextBlock
+            FontSize="11"
+            TextWrapping="Wrap"
+            Margin="0,0,0,6"
+            Foreground="{StaticResource TextMutedBrush}"
+            Text="XML definition files to offer when decoding a table file, so they don't need to be browsed to each time."/>
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Margin="0,0,8,0"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusSmall}">
+                <ListBox x:Name="DefinitionFilesListBox" Height="84" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" ToolTip="{Binding}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Button
+                Grid.Column="1"
+                Width="90"
+                Margin="0,0,8,0"
+                VerticalAlignment="Top"
+                Content="Add..."
+                Click="AddDefinitionFile_Click"/>
+
+            <Button
+                Grid.Column="2"
+                Width="26"
+                Height="26"
+                Padding="0"
+                VerticalAlignment="Top"
+                ToolTip="Remove - Takes the selected file off this list"
+                Click="RemoveDefinitionFile_Click">
+                <Path
+                    Data="M5,7 L19,7 M9,7 L9,4 L15,4 L15,7 M6,7 L7,20 A1,1 0 0 0 8,21 L16,21 A1,1 0 0 0 17,20 L18,7"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                    Width="12" Height="12" Stretch="Uniform"/>
+            </Button>
+        </Grid>
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="CancelButton_Click"/>
             <Button Content="Save" Width="90" Style="{StaticResource AccentButtonStyle}" Click="SaveButton_Click"/>

@@ -6,4 +6,6 @@ namespace KubaToolKit.Shared.Services;
 public class TableViewerSettings
 {
     public string QTableExePath { get; set; } = @"C:\Utilitaires\Qtable\QTable.exe";
+
+    public List<string> DefaultDefinitionFiles { get; set; } = new();
 }
