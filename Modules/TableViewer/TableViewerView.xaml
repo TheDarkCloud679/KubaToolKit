@@ -38,19 +38,44 @@
                         FontWeight="SemiBold"
                         FontSize="14"
                         VerticalAlignment="Center"/>
-                    <Button
-                        Grid.Column="1"
-                        Width="26"
-                        Height="26"
-                        Padding="0"
-                        ToolTip="Settings - Set the XML definitions files"
-                        Click="SettingsButton_Click">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button
+                            Width="26"
+                            Height="26"
+                            Padding="0"
+                            ToolTip="Edit Value Labels - Used by the Cards view"
+                            Click="OpenValueLabels_Click">
+                            <Path
+                                Data="M3,12 L12,3 L19,3 L19,10 L10,19 L3,12 Z M15,7 A1.4,1.4 0 1 0 15,7.01"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="12" Height="12" Stretch="Uniform"/>
+                        </Button>
+
                         <Path
-                            Data="M12,8 A4,4 0 1 0 12,16 A4,4 0 1 0 12,8 Z M18,12 L21,12 M16.24,16.24 L18.36,18.36 M12,18 L12,21 M7.76,16.24 L5.64,18.36 M6,12 L3,12 M7.76,7.76 L5.64,5.64 M12,6 L12,3 M16.24,7.76 L18.36,5.64"
-                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                            StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                            Width="14" Height="14" Stretch="Uniform"/>
-                    </Button>
+                            x:Name="ValueLabelsWarningIcon"
+                            Data="M12,3 L22,20 L2,20 Z M12,9 L12,14 M12,17 L12,17.2"
+                            Stroke="{StaticResource DangerBrush}"
+                            StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                            Width="15" Height="15" Stretch="Uniform"
+                            VerticalAlignment="Center"
+                            Margin="4,0,0,0"
+                            Visibility="Collapsed"/>
+
+                        <Button
+                            Width="26"
+                            Height="26"
+                            Padding="0"
+                            Margin="8,0,0,0"
+                            ToolTip="Settings - Set the XML definitions files"
+                            Click="SettingsButton_Click">
+                            <Path
+                                Data="M12,8 A4,4 0 1 0 12,16 A4,4 0 1 0 12,8 Z M18,12 L21,12 M16.24,16.24 L18.36,18.36 M12,18 L12,21 M7.76,16.24 L5.64,18.36 M6,12 L3,12 M7.76,7.76 L5.64,5.64 M12,6 L12,3 M16.24,7.76 L18.36,5.64"
+                                Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                Width="14" Height="14" Stretch="Uniform"/>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Table file(s) -->
@@ -213,13 +238,47 @@
 
                 <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <StackPanel
+                        Grid.Row="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,0,0,8">
+                        <Border
+                            Background="{StaticResource SurfaceAltBrush}"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusMedium}"
+                            Padding="2">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton
+                                    x:Name="ResultsViewCardsRadio"
+                                    Content="Cards"
+                                    GroupName="ResultsView"
+                                    Checked="ResultsViewMode_Changed"
+                                    Style="{StaticResource NavPillRadioButtonStyle}"
+                                    FontSize="11"
+                                    Padding="12,4"/>
+                                <RadioButton
+                                    x:Name="ResultsViewGridRadio"
+                                    Content="Grid"
+                                    GroupName="ResultsView"
+                                    IsChecked="True"
+                                    Checked="ResultsViewMode_Changed"
+                                    Style="{StaticResource NavPillRadioButtonStyle}"
+                                    FontSize="11"
+                                    Padding="12,4"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
                     <DataGrid
                         x:Name="ResultsGrid"
-                        Grid.Row="0"
+                        Grid.Row="1"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
                         HeadersVisibility="Column"
@@ -244,9 +303,19 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
+                    <ScrollViewer
+                        x:Name="ResultsCardsScroll"
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto"
+                        Padding="4"
+                        Visibility="Collapsed">
+                        <ContentControl x:Name="ResultsCardsContent"/>
+                    </ScrollViewer>
+
                     <StackPanel
                         x:Name="NotesPanel"
-                        Grid.Row="1"
+                        Grid.Row="2"
                         Margin="0,8,0,0"
                         Visibility="Collapsed">
                         <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,2"/>

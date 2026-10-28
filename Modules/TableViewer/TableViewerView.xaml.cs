@@ -1,12 +1,14 @@
 using KubaToolKit.Modules.TableViewer.Decoding;
 using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
+using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace KubaToolKit.Modules.TableViewer;
 
@@ -20,6 +22,7 @@ public partial class TableViewerView : UserControl
         new(@"^\.D\d{3}$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly TableViewerSettingsService _settingsService = new();
+    private readonly TableViewerValueLabelsService _valueLabelsService = new();
 
     private readonly List<TableFileItem> _tableFiles = new();
 
@@ -285,19 +288,28 @@ public partial class TableViewerView : UserControl
     private void
     ResultsSummaryListBox_SelectionChanged(
         object sender,
-        SelectionChangedEventArgs e)
+        SelectionChangedEventArgs e) =>
+        RefreshResultsView();
+
+    private void
+    ResultsViewMode_Changed(
+        object sender,
+        RoutedEventArgs e) =>
+        RefreshResultsView();
+
+    private void
+    RefreshResultsView()
     {
         var selected = ResultsSummaryListBox.SelectedItem as FileDecodeResultItem;
 
         if (selected == null)
         {
             ResultsGrid.ItemsSource = null;
+            ResultsCardsContent.Content = null;
             NotesPanel.Visibility = Visibility.Collapsed;
 
             return;
         }
-
-        ResultsGrid.ItemsSource = selected.Result.Fields;
 
         if (selected.Result.Notes.Count > 0)
         {
@@ -308,5 +320,52 @@ public partial class TableViewerView : UserControl
         {
             NotesPanel.Visibility = Visibility.Collapsed;
         }
+
+        if (ResultsViewGridRadio?.IsChecked == true)
+        {
+            ResultsGrid.Visibility = Visibility.Visible;
+            ResultsCardsScroll.Visibility = Visibility.Collapsed;
+            ResultsGrid.ItemsSource = selected.Result.Fields;
+
+            return;
+        }
+
+        ResultsGrid.Visibility = Visibility.Collapsed;
+        ResultsCardsScroll.Visibility = Visibility.Visible;
+
+        var valueLabels = _valueLabelsService.Load();
+
+        ValueLabelsWarningIcon.Visibility =
+            _valueLabelsService.LastError != null ? Visibility.Visible : Visibility.Collapsed;
+
+        ValueLabelsWarningIcon.ToolTip =
+            _valueLabelsService.LastError != null
+                ? $"Invalid table-viewer-value-labels.json, no labels applied: {_valueLabelsService.LastError}"
+                : null;
+
+        ResultsCardsContent.Content =
+            TableCardViewBuilder.Build(selected.Result.Fields, valueLabels)
+            ?? new TextBlock
+            {
+                Text = "No fields decoded.",
+                FontStyle = FontStyles.Italic,
+                Foreground = (Brush)FindResource("TextMutedBrush"),
+                Margin = new Thickness(8)
+            };
+    }
+
+    private void
+    OpenValueLabels_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _valueLabelsService.Load();
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = TableViewerValueLabelsService.ValueLabelsFile,
+                UseShellExecute = true
+            });
     }
 }
