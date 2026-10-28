@@ -124,6 +124,26 @@ MainWindow_Loaded(
 
             _atlassianSearchView.SetProjectInfoProfile(profile);
 
+            LoadPatterns();
+            LoadCloudTrailAttributes();
+            InitializeDates();
+
+            // Before this, ModeRadio_Checked's own "don't touch anything
+            // until the window has finished loading" guard (_windowLoaded)
+            // left every CloudWatch-only control (DateRangeRow and
+            // friends) sitting at its XAML-declared default of Visible --
+            // including on Dashboard, the actual default tab -- for
+            // however long the SSO await below took, which on a slow
+            // login showed as those controls flashing in on startup
+            // before disappearing. Established right away now, before
+            // anything async runs, rather than only once SSO finishes.
+            _windowLoaded =
+                true;
+
+            ModeRadio_Checked(
+                this,
+                new RoutedEventArgs());
+
             // Kick off AWS SSO auth right away rather than waiting for the
             // user to pick a profile in the main nav (nothing auto-selects
             // one -- see LoadProfiles) or for some module's own AWS call to
@@ -141,17 +161,6 @@ MainWindow_Loaded(
                 await AwsSsoService
                     .EnsureLoggedIn(ssoProbeProfile);
             }
-
-            LoadPatterns();
-            LoadCloudTrailAttributes();
-            InitializeDates();
-
-            _windowLoaded =
-                true;
-
-            ModeRadio_Checked(
-                this,
-                new RoutedEventArgs());
 
             Logger.Info("MainWindow: initial load finished.");
         }
