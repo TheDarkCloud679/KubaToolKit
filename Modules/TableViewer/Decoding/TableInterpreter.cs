@@ -13,7 +13,13 @@ namespace KubaToolKit.Modules.TableViewer.Decoding;
 // read-only viewer.
 public class TableInterpreter
 {
-    private const int MaxFields = 5000;
+    // The real runaway-loop risk (an unbounded array that never advances)
+    // is caught directly by HandleArray's own stall guard now, so this is
+    // just a last-resort ceiling against a pathologically huge file (e.g.
+    // a multi-megabyte "raw data" array, one field per byte) freezing the
+    // UI thread while it's rendered -- not a bound real files should
+    // realistically hit.
+    private const int MaxFields = 200_000;
 
     private static readonly HashSet<string> PlainIntegerTypes =
         new(StringComparer.OrdinalIgnoreCase) { "u8", "u16", "u24", "u32", "u40", "u48", "u56", "u64" };
@@ -68,7 +74,7 @@ public class TableInterpreter
 
             if (_fields.Count >= MaxFields)
             {
-                AddNoteOnce("Stopped: reached the display limit of 5000 decoded values.");
+                AddNoteOnce("Stopped: reached the display limit of 200,000 decoded values.");
 
                 return;
             }
@@ -296,7 +302,7 @@ public class TableInterpreter
 
             if (_fields.Count >= MaxFields)
             {
-                AddNoteOnce("Stopped: reached the display limit of 5000 decoded values.");
+                AddNoteOnce("Stopped: reached the display limit of 200,000 decoded values.");
 
                 return;
             }
