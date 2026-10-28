@@ -15,29 +15,27 @@ public partial class TableViewerView : UserControl
 {
     private readonly TableViewerSettingsService _settingsService = new();
 
-    private readonly List<string> _tableFiles = new();
+    private readonly List<TableFileItem> _tableFiles = new();
 
     public TableViewerView()
     {
         InitializeComponent();
     }
 
-    private string?
-    SelectedTableFilePath =>
-        TableFilesListBox.SelectedItem as string;
+    private TableFileItem?
+    SelectedTableFile =>
+        TableFilesListBox.SelectedItem as TableFileItem;
 
     private void
     RefreshTableFilesList()
     {
-        var previouslySelected = SelectedTableFilePath;
+        var previouslySelected = SelectedTableFile?.Path;
 
         TableFilesListBox.ItemsSource = null;
         TableFilesListBox.ItemsSource = _tableFiles;
 
         TableFilesListBox.SelectedItem =
-            previouslySelected != null && _tableFiles.Contains(previouslySelected)
-                ? previouslySelected
-                : _tableFiles.FirstOrDefault();
+            _tableFiles.FirstOrDefault(f => f.Path == previouslySelected) ?? _tableFiles.FirstOrDefault();
     }
 
     private void
@@ -76,15 +74,7 @@ public partial class TableViewerView : UserControl
             return;
         }
 
-        foreach (var file in dialog.FileNames)
-        {
-            if (!_tableFiles.Contains(file))
-            {
-                _tableFiles.Add(file);
-            }
-        }
-
-        RefreshTableFilesList();
+        AddFiles(dialog.FileNames);
     }
 
     private void
@@ -108,11 +98,20 @@ public partial class TableViewerView : UserControl
             return;
         }
 
-        foreach (var file in filesInFolder)
+        AddFiles(filesInFolder);
+    }
+
+    private void
+    AddFiles(
+        IEnumerable<string> files)
+    {
+        var existing = _tableFiles.Select(f => f.Path).ToHashSet();
+
+        foreach (var file in files)
         {
-            if (!_tableFiles.Contains(file))
+            if (existing.Add(file))
             {
-                _tableFiles.Add(file);
+                _tableFiles.Add(new TableFileItem { Path = file });
             }
         }
 
@@ -124,12 +123,12 @@ public partial class TableViewerView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        if (SelectedTableFilePath == null)
+        if (SelectedTableFile == null)
         {
             return;
         }
 
-        _tableFiles.Remove(SelectedTableFilePath);
+        _tableFiles.Remove(SelectedTableFile);
 
         RefreshTableFilesList();
     }
@@ -149,45 +148,75 @@ public partial class TableViewerView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        if (SelectedTableFilePath == null || !File.Exists(SelectedTableFilePath))
+        var checkedFiles = _tableFiles.Where(f => f.IsChecked).ToList();
+
+        if (checkedFiles.Count == 0)
         {
-            AppMessageBox.Show("Choose a binary table file first.", "Table Viewer");
+            AppMessageBox.Show("Check at least one file to decode.", "Table Viewer");
 
             return;
         }
 
         var settings = _settingsService.Load();
+        var combinedFields = new List<DecodedField>();
+        var combinedNotes = new List<string>();
+        var decodedCount = 0;
+        var totalValues = 0;
 
-        TableDecodeResult result;
-
-        try
+        foreach (var file in checkedFiles)
         {
-            result = TableFileDecoder.Decode(SelectedTableFilePath, settings);
+            TableDecodeResult result;
+
+            try
+            {
+                result =
+                    File.Exists(file.Path)
+                        ? TableFileDecoder.Decode(file.Path, settings)
+                        : TableDecodeResult.Failure("File no longer exists.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"TableViewerView: decode failed for '{file.Path}'.", ex);
+
+                result = TableDecodeResult.Failure($"Decode failed: {ex.Message}");
+            }
+
+            // A header row per file -- shows up/down front whether it
+            // decoded at all, and (when several files are checked) keeps
+            // their fields visually grouped instead of one flat list.
+            combinedFields.Add(
+                new DecodedField
+                {
+                    Name = file.FileName,
+                    Value =
+                        result.Success
+                            ? $"{result.Trigram} - {result.Fields.Count} value(s)"
+                            : result.ErrorMessage ?? "Failed",
+                    Type = "FILE",
+                    Depth = 0
+                });
+
+            if (!result.Success)
+            {
+                combinedNotes.Add($"{file.FileName}: {result.ErrorMessage}");
+
+                continue;
+            }
+
+            decodedCount++;
+            totalValues += result.Fields.Count;
+
+            combinedFields.AddRange(result.Fields.Select(f => f.WithDepthOffset(1)));
+
+            combinedNotes.AddRange(
+                checkedFiles.Count > 1 ? result.Notes.Select(n => $"{file.FileName}: {n}") : result.Notes);
         }
-        catch (Exception ex)
+
+        ResultsGrid.ItemsSource = combinedFields;
+
+        if (combinedNotes.Count > 0)
         {
-            Logger.Error("TableViewerView: decode failed.", ex);
-
-            AppMessageBox.Show($"Decode failed: {ex.Message}", "Table Viewer");
-
-            return;
-        }
-
-        if (!result.Success)
-        {
-            ResultsGrid.ItemsSource = null;
-            NotesPanel.Visibility = Visibility.Collapsed;
-
-            StatusText.Text = result.ErrorMessage;
-
-            return;
-        }
-
-        ResultsGrid.ItemsSource = result.Fields;
-
-        if (result.Notes.Count > 0)
-        {
-            NotesList.ItemsSource = result.Notes;
+            NotesList.ItemsSource = combinedNotes;
             NotesPanel.Visibility = Visibility.Visible;
         }
         else
@@ -196,6 +225,8 @@ public partial class TableViewerView : UserControl
         }
 
         StatusText.Text =
-            $"Decoded as '{result.Trigram}' from {Path.GetFileName(result.DefinitionsFile)} -- {result.Fields.Count} value(s).";
+            checkedFiles.Count == 1
+                ? (decodedCount == 1 ? $"Decoded {totalValues} value(s)." : "Decode failed -- see above.")
+                : $"Decoded {decodedCount} of {checkedFiles.Count} file(s), {totalValues} value(s) total.";
     }
 }
