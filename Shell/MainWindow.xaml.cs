@@ -8,6 +8,7 @@ using KubaToolKit.Modules.AtlassianSearch;
 using KubaToolKit.Modules.S3Explorer;
 using KubaToolKit.Modules.Sqs;
 using KubaToolKit.Modules.StepFunctions;
+using KubaToolKit.Modules.TableViewer;
 using KubaToolKit.Shared.Behaviors;
 using KubaToolKit.Shared.Services;
 using System.ComponentModel;
@@ -32,6 +33,7 @@ public partial class MainWindow
     private readonly StepFunctionsView _stepFunctionsView;
     private readonly ApiClientView _apiClientView;
     private readonly AtlassianSearchView _atlassianSearchView;
+    private readonly TableViewerView _tableViewerView;
 
     private readonly ProfileColorSettingsService _profileColorSettingsService = new();
     private ProfileColorSettings _profileColorSettings = new();
@@ -61,6 +63,7 @@ public partial class MainWindow
         _stepFunctionsView = _modules.OfType<StepFunctionsModule>().Single().TypedView;
         _apiClientView = _modules.OfType<ApiClientModule>().Single().TypedView;
         _atlassianSearchView = _modules.OfType<AtlassianSearchModule>().Single().TypedView;
+        _tableViewerView = _modules.OfType<TableViewerModule>().Single().TypedView;
 
         Logger.Debug($"MainWindow: {_modules.Count} module(s) instantiated.");
 
@@ -268,6 +271,9 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
             await _stepFunctionsView.OnProfileChanged(profile);
         }
         else if (ApiClientModeRadio?.IsChecked == true)
+        {
+        }
+        else if (TableViewerModeRadio?.IsChecked == true)
         {
         }
         else if (CloudWatchModeRadio?.IsChecked == true)
@@ -612,8 +618,14 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
                 ?.IsChecked
             == true;
 
+        bool isTableViewer =
+            TableViewerModeRadio
+                ?.IsChecked
+            == true;
+
         bool isCloudWatch =
-            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isAtlassianSearch && !isCloudTrail;
+            !isS3 && !isSqs && !isDashboard && !isStepFunctions && !isApiClient && !isAtlassianSearch && !isCloudTrail
+            && !isTableViewer;
 
         _dashboardView.Visibility =
             isDashboard ? Visibility.Visible : Visibility.Collapsed;
@@ -638,6 +650,9 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
 
         _atlassianSearchView.Visibility =
             isAtlassianSearch ? Visibility.Visible : Visibility.Collapsed;
+
+        _tableViewerView.Visibility =
+            isTableViewer ? Visibility.Visible : Visibility.Collapsed;
 
         UpdateProfileRowVisibility();
 
@@ -704,9 +719,10 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
     UpdateProfileRowVisibility()
     {
         var isApiClient = ApiClientModeRadio?.IsChecked == true;
+        var isTableViewer = TableViewerModeRadio?.IsChecked == true;
 
         ProfilePatternSearchRow.Visibility =
-            isApiClient ? Visibility.Collapsed : Visibility.Visible;
+            isApiClient || isTableViewer ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void

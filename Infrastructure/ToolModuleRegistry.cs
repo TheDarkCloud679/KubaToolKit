@@ -15,5 +15,6 @@ public static class ToolModuleRegistry
             new Modules.StepFunctions.StepFunctionsModule(),
             new Modules.ApiClient.ApiClientModule(),
             new Modules.AtlassianSearch.AtlassianSearchModule(),
+            new Modules.TableViewer.TableViewerModule(),
         };
 }
