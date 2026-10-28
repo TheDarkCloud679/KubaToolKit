@@ -99,7 +99,30 @@ public static class TableCardViewBuilder
 
         if (scalars.Count > 0)
         {
-            parent.Children.Add(BuildScalarsSection(scalars, depth, valueLabels));
+            var scalarsElement = BuildScalarsSection(scalars, depth, valueLabels);
+
+            // At the top level specifically, a run of one-off fields that
+            // doesn't repeat (e.g. ADV's own version/structure/network/
+            // login settings) has no card of its own to land in otherwise
+            // -- landed as bare text with nothing containing it, unlike
+            // everything else on the page. Wrapped in one "Général" card,
+            // expanded by default since it's usually the main thing to
+            // see first. Nested ungrouped scalars (already inside some
+            // real card) don't need this -- they're already contained.
+            if (depth == 0 && scalarsElement is Grid)
+            {
+                var generalCard = BeginGroupCard("Général", depth);
+
+                generalCard.Content = scalarsElement;
+                generalCard.IsExpanded = true;
+                generalCard.Margin = new Thickness(0, 0, 0, containers.Count > 0 ? 8 : 0);
+
+                parent.Children.Add(generalCard);
+            }
+            else
+            {
+                parent.Children.Add(scalarsElement);
+            }
         }
 
         foreach (var node in containers)
@@ -111,7 +134,7 @@ public static class TableCardViewBuilder
             RenderChildren(node.Children, content, depth + 1, valueLabels);
 
             card.Content = content;
-            card.Margin = new Thickness(0, scalars.Count > 0 || parent.Children.Count > 1 ? 10 : 0, 0, 0);
+            card.Margin = new Thickness(0, scalars.Count > 0 || parent.Children.Count > 1 ? 8 : 0, 0, 0);
 
             parent.Children.Add(card);
         }
@@ -219,7 +242,7 @@ public static class TableCardViewBuilder
     {
         var grid = new Grid();
 
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var row = 0;
@@ -233,10 +256,10 @@ public static class TableCardViewBuilder
                 {
                     Text = node.Field.Name,
                     Foreground = TextSecondaryBrush,
-                    FontSize = 12,
+                    FontSize = 11,
                     TextWrapping = TextWrapping.Wrap,
                     VerticalAlignment = VerticalAlignment.Top,
-                    Margin = new Thickness(0, 3, 10, 3)
+                    Margin = new Thickness(0, 1, 10, 1)
                 };
 
             Grid.SetRow(keyBlock, row);
@@ -250,14 +273,14 @@ public static class TableCardViewBuilder
                 {
                     Background = Brushes.Transparent,
                     CornerRadius = new CornerRadius(3),
-                    Margin = new Thickness(0, 3, 0, 3),
+                    Margin = new Thickness(0, 1, 0, 1),
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Child =
                         new TextBlock
                         {
                             Text = label != null ? $"{label} ({node.Field.Value})" : node.Field.Value,
                             Foreground = TextPrimaryBrush,
-                            FontSize = 12,
+                            FontSize = 11,
                             TextWrapping = TextWrapping.Wrap
                         }
                 };
@@ -339,7 +362,7 @@ public static class TableCardViewBuilder
                 Background = depth % 2 == 0 ? SurfaceBrush : SurfaceAltBrush,
                 BorderBrush = BorderBrush,
                 BorderThickness = new Thickness(1),
-                Margin = new Thickness(0, 0, 0, 8)
+                Margin = new Thickness(0, 0, 0, 4)
             };
 
         // Past the first couple of levels, the default Expander style's
