@@ -198,7 +198,15 @@ public static class ExpressionEvaluator
 
                 SkipWhitespace();
 
-                if (!Match(")"))
+                // A real typo found in the wild -- cond="(structure<0x500"
+                // with no closing ')' at all -- would otherwise throw,
+                // which skips the whole <if> and misaligns every byte
+                // read after it for the rest of the file. QTable's own
+                // parser evidently tolerates this, so an unclosed paren
+                // right at the end of the expression is treated as
+                // implicitly closed rather than rejected; a missing ')'
+                // with real content still following it is still an error.
+                if (!Match(")") && _pos < _text.Length)
                 {
                     throw new FormatException($"expected ')' in '{_text}'");
                 }
