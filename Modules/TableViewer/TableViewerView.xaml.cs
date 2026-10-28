@@ -2,6 +2,7 @@ using KubaToolKit.Modules.TableViewer.Decoding;
 using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -143,7 +144,7 @@ public partial class TableViewerView : UserControl
         window.ShowDialog();
     }
 
-    private void
+    private async void
     Decode_Click(
         object sender,
         RoutedEventArgs e)
@@ -158,12 +159,64 @@ public partial class TableViewerView : UserControl
         }
 
         var settings = _settingsService.Load();
-        var combinedFields = new List<DecodedField>();
-        var combinedNotes = new List<string>();
-        var decodedCount = 0;
-        var totalValues = 0;
 
-        foreach (var file in checkedFiles)
+        DecodeButton.IsEnabled = false;
+        DecodeProgressBar.Visibility = Visibility.Visible;
+        DecodeProgressBar.Maximum = checkedFiles.Count;
+        DecodeProgressBar.Value = 0;
+        StatusText.Text = $"Decoding 0 / {checkedFiles.Count}...";
+        ResultsSummaryListBox.ItemsSource = null;
+        ResultsGrid.ItemsSource = null;
+        NotesPanel.Visibility = Visibility.Collapsed;
+
+        var progress =
+            new Progress<int>(
+                done =>
+                {
+                    DecodeProgressBar.Value = done;
+                    StatusText.Text = $"Decoding {done} / {checkedFiles.Count}...";
+                });
+
+        List<FileDecodeResultItem> results;
+
+        try
+        {
+            // The definitions XML (and any <table> it resolves) is
+            // cached after its first use, so running this off the UI
+            // thread is what actually keeps the window responsive across
+            // a large batch -- the per-file work itself is plain
+            // synchronous file IO and XML walking.
+            results = await Task.Run(() => DecodeAll(checkedFiles, settings, progress));
+        }
+        finally
+        {
+            DecodeButton.IsEnabled = true;
+            DecodeProgressBar.Visibility = Visibility.Collapsed;
+        }
+
+        ResultsSummaryListBox.ItemsSource = results;
+
+        var succeeded = results.Count(r => r.Result.Success);
+        var totalValues = results.Where(r => r.Result.Success).Sum(r => r.Result.Fields.Count);
+
+        StatusText.Text =
+            checkedFiles.Count == 1
+                ? (succeeded == 1 ? $"Decoded {totalValues} value(s)." : "Decode failed -- see the list.")
+                : $"Decoded {succeeded} of {checkedFiles.Count} file(s), {totalValues} value(s) total.";
+
+        ResultsSummaryListBox.SelectedItem = results.FirstOrDefault(r => r.Result.Success) ?? results.FirstOrDefault();
+    }
+
+    private static List<FileDecodeResultItem>
+    DecodeAll(
+        List<TableFileItem> files,
+        TableViewerSettings settings,
+        IProgress<int> progress)
+    {
+        var results = new List<FileDecodeResultItem>(files.Count);
+        var done = 0;
+
+        foreach (var file in files)
         {
             TableDecodeResult result;
 
@@ -181,52 +234,40 @@ public partial class TableViewerView : UserControl
                 result = TableDecodeResult.Failure($"Decode failed: {ex.Message}");
             }
 
-            // A header row per file -- shows up/down front whether it
-            // decoded at all, and (when several files are checked) keeps
-            // their fields visually grouped instead of one flat list.
-            combinedFields.Add(
-                new DecodedField
-                {
-                    Name = file.FileName,
-                    Value =
-                        result.Success
-                            ? $"{result.Trigram} - {result.Fields.Count} value(s)"
-                            : result.ErrorMessage ?? "Failed",
-                    Type = "FILE",
-                    Depth = 0
-                });
+            results.Add(new FileDecodeResultItem { FileName = file.FileName, Result = result });
 
-            if (!result.Success)
-            {
-                combinedNotes.Add($"{file.FileName}: {result.ErrorMessage}");
-
-                continue;
-            }
-
-            decodedCount++;
-            totalValues += result.Fields.Count;
-
-            combinedFields.AddRange(result.Fields.Select(f => f.WithDepthOffset(1)));
-
-            combinedNotes.AddRange(
-                checkedFiles.Count > 1 ? result.Notes.Select(n => $"{file.FileName}: {n}") : result.Notes);
+            done++;
+            progress.Report(done);
         }
 
-        ResultsGrid.ItemsSource = combinedFields;
+        return results;
+    }
 
-        if (combinedNotes.Count > 0)
+    private void
+    ResultsSummaryListBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var selected = ResultsSummaryListBox.SelectedItem as FileDecodeResultItem;
+
+        if (selected == null)
         {
-            NotesList.ItemsSource = combinedNotes;
+            ResultsGrid.ItemsSource = null;
+            NotesPanel.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        ResultsGrid.ItemsSource = selected.Result.Fields;
+
+        if (selected.Result.Notes.Count > 0)
+        {
+            NotesList.ItemsSource = selected.Result.Notes;
             NotesPanel.Visibility = Visibility.Visible;
         }
         else
         {
             NotesPanel.Visibility = Visibility.Collapsed;
         }
-
-        StatusText.Text =
-            checkedFiles.Count == 1
-                ? (decodedCount == 1 ? $"Decoded {totalValues} value(s)." : "Decode failed -- see above.")
-                : $"Decoded {decodedCount} of {checkedFiles.Count} file(s), {totalValues} value(s) total.";
     }
 }

@@ -18,18 +18,4 @@ public class DecodedField
     public long OffsetBits { get; init; }
 
     public int Depth { get; init; }
-
-    public DecodedField
-    WithDepthOffset(
-        int offset) =>
-        new()
-        {
-            Name = Name,
-            Value = Value,
-            Type = Type,
-            SizeBits = SizeBits,
-            OffsetBytes = OffsetBytes,
-            OffsetBits = OffsetBits,
-            Depth = Depth + offset
-        };
 }

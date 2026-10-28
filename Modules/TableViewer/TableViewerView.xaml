@@ -138,6 +138,13 @@
                     Style="{StaticResource AccentButtonStyle}"
                     Click="Decode_Click"/>
 
+                <ProgressBar
+                    x:Name="DecodeProgressBar"
+                    Height="6"
+                    Margin="0,8,0,0"
+                    Minimum="0"
+                    Visibility="Collapsed"/>
+
                 <TextBlock
                     x:Name="StatusText"
                     FontSize="11"
@@ -159,53 +166,91 @@
             Padding="{StaticResource CardPadding}">
 
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                <DataGrid
-                    x:Name="ResultsGrid"
-                    Grid.Row="0"
-                    AutoGenerateColumns="False"
-                    IsReadOnly="True"
-                    HeadersVisibility="Column"
-                    GridLinesVisibility="Horizontal"
-                    RowHeight="24">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Name" Width="2*">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock
-                                        Text="{Binding Name}"
-                                        Margin="{Binding Depth, Converter={StaticResource DepthIndentConverter}}"
-                                        VerticalAlignment="Center"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="2*"/>
-                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*"/>
-                        <DataGridTextColumn Header="Size (bits)" Binding="{Binding SizeBits}" Width="*"/>
-                        <DataGridTextColumn Header="Offset (byte)" Binding="{Binding OffsetBytes}" Width="*"/>
-                        <DataGridTextColumn Header="Offset (bit)" Binding="{Binding OffsetBits}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-
-                <StackPanel
-                    x:Name="NotesPanel"
-                    Grid.Row="1"
-                    Margin="0,8,0,0"
-                    Visibility="Collapsed">
-                    <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,2"/>
-                    <ItemsControl x:Name="NotesList">
-                        <ItemsControl.ItemTemplate>
+                <!-- One entry per decoded file: select one to see its
+                     fields on the right, instead of merging every file's
+                     fields into a single (potentially huge) list. -->
+                <Border
+                    Grid.Column="0"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusSmall}">
+                    <ListBox
+                        x:Name="ResultsSummaryListBox"
+                        BorderThickness="0"
+                        SelectionChanged="ResultsSummaryListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}"/>
+                                <StackPanel Margin="2">
+                                    <TextBlock
+                                        Text="{Binding FileName}"
+                                        FontSize="11"
+                                        TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Text="{Binding StatusText}"
+                                        FontSize="10"
+                                        TextTrimming="CharacterEllipsis"
+                                        Foreground="{StaticResource TextMutedBrush}"/>
+                                </StackPanel>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
 
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DataGrid
+                        x:Name="ResultsGrid"
+                        Grid.Row="0"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        HeadersVisibility="Column"
+                        GridLinesVisibility="Horizontal"
+                        RowHeight="24">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Name" Width="2*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock
+                                            Text="{Binding Name}"
+                                            Margin="{Binding Depth, Converter={StaticResource DepthIndentConverter}}"
+                                            VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="2*"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*"/>
+                            <DataGridTextColumn Header="Size (bits)" Binding="{Binding SizeBits}" Width="*"/>
+                            <DataGridTextColumn Header="Offset (byte)" Binding="{Binding OffsetBytes}" Width="*"/>
+                            <DataGridTextColumn Header="Offset (bit)" Binding="{Binding OffsetBits}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel
+                        x:Name="NotesPanel"
+                        Grid.Row="1"
+                        Margin="0,8,0,0"
+                        Visibility="Collapsed">
+                        <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,2"/>
+                        <ItemsControl x:Name="NotesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </Grid>
             </Grid>
         </Border>
 

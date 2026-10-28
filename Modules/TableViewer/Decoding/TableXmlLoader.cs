@@ -6,6 +6,14 @@ namespace KubaToolKit.Modules.TableViewer.Decoding;
 
 public static class TableXmlLoader
 {
+    // Decoding a whole folder means re-resolving the same (often
+    // multi-thousand-line) definitions file for every table file picked
+    // -- cached per path (invalidated on last-write-time change) so it's
+    // actually re-read and retokenized only once per batch, not once per
+    // file.
+    private static readonly Dictionary<string, (DateTime LastWriteUtc, XElement Root)> RootCache = new();
+    private static readonly object CacheLock = new();
+
     // Finds the <table name="..."> matching a 3-letter trigram inside a
     // definitions file (e.g. tables_ebrio.xml), with its <include>s
     // already spliced in.
@@ -19,7 +27,7 @@ public static class TableXmlLoader
             return null;
         }
 
-        var root = LoadLenient(definitionsFilePath);
+        var root = GetCachedRoot(definitionsFilePath);
 
         var table =
             root.Elements("table")
@@ -33,9 +41,34 @@ public static class TableXmlLoader
 
         var baseDir = Path.GetDirectoryName(Path.GetFullPath(definitionsFilePath)) ?? ".";
 
+        // Idempotent on an already-resolved table (its <include>s are
+        // already spliced in, so this just walks the tree finding none)
+        // -- cheap enough not to need its own cache entry.
         ResolveIncludes(table, baseDir);
 
         return table;
+    }
+
+    private static XElement
+    GetCachedRoot(
+        string definitionsFilePath)
+    {
+        var fullPath = Path.GetFullPath(definitionsFilePath);
+        var lastWriteUtc = File.GetLastWriteTimeUtc(fullPath);
+
+        lock (CacheLock)
+        {
+            if (RootCache.TryGetValue(fullPath, out var cached) && cached.LastWriteUtc == lastWriteUtc)
+            {
+                return cached.Root;
+            }
+
+            var root = LoadLenient(fullPath);
+
+            RootCache[fullPath] = (lastWriteUtc, root);
+
+            return root;
+        }
     }
 
     private static void
