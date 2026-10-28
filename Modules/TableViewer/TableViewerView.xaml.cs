@@ -2,6 +2,7 @@ using KubaToolKit.Modules.TableViewer.Decoding;
 using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,6 +18,8 @@ public partial class TableViewerView : UserControl
     private readonly TableViewerSettingsService _settingsService = new();
 
     private readonly List<TableFileItem> _tableFiles = new();
+
+    private CancellationTokenSource? _decodeCts;
 
     public TableViewerView()
     {
@@ -160,7 +163,10 @@ public partial class TableViewerView : UserControl
 
         var settings = _settingsService.Load();
 
-        DecodeButton.IsEnabled = false;
+        _decodeCts = new CancellationTokenSource();
+
+        DecodeButton.Visibility = Visibility.Collapsed;
+        CancelDecodeButton.Visibility = Visibility.Visible;
         DecodeProgressBar.Visibility = Visibility.Visible;
         DecodeProgressBar.Maximum = checkedFiles.Count;
         DecodeProgressBar.Value = 0;
@@ -170,14 +176,15 @@ public partial class TableViewerView : UserControl
         NotesPanel.Visibility = Visibility.Collapsed;
 
         var progress =
-            new Progress<int>(
-                done =>
+            new Progress<(int Done, string FileName)>(
+                p =>
                 {
-                    DecodeProgressBar.Value = done;
-                    StatusText.Text = $"Decoding {done} / {checkedFiles.Count}...";
+                    DecodeProgressBar.Value = p.Done;
+                    StatusText.Text = $"Decoding {p.Done} / {checkedFiles.Count} -- {p.FileName}...";
                 });
 
         List<FileDecodeResultItem> results;
+        var cancelled = false;
 
         try
         {
@@ -186,12 +193,20 @@ public partial class TableViewerView : UserControl
             // thread is what actually keeps the window responsive across
             // a large batch -- the per-file work itself is plain
             // synchronous file IO and XML walking.
-            results = await Task.Run(() => DecodeAll(checkedFiles, settings, progress));
+            results = await Task.Run(() => DecodeAll(checkedFiles, settings, progress, _decodeCts.Token));
+        }
+        catch (OperationCanceledException)
+        {
+            results = new List<FileDecodeResultItem>();
+            cancelled = true;
         }
         finally
         {
-            DecodeButton.IsEnabled = true;
+            DecodeButton.Visibility = Visibility.Visible;
+            CancelDecodeButton.Visibility = Visibility.Collapsed;
             DecodeProgressBar.Visibility = Visibility.Collapsed;
+            _decodeCts?.Dispose();
+            _decodeCts = null;
         }
 
         ResultsSummaryListBox.ItemsSource = results;
@@ -200,24 +215,37 @@ public partial class TableViewerView : UserControl
         var totalValues = results.Where(r => r.Result.Success).Sum(r => r.Result.Fields.Count);
 
         StatusText.Text =
-            checkedFiles.Count == 1
-                ? (succeeded == 1 ? $"Decoded {totalValues} value(s)." : "Decode failed -- see the list.")
-                : $"Decoded {succeeded} of {checkedFiles.Count} file(s), {totalValues} value(s) total.";
+            cancelled
+                ? $"Cancelled -- decoded {succeeded} of {checkedFiles.Count} file(s) before stopping."
+                : checkedFiles.Count == 1
+                    ? (succeeded == 1 ? $"Decoded {totalValues} value(s)." : "Decode failed -- see the list.")
+                    : $"Decoded {succeeded} of {checkedFiles.Count} file(s), {totalValues} value(s) total.";
 
         ResultsSummaryListBox.SelectedItem = results.FirstOrDefault(r => r.Result.Success) ?? results.FirstOrDefault();
     }
+
+    private void
+    CancelDecodeButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        _decodeCts?.Cancel();
 
     private static List<FileDecodeResultItem>
     DecodeAll(
         List<TableFileItem> files,
         TableViewerSettings settings,
-        IProgress<int> progress)
+        IProgress<(int Done, string FileName)> progress,
+        CancellationToken cancellationToken)
     {
         var results = new List<FileDecodeResultItem>(files.Count);
         var done = 0;
 
         foreach (var file in files)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            progress.Report((done, file.FileName));
+
             TableDecodeResult result;
 
             try
@@ -237,7 +265,7 @@ public partial class TableViewerView : UserControl
             results.Add(new FileDecodeResultItem { FileName = file.FileName, Result = result });
 
             done++;
-            progress.Report(done);
+            progress.Report((done, file.FileName));
         }
 
         return results;

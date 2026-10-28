@@ -130,13 +130,22 @@
                     </Button>
                 </Grid>
 
-                <Button
-                    x:Name="DecodeButton"
-                    Content="Decode"
-                    Width="130"
-                    HorizontalAlignment="Left"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Click="Decode_Click"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button
+                        x:Name="DecodeButton"
+                        Content="Decode"
+                        Width="130"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="Decode_Click"/>
+                    <Button
+                        x:Name="CancelDecodeButton"
+                        Content="Cancel"
+                        Width="90"
+                        Margin="8,0,0,0"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Visibility="Collapsed"
+                        Click="CancelDecodeButton_Click"/>
+                </StackPanel>
 
                 <ProgressBar
                     x:Name="DecodeProgressBar"
