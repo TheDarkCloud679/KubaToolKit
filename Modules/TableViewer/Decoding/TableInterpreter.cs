@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Xml.Linq;
 
 namespace KubaToolKit.Modules.TableViewer.Decoding;
@@ -18,14 +19,16 @@ public class TableInterpreter
         new(StringComparer.OrdinalIgnoreCase) { "u8", "u16", "u24", "u32", "u40", "u48", "u56", "u64" };
 
     private readonly BitReader _reader;
+    private readonly CancellationToken _cancellationToken;
     private readonly Dictionary<string, object> _vars = new();
     private readonly List<DecodedField> _fields = new();
     private readonly List<string> _notes = new();
     private readonly HashSet<string> _warnedTags = new(StringComparer.OrdinalIgnoreCase);
 
-    public TableInterpreter(byte[] data)
+    public TableInterpreter(byte[] data, CancellationToken cancellationToken = default)
     {
         _reader = new BitReader(data);
+        _cancellationToken = cancellationToken;
     }
 
     public (IReadOnlyList<DecodedField> Fields, IReadOnlyList<string> Notes)
@@ -35,6 +38,12 @@ public class TableInterpreter
         try
         {
             Walk(table, 0);
+        }
+        catch (OperationCanceledException)
+        {
+            // Absorbed here rather than propagated: whatever decoded
+            // before cancellation is still a useful, real partial result.
+            _notes.Add("Decoding was cancelled.");
         }
         catch (EndOfStreamException ex)
         {
@@ -55,6 +64,8 @@ public class TableInterpreter
     {
         foreach (var child in node.Elements())
         {
+            _cancellationToken.ThrowIfCancellationRequested();
+
             if (_fields.Count >= MaxFields)
             {
                 AddNoteOnce("Stopped: reached the display limit of 5000 decoded values.");
@@ -263,8 +274,21 @@ public class TableInterpreter
                 Depth = depth
             });
 
+        // A small, explicitly-bounded array (e.g. size="1") is never a
+        // hang risk -- it ends on its own after `count` passes even if
+        // some of them read nothing. The stall guard below only matters
+        // for arrays that are effectively unbounded (size="*"/"@", or an
+        // expression that evaluated to something huge), where a
+        // malformed body (e.g. entirely behind a false <if>) reading and
+        // adding nothing on every pass would otherwise loop forever --
+        // not even Cancel could interrupt that, since nothing in such a
+        // loop ever yields back to check it.
+        var guardAgainstStall = untilEndOfFile || count > 100_000;
+
         for (long i = 0; i < count; i++)
         {
+            _cancellationToken.ThrowIfCancellationRequested();
+
             if (_reader.AtEnd)
             {
                 break;
@@ -277,7 +301,19 @@ public class TableInterpreter
                 return;
             }
 
+            var bitsBefore = _reader.BitPosition;
+            var fieldsBefore = _fields.Count;
+
             Walk(array, depth + 1);
+
+            if (guardAgainstStall && _reader.BitPosition == bitsBefore && _fields.Count == fieldsBefore)
+            {
+                AddNoteOnce(
+                    $"Array '{name}' stopped making progress -- stopped early to avoid hanging.",
+                    "array-stall:" + name);
+
+                break;
+            }
         }
     }
 

@@ -184,7 +184,7 @@ public partial class TableViewerView : UserControl
                 });
 
         List<FileDecodeResultItem> results;
-        var cancelled = false;
+        bool cancelled;
 
         try
         {
@@ -192,13 +192,11 @@ public partial class TableViewerView : UserControl
             // cached after its first use, so running this off the UI
             // thread is what actually keeps the window responsive across
             // a large batch -- the per-file work itself is plain
-            // synchronous file IO and XML walking.
+            // synchronous file IO and XML walking. DecodeAll stops and
+            // returns gracefully on cancellation rather than throwing, so
+            // whatever already decoded is kept.
             results = await Task.Run(() => DecodeAll(checkedFiles, settings, progress, _decodeCts.Token));
-        }
-        catch (OperationCanceledException)
-        {
-            results = new List<FileDecodeResultItem>();
-            cancelled = true;
+            cancelled = _decodeCts.IsCancellationRequested;
         }
         finally
         {
@@ -242,7 +240,10 @@ public partial class TableViewerView : UserControl
 
         foreach (var file in files)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
 
             progress.Report((done, file.FileName));
 
@@ -252,7 +253,7 @@ public partial class TableViewerView : UserControl
             {
                 result =
                     File.Exists(file.Path)
-                        ? TableFileDecoder.Decode(file.Path, settings)
+                        ? TableFileDecoder.Decode(file.Path, settings, cancellationToken)
                         : TableDecodeResult.Failure("File no longer exists.");
             }
             catch (Exception ex)

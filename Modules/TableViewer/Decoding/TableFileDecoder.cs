@@ -1,5 +1,6 @@
 using KubaToolKit.Shared.Services;
 using System.IO;
+using System.Threading;
 
 namespace KubaToolKit.Modules.TableViewer.Decoding;
 
@@ -13,7 +14,8 @@ public static class TableFileDecoder
     public static TableDecodeResult
     Decode(
         string filePath,
-        TableViewerSettings settings)
+        TableViewerSettings settings,
+        CancellationToken cancellationToken = default)
     {
         var trigram = GetTrigram(filePath);
 
@@ -56,7 +58,7 @@ public static class TableFileDecoder
                 return TableDecodeResult.Failure($"Couldn't read the file: {ex.Message}");
             }
 
-            var interpreter = new TableInterpreter(data);
+            var interpreter = new TableInterpreter(data, cancellationToken);
             var (fields, notes) = interpreter.Run(table);
 
             return
