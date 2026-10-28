@@ -106,15 +106,14 @@ public static class TableCardViewBuilder
             // login settings) has no card of its own to land in otherwise
             // -- landed as bare text with nothing containing it, unlike
             // everything else on the page. Wrapped in one "Général" card,
-            // expanded by default since it's usually the main thing to
-            // see first. Nested ungrouped scalars (already inside some
-            // real card) don't need this -- they're already contained.
+            // collapsed by default like every other card here. Nested
+            // ungrouped scalars (already inside some real card) don't
+            // need this -- they're already contained.
             if (depth == 0 && scalarsElement is Grid)
             {
                 var generalCard = BeginGroupCard("Général", depth);
 
                 generalCard.Content = scalarsElement;
-                generalCard.IsExpanded = true;
                 generalCard.Margin = new Thickness(0, 0, 0, containers.Count > 0 ? 8 : 0);
 
                 parent.Children.Add(generalCard);
