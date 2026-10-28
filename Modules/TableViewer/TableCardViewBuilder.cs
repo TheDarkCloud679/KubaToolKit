@@ -280,8 +280,12 @@ public static class TableCardViewBuilder
     {
         var grid = new Grid();
 
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Both size to their own content rather than a fixed/stretched
+        // width -- a wide window otherwise left the value column
+        // stretched across a lot of empty space while a merely long
+        // label name still wrapped to two lines in its fixed column.
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var row = 0;
 
