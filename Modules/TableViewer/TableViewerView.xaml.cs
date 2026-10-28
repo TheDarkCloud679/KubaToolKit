@@ -2,6 +2,7 @@ using KubaToolKit.Modules.TableViewer.Decoding;
 using KubaToolKit.Shared.Services;
 using KubaToolKit.Shared.Windows;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,9 @@ namespace KubaToolKit.Modules.TableViewer;
 // rather than shelling out to QTable.exe.
 public partial class TableViewerView : UserControl
 {
+    private static readonly Regex TableFileExtensionPattern =
+        new(@"^\.D\d{3}$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private readonly TableViewerSettingsService _settingsService = new();
 
     private readonly List<TableFileItem> _tableFiles = new();
@@ -93,11 +97,17 @@ public partial class TableViewerView : UserControl
             return;
         }
 
-        var filesInFolder = Directory.GetFiles(dialog.FolderName);
+        // A real table-file folder is a mix of .D### data files and
+        // unrelated stuff (logs, exports, whatever else lives there) --
+        // only the former are table files QTable itself would open.
+        var filesInFolder =
+            Directory.GetFiles(dialog.FolderName)
+                .Where(f => TableFileExtensionPattern.IsMatch(Path.GetExtension(f)))
+                .ToArray();
 
         if (filesInFolder.Length == 0)
         {
-            AppMessageBox.Show("That folder has no files in it.", "Table Viewer");
+            AppMessageBox.Show("That folder has no .D### table files in it.", "Table Viewer");
 
             return;
         }
