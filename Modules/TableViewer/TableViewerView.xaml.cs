@@ -27,46 +27,16 @@ public partial class TableViewerView : UserControl
     public TableViewerView()
     {
         InitializeComponent();
-
-        QTableExePathTextBox.Text = _settingsService.Load().QTableExePath;
     }
 
     private void
-    SaveQTableExePath()
-    {
-        _settingsService.Save(new TableViewerSettings { QTableExePath = QTableExePathTextBox.Text.Trim() });
-    }
-
-    private void
-    QTableExePathTextBox_LostFocus(
-        object sender,
-        RoutedEventArgs e) =>
-        SaveQTableExePath();
-
-    private void
-    BrowseQTableExe_Click(
+    SettingsButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Locate QTable.exe",
-            Filter = "QTable (QTable.exe)|QTable.exe|Executable files (*.exe)|*.exe|All files (*.*)|*.*"
-        };
+        var window = new TableViewerSettingsWindow { Owner = Window.GetWindow(this) };
 
-        if (File.Exists(QTableExePathTextBox.Text))
-        {
-            dialog.InitialDirectory = Path.GetDirectoryName(QTableExePathTextBox.Text);
-        }
-
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-
-        QTableExePathTextBox.Text = dialog.FileName;
-
-        SaveQTableExePath();
+        window.ShowDialog();
     }
 
     private void
@@ -99,7 +69,7 @@ public partial class TableViewerView : UserControl
             Filter = "XML definition files (*.xml)|*.xml|All files (*.*)|*.*"
         };
 
-        var qtableFolder = Path.GetDirectoryName(QTableExePathTextBox.Text);
+        var qtableFolder = Path.GetDirectoryName(_settingsService.Load().QTableExePath);
         var xmlFolder = qtableFolder != null ? Path.Combine(qtableFolder, "xml") : null;
 
         if (xmlFolder != null && Directory.Exists(xmlFolder))
@@ -243,12 +213,12 @@ public partial class TableViewerView : UserControl
     TryGetQTableExePath(
         out string exePath)
     {
-        exePath = QTableExePathTextBox.Text.Trim();
+        exePath = _settingsService.Load().QTableExePath.Trim();
 
         if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
         {
             AppMessageBox.Show(
-                "QTable.exe wasn't found at the configured path. Use Browse... to locate it.",
+                "QTable.exe wasn't found. Use the settings (gear icon) to locate it.",
                 "Table Viewer");
 
             return false;
