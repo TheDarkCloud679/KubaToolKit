@@ -99,7 +99,7 @@ public static class TableCardViewBuilder
 
         if (scalars.Count > 0)
         {
-            parent.Children.Add(BuildScalarsSection(scalars, valueLabels));
+            parent.Children.Add(BuildScalarsSection(scalars, depth, valueLabels));
         }
 
         foreach (var node in containers)
@@ -122,12 +122,14 @@ public static class TableCardViewBuilder
     // card of its own to land in, so every entry's fields used to land as
     // one undifferentiated flat list -- unreadable past a handful of
     // entries, with no visual cue for where one ends and the next
-    // starts. Entries repeat the same field names in the same order, so
-    // that's detected here and rendered as a run of small "#N" groups
-    // instead.
+    // starts, and every single one always on screen at once. Entries
+    // repeat the same field names in the same order, so that's detected
+    // here and each one rendered as its own collapsed-by-default "#N"
+    // card instead, the same shell real sub-objects get.
     private static UIElement
     BuildScalarsSection(
         List<FieldNode> scalars,
+        int depth,
         IReadOnlyDictionary<string, Dictionary<string, string>> valueLabels)
     {
         var period = DetectRepeatPeriod(scalars);
@@ -144,17 +146,12 @@ public static class TableCardViewBuilder
         {
             var group = scalars.GetRange(g * period.Value, period.Value);
 
-            panel.Children.Add(
-                new TextBlock
-                {
-                    Text = $"#{g + 1}",
-                    FontSize = 10,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = TextMutedBrush,
-                    Margin = new Thickness(0, g == 0 ? 0 : 10, 0, 2)
-                });
+            var card = BeginGroupCard($"#{g + 1}", depth);
 
-            panel.Children.Add(BuildFieldsGrid(group, valueLabels));
+            card.Content = BuildFieldsGrid(group, valueLabels);
+            card.Margin = new Thickness(0, 0, 0, g == groupCount - 1 ? 0 : 4);
+
+            panel.Children.Add(card);
         }
 
         return panel;
@@ -291,6 +288,22 @@ public static class TableCardViewBuilder
     private static Expander
     BeginCard(
         FieldNode node,
+        int depth) =>
+        BeginCard(node.Field.Name, node.Field.Value, depth);
+
+    // A numbered entry within a repeating group (e.g. "#1" of 27 "cartes"
+    // entries) is still just a card -- same shell, no field behind its
+    // header to pull a value from.
+    private static Expander
+    BeginGroupCard(
+        string header,
+        int depth) =>
+        BeginCard(header, "", depth);
+
+    private static Expander
+    BeginCard(
+        string header,
+        string value,
         int depth)
     {
         var headerPanel = new StackPanel { Orientation = Orientation.Horizontal };
@@ -298,7 +311,7 @@ public static class TableCardViewBuilder
         headerPanel.Children.Add(
             new TextBlock
             {
-                Text = node.Field.Name,
+                Text = header,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = Math.Max(11, 13 - depth),
                 Foreground = TextPrimaryBrush,
@@ -306,12 +319,12 @@ public static class TableCardViewBuilder
                 TextWrapping = TextWrapping.Wrap
             });
 
-        if (!string.IsNullOrWhiteSpace(node.Field.Value))
+        if (!string.IsNullOrWhiteSpace(value))
         {
             headerPanel.Children.Add(
                 new TextBlock
                 {
-                    Text = $"  -  {node.Field.Value}",
+                    Text = $"  -  {value}",
                     FontSize = Math.Max(10, 12 - depth),
                     Foreground = TextMutedBrush,
                     VerticalAlignment = VerticalAlignment.Center
