@@ -99,7 +99,10 @@ public partial class TableViewerView : UserControl
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Choose binary table file(s)",
-            Filter = "Table files (*.dat)|*.dat|All files (*.*)|*.*",
+            // Proprietary format, not .dat -- extensions vary (e.g.
+            // ADV00004.D010), so default to showing everything rather
+            // than guessing a pattern that would hide real files.
+            Filter = "All files (*.*)|*.*|Proprietary table files (*.D*)|*.D*",
             Multiselect = true
         };
 
