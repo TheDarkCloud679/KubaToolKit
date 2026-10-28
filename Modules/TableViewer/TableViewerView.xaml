@@ -8,7 +8,12 @@
         <local:DepthIndentConverter x:Key="DepthIndentConverter"/>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid
+        AllowDrop="True"
+        DragEnter="TableViewerView_DragOver"
+        DragOver="TableViewerView_DragOver"
+        DragLeave="TableViewerView_DragLeave"
+        Drop="TableViewerView_Drop">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
@@ -330,6 +335,53 @@
 
                 </Grid>
             </Grid>
+        </Border>
+
+        <!-- Drop anywhere on the module to add file(s): a folder
+             dropped is filtered to .D### files the same way "Add
+             folder..." is, a file dropped directly is added as-is. -->
+        <Border
+            x:Name="TableFilesDropOverlay"
+            Grid.RowSpan="3"
+            Visibility="Collapsed"
+            Margin="8"
+            Background="{StaticResource AccentSoftBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="2"
+            CornerRadius="{StaticResource RadiusLarge}"
+            IsHitTestVisible="False">
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                <Border
+                    Width="52" Height="52"
+                    Margin="0,0,0,10"
+                    CornerRadius="{StaticResource RadiusPill}"
+                    Background="{StaticResource SurfaceBrush}"
+                    Effect="{StaticResource CardShadowEffect}"
+                    HorizontalAlignment="Center">
+                    <Path
+                        Data="M12,16 L12,4 M7,9 L12,4 L17,9 M4,17 L4,19 A2,2 0 0 0 6,21 L18,21 A2,2 0 0 0 20,19 L20,17"
+                        Stroke="{StaticResource AccentBrush}"
+                        StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        Width="24" Height="24" Stretch="Uniform"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <TextBlock
+                    Text="Drop to add table file(s)"
+                    FontSize="16"
+                    FontWeight="Bold"
+                    Foreground="{StaticResource TextPrimaryBrush}"
+                    HorizontalAlignment="Center"/>
+
+                <TextBlock
+                    Text="A folder is filtered to .D### files automatically"
+                    Margin="0,4,0,0"
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    HorizontalAlignment="Center"/>
+            </StackPanel>
         </Border>
 
     </Grid>

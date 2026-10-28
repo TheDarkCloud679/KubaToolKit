@@ -136,6 +136,71 @@ public partial class TableViewerView : UserControl
     }
 
     private void
+    TableViewerView_DragOver(
+        object sender,
+        DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            TableFilesDropOverlay.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+            TableFilesDropOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        e.Handled = true;
+    }
+
+    private void
+    TableViewerView_DragLeave(
+        object sender,
+        DragEventArgs e) =>
+        TableFilesDropOverlay.Visibility = Visibility.Collapsed;
+
+    private void
+    TableViewerView_Drop(
+        object sender,
+        DragEventArgs e)
+    {
+        TableFilesDropOverlay.Visibility = Visibility.Collapsed;
+
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return;
+        }
+
+        var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
+        var toAdd = new List<string>();
+
+        foreach (var path in dropped)
+        {
+            if (Directory.Exists(path))
+            {
+                // Same filter as "Add folder...": only the real table
+                // files, not whatever else lives alongside them.
+                toAdd.AddRange(
+                    Directory.GetFiles(path).Where(f => TableFileExtensionPattern.IsMatch(Path.GetExtension(f))));
+            }
+            else if (File.Exists(path))
+            {
+                toAdd.Add(path);
+            }
+        }
+
+        if (toAdd.Count == 0)
+        {
+            AppMessageBox.Show("No .D### table files found in what was dropped.", "Table Viewer");
+
+            return;
+        }
+
+        AddFiles(toAdd);
+    }
+
+    private void
     RemoveTableFile_Click(
         object sender,
         RoutedEventArgs e)
