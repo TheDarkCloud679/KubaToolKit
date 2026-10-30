@@ -23,6 +23,19 @@ namespace KubaToolKit
             {
                 ReportCrash(e.Exception);
                 e.Handled = true;
+
+                // Startup runs with ShutdownMode.OnExplicitShutdown (set
+                // below, before MainWindow exists, so a failed update
+                // download doesn't close the app out from under its own
+                // popup) -- if a crash here left no window open, nothing
+                // would ever call Shutdown() otherwise, and the process
+                // sat alive forever with no window: invisible in Task
+                // Manager, and blocking a fresh launch from ever doing
+                // anything since it never actually exited.
+                if (Windows.Count == 0)
+                {
+                    Shutdown();
+                }
             };
         }
 
@@ -59,7 +72,26 @@ namespace KubaToolKit
                 Logger.Error("Application: update check failed, continuing with current version.", ex);
             }
 
-            var mainWindow = new MainWindow();
+            KubaToolKit.Shell.MainWindow mainWindow;
+
+            try
+            {
+                mainWindow = new KubaToolKit.Shell.MainWindow();
+            }
+            catch (Exception ex)
+            {
+                // Every module view is constructed eagerly inside
+                // MainWindow's own constructor, so a bug in any one of
+                // them throws here too -- explicit on top of
+                // DispatcherUnhandledException's own Shutdown() (this
+                // doesn't reach the dispatcher loop at all, being plain
+                // synchronous construction) so this can never be the one
+                // path that leaves the process hanging with no window.
+                ReportCrash(ex);
+                Shutdown();
+
+                return;
+            }
 
             // WPF defaults MainWindow to whatever Window is shown first --
             // on the "update download failed" path, that would otherwise
