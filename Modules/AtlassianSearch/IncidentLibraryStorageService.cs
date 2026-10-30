@@ -35,20 +35,55 @@ public class IncidentLibraryStorageService
     public string RootFolder =>
         OverrideRootFolder ?? TeamSharingFolders.SharedIncidentsFolder() ?? DefaultRootFolder;
 
-    public void
-    EnsureFolderExists() =>
-        Directory.CreateDirectory(RootFolder);
+    // Returns false (rather than throwing) when the folder can't be
+    // created or reached -- e.g. RootFolder resolving to a Team Sharing
+    // path on a drive that isn't mounted right now (a real crash seen in
+    // the wild: a synced-drive letter not yet available at startup).
+    // AtlassianSearchView calls LoadIncidents() from its own constructor,
+    // and every module view is constructed eagerly at app startup, so an
+    // uncaught exception here took down the entire app before its window
+    // ever showed, not just this module.
+    public bool
+    EnsureFolderExists()
+    {
+        try
+        {
+            Directory.CreateDirectory(RootFolder);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"IncidentLibraryStorageService: couldn't create or reach '{RootFolder}'.", ex);
+
+            return false;
+        }
+    }
 
     public List<IncidentEntry>
     LoadIncidents()
     {
-        EnsureFolderExists();
-
         var incidents = new List<IncidentEntry>();
 
-        foreach (var file in Directory
-                     .GetFiles(RootFolder, "*.json")
-                     .OrderBy(f => f))
+        if (!EnsureFolderExists())
+        {
+            return incidents;
+        }
+
+        string[] files;
+
+        try
+        {
+            files = Directory.GetFiles(RootFolder, "*.json");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"IncidentLibraryStorageService: couldn't list '{RootFolder}'.", ex);
+
+            return incidents;
+        }
+
+        foreach (var file in files.OrderBy(f => f))
         {
             try
             {
