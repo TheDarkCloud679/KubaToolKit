@@ -685,6 +685,20 @@ public partial class ApiClientView
         PathVariablesPopup.IsOpen = !PathVariablesPopup.IsOpen;
     }
 
+    // PathVariablesButton sits near the tab row's right edge, so a plain
+    // "Bottom" placement (left-edge-aligned under the button) pushed this
+    // popup's right side straight off the window. Right-align it under
+    // the button instead, once its content has actually been measured
+    // (ActualWidth is still 0 before Opened fires).
+    private void
+    PathVariablesPopup_Opened(
+        object sender,
+        EventArgs e)
+    {
+        PathVariablesPopup.HorizontalOffset =
+            PathVariablesButton.ActualWidth - PathVariablesPopupContent.ActualWidth;
+    }
+
     private void
     SyncUrlFromParams()
     {
