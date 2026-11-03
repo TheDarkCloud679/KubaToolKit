@@ -3,6 +3,7 @@ using KubaToolKit.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,6 +20,7 @@ public partial class ApiClientView
     private readonly CollectionStorageService _collectionStorage = new();
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
+    private readonly ObservableCollection<HeaderItem> _pathVariables = new();
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
     private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
@@ -46,6 +48,7 @@ public partial class ApiClientView
 
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
+        PathVariablesGrid.ItemsSource = _pathVariables;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
         BodyFormGrid.ItemsSource = _bodyFormData;
         ExtractionsGrid.ItemsSource = _extractions;
@@ -56,6 +59,7 @@ public partial class ApiClientView
         _bodyUrlEncoded.CollectionChanged += (_, __) => RefreshAutoHeaders();
 
         UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
+        UrlTextBox.TextChanged += (_, __) => SyncPathVariablesFromUrl();
         UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
         LoadCollectionsAndEnvironments(_collectionStorage.LoadLastEnvironmentName());
@@ -589,6 +593,47 @@ public partial class ApiClientView
         }
     }
 
+    // Postman's ":name" path segments -- a separate mechanism from
+    // {{var}} variables, with its own per-request value (not tied to any
+    // environment). Unlike Params, this is one-directional (URL text ->
+    // grid): the grid only lets the user fill in a value, never add or
+    // remove a row, since the set of names comes straight from the URL.
+    private static readonly Regex PathVariableNamePattern =
+        new(@"(?<=/):(\w+)", RegexOptions.Compiled);
+
+    private void
+    SyncPathVariablesFromUrl()
+    {
+        var url = UrlTextBox.Text;
+        var queryIndex = url.IndexOf('?');
+        var pathPart = queryIndex >= 0 ? url[..queryIndex] : url;
+
+        var names =
+            PathVariableNamePattern.Matches(pathPart)
+                .Select(m => m.Groups[1].Value)
+                .Distinct()
+                .ToList();
+
+        for (var i = _pathVariables.Count - 1; i >= 0; i--)
+        {
+            if (!names.Contains(_pathVariables[i].Key))
+            {
+                _pathVariables.RemoveAt(i);
+            }
+        }
+
+        foreach (var name in names)
+        {
+            if (!_pathVariables.Any(p => p.Key == name))
+            {
+                _pathVariables.Add(new HeaderItem { Key = name, Value = "" });
+            }
+        }
+
+        PathVariablesSection.Visibility =
+            _pathVariables.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void
     SyncUrlFromParams()
     {
@@ -826,6 +871,19 @@ public partial class ApiClientView
         }
 
         UrlTextBox.Text = node.Url;
+
+        // UrlTextBox's TextChanged already re-detected the :name segments
+        // (with blank values) via SyncPathVariablesFromUrl -- fill in the
+        // values saved for this node.
+        foreach (var pathVariable in node.PathVariables)
+        {
+            var row = _pathVariables.FirstOrDefault(p => p.Key == pathVariable.Key);
+
+            if (row != null)
+            {
+                row.Value = pathVariable.Value;
+            }
+        }
 
         _headers.Clear();
 
@@ -1347,6 +1405,7 @@ public partial class ApiClientView
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
         BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        PathVariablesGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SyncUrlFromParams();
 
         var mode = GetSelectedBodyMode();
@@ -1378,6 +1437,11 @@ public partial class ApiClientView
                 PostResponseExtractions =
                     _extractions
                         .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
+                        .ToList(),
+
+                PathVariables =
+                    _pathVariables
+                        .Select(p => new HeaderItem { Enabled = true, Key = p.Key, Value = p.Value })
                         .ToList()
             };
 
@@ -1402,6 +1466,7 @@ public partial class ApiClientView
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
         BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        PathVariablesGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SyncUrlFromParams();
 
         var mode = GetSelectedBodyMode();
@@ -1427,6 +1492,11 @@ public partial class ApiClientView
         node.PostResponseExtractions =
             _extractions
                 .Select(x => new HeaderItem { Enabled = x.Enabled, Key = x.Key, Value = x.Value })
+                .ToList();
+
+        node.PathVariables =
+            _pathVariables
+                .Select(p => new HeaderItem { Enabled = true, Key = p.Key, Value = p.Value })
                 .ToList();
 
         RefreshNodeDisplay(node);
@@ -1517,6 +1587,7 @@ public partial class ApiClientView
                     requestBody,
                     auth,
                     environment.ToSubstitutionMap(),
+                    node.PathVariables,
                     CancellationToken.None);
 
             if (result.StatusCode is < 200 or >= 300)
@@ -1853,6 +1924,7 @@ public partial class ApiClientView
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);
         BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        PathVariablesGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SyncUrlFromParams();
 
         url = UrlTextBox.Text.Trim();
@@ -1900,6 +1972,7 @@ public partial class ApiClientView
                     requestBody,
                     auth,
                     variables,
+                    _pathVariables.ToList(),
                     _sendCancellation.Token);
 
             Logger.Info($"ApiClientView: {method} {url} -> {result.StatusDisplay} ({result.ElapsedMs} ms)");

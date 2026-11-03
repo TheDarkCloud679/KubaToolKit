@@ -240,6 +240,7 @@ public class CollectionStorageService
                         IsRequest = true,
                         Method = item.Request.Method ?? "GET",
                         Url = ExtractUrl(item.Request.Url),
+                        PathVariables = ExtractPathVariables(item.Request.Url),
                         Parent = parent,
 
                         Headers =
@@ -308,6 +309,46 @@ public class CollectionStorageService
         }
 
         return "";
+    }
+
+    // Postman stores a request's ":name" path segment values separately
+    // from the raw URL string, in url.variable[] (only present when the
+    // URL is the object form, not the plain-string form).
+    private static List<HeaderItem>
+    ExtractPathVariables(
+        JsonElement url)
+    {
+        var result = new List<HeaderItem>();
+
+        if (url.ValueKind != JsonValueKind.Object
+            || !url.TryGetProperty("variable", out var variables)
+            || variables.ValueKind != JsonValueKind.Array)
+        {
+            return result;
+        }
+
+        foreach (var variable in variables.EnumerateArray())
+        {
+            var key =
+                variable.TryGetProperty("key", out var keyElement)
+                    ? keyElement.GetString() ?? ""
+                    : "";
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            var value =
+                variable.TryGetProperty("value", out var valueElement)
+                    && valueElement.ValueKind == JsonValueKind.String
+                        ? valueElement.GetString() ?? ""
+                        : "";
+
+            result.Add(new HeaderItem { Enabled = true, Key = key, Value = value });
+        }
+
+        return result;
     }
 
     private static AuthConfig
@@ -798,7 +839,7 @@ public class CollectionStorageService
                     new JsonObject
                     {
                         ["method"] = node.Method,
-                        ["url"] = node.Url,
+                        ["url"] = BuildUrlNode(node),
 
                         ["header"] =
                             new JsonArray(
@@ -878,6 +919,35 @@ public class CollectionStorageService
         }
 
         return array;
+    }
+
+    // A plain string when there's nothing to round-trip beyond the raw
+    // URL; the Postman object form (raw + variable[]) only when there are
+    // path variable values to preserve, so a collection without any stays
+    // exactly as simple as it was.
+    private static JsonNode
+    BuildUrlNode(
+        CollectionNode node)
+    {
+        if (node.PathVariables.Count == 0)
+        {
+            return node.Url;
+        }
+
+        return new JsonObject
+        {
+            ["raw"] = node.Url,
+            ["variable"] =
+                new JsonArray(
+                    node.PathVariables
+                        .Where(p => !string.IsNullOrWhiteSpace(p.Key))
+                        .Select(p => (JsonNode)new JsonObject
+                        {
+                            ["key"] = p.Key,
+                            ["value"] = p.Value
+                        })
+                        .ToArray())
+        };
     }
 
     private static JsonObject?

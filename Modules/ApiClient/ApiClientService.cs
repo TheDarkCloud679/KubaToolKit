@@ -23,6 +23,12 @@ public class ApiClientService
     private static readonly Regex VariablePattern =
         new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
 
+    // A Postman ":name" path segment -- distinct from {{var}} above, and
+    // only matched right after a '/' so a literal port number in a URL
+    // (host:8080) is never mistaken for one.
+    private static readonly Regex PathVariablePattern =
+        new(@"(?<=/):(\w+)", RegexOptions.Compiled);
+
     public async Task<ApiResponseResult>
     SendAsync(
         string method,
@@ -31,9 +37,20 @@ public class ApiClientService
         RequestBody body,
         AuthConfig auth,
         Dictionary<string, string>? variables = null,
+        List<HeaderItem>? pathVariables = null,
         CancellationToken cancellationToken = default)
     {
+        url = SubstitutePathVariables(url, pathVariables);
         url = SubstituteVariables(url, variables);
+
+        var unresolvedPathVariable = PathVariablePattern.Match(url);
+
+        if (unresolvedPathVariable.Success)
+        {
+            throw new InvalidOperationException(
+                $"The path variable '{unresolvedPathVariable.Value}' has no value set. "
+                + "Fill it in under Path Variables and try again.");
+        }
 
         var unresolvedUrlVariable = VariablePattern.Match(url);
 
@@ -250,6 +267,30 @@ public class ApiClientService
 
                 return rawContent;
         }
+    }
+
+    private static string
+    SubstitutePathVariables(
+        string url,
+        List<HeaderItem>? pathVariables)
+    {
+        if (pathVariables == null || pathVariables.Count == 0)
+        {
+            return url;
+        }
+
+        return PathVariablePattern.Replace(
+            url,
+            match =>
+            {
+                var variable =
+                    pathVariables.FirstOrDefault(p =>
+                        string.Equals(p.Key, match.Groups[1].Value, StringComparison.Ordinal));
+
+                return variable != null
+                    ? Uri.EscapeDataString(variable.Value ?? "")
+                    : match.Value;
+            });
     }
 
     [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(text))]

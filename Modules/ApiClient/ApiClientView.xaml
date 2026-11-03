@@ -782,6 +782,61 @@
                                         ResizeDirection="Rows"
                                         ToolTip="Drag to resize"/>
                                 </Grid>
+
+                                <!-- Postman's ":name" URL segments, e.g.
+                                     /accounts/:accountId, auto-detected
+                                     from the URL text above (see
+                                     SyncPathVariablesFromUrl), not a user-
+                                     editable key list like Params: only
+                                     shown when the URL actually has one. -->
+                                <StackPanel x:Name="PathVariablesSection" Visibility="Collapsed" Margin="0,10,0,0">
+                                    <TextBlock
+                                        Text="Path Variables"
+                                        FontWeight="SemiBold"
+                                        Margin="0,0,0,6"
+                                        Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                    <DataGrid
+                                        x:Name="PathVariablesGrid"
+                                        AutoGenerateColumns="False"
+                                        CanUserAddRows="False"
+                                        CanUserDeleteRows="False"
+                                        HeadersVisibility="Column"
+                                        HorizontalScrollBarVisibility="Auto"
+                                        VerticalScrollBarVisibility="Auto"
+                                        RowHeight="38">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn
+                                                Header="Key"
+                                                Binding="{Binding Key}"
+                                                IsReadOnly="True"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="2*"
+                                                MinWidth="160">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Key}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn
+                                                Header="Value"
+                                                Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                                Width="3*"
+                                                MinWidth="200">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="ToolTip" Value="{Binding Value}"/>
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- Auth -->

@@ -9,6 +9,12 @@ public class CollectionNode
     public string Method { get; set; } = "";
     public string Url { get; set; } = "";
     public List<HeaderItem> Headers { get; set; } = new();
+
+    // Postman's ":name" path segments (e.g. /accounts/:accountId), as
+    // opposed to {{var}} variables -- a separate mechanism Postman
+    // collections commonly use, with its own value per request, not tied
+    // to any environment.
+    public List<HeaderItem> PathVariables { get; set; } = new();
     public string Body { get; set; } = "";
 
     public string BodyMode { get; set; } = "raw";
