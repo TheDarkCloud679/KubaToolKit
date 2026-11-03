@@ -697,15 +697,35 @@
 
                             <!-- Params -->
                             <StackPanel x:Name="ParamsTabContent">
-                                <Button
-                                    HorizontalAlignment="Right"
-                                    Width="26"
-                                    Height="26"
-                                    Padding="0"
-                                    Margin="0,0,0,6"
-                                    ToolTip="Add a row"
-                                    Content="+"
-                                    Click="AddParamRow_Click"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Query Params"
+                                        FontWeight="SemiBold"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                    <Button
+                                        Grid.Column="1"
+                                        Width="26"
+                                        Height="26"
+                                        Padding="0"
+                                        ToolTip="Add a row"
+                                        Content="+"
+                                        Click="AddParamRow_Click"/>
+                                </Grid>
+
+                                <TextBlock
+                                    Text="Appended to the URL after &quot;?&quot; -- stays in sync whether you edit them here or type directly in the URL above."
+                                    FontSize="11"
+                                    Margin="0,2,0,8"
+                                    TextWrapping="Wrap"
+                                    Foreground="{StaticResource TextMutedBrush}"/>
 
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -789,12 +809,19 @@
                                      SyncPathVariablesFromUrl), not a user-
                                      editable key list like Params: only
                                      shown when the URL actually has one. -->
-                                <StackPanel x:Name="PathVariablesSection" Visibility="Collapsed" Margin="0,10,0,0">
+                                <StackPanel x:Name="PathVariablesSection" Visibility="Collapsed" Margin="0,14,0,0">
                                     <TextBlock
                                         Text="Path Variables"
                                         FontWeight="SemiBold"
-                                        Margin="0,0,0,6"
+                                        Margin="0,0,0,2"
                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                    <TextBlock
+                                        Text="Detected automatically from the &quot;:name&quot; segments in the URL above -- just fill in a value."
+                                        FontSize="11"
+                                        Margin="0,0,0,8"
+                                        TextWrapping="Wrap"
+                                        Foreground="{StaticResource TextMutedBrush}"/>
 
                                     <DataGrid
                                         x:Name="PathVariablesGrid"
