@@ -649,7 +649,7 @@
                                                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                                     StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                     Width="12" Height="12" Stretch="Uniform" Margin="0,0,8,0"/>
-                                                <TextBlock Text="Edit Environment (name, variables...)" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Edit Environment" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Style="{StaticResource SettingsMenuItemStyle}" Click="ReloadEnvironments_Click">
@@ -872,6 +872,7 @@
 
                                     <DataGrid
                                         x:Name="PathVariablesGrid"
+                                        AlternationCount="2"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="False"
                                         CanUserDeleteRows="False"
@@ -957,6 +958,7 @@
 
                                     <DataGrid
                                         x:Name="ParamsGrid"
+                                        AlternationCount="2"
                                         Grid.Row="0"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="True"
@@ -1132,6 +1134,7 @@
 
                                     <DataGrid
                                         x:Name="HeadersGrid"
+                                        AlternationCount="2"
                                         Grid.Row="0"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="True"
@@ -1252,6 +1255,7 @@
 
                                             <DataGrid
                                                 x:Name="AutoHeadersGrid"
+                                                AlternationCount="2"
                                                 Grid.Row="0"
                                                 IsReadOnly="True"
                                                 AutoGenerateColumns="False"
@@ -1378,6 +1382,7 @@
 
                                         <DataGrid
                                             x:Name="BodyFormGrid"
+                                            AlternationCount="2"
                                             Grid.Row="0"
                                             AutoGenerateColumns="False"
                                             CanUserAddRows="True"
@@ -1589,6 +1594,7 @@
 
                                     <DataGrid
                                         x:Name="ExtractionsGrid"
+                                        AlternationCount="2"
                                         Grid.Row="0"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="True"

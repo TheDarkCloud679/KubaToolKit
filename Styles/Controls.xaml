@@ -1608,12 +1608,19 @@
         </Style.Triggers>
     </Style>
 
+    <!-- A constant opaque Background here used to paint over the row's own
+         background for the whole width of the Key/Value columns, so the
+         DataGridRow style's zebra striping and hover/selection highlight
+         (see TargetType="DataGridRow" above) never showed through, since
+         these two columns cover most of a row. Transparent lets the row
+         underneath read through; the border alone still reads as an
+         editable field. -->
     <Style x:Key="EditableDataGridCellStyle" TargetType="DataGridCell">
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="Margin" Value="2,3"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Template">
             <Setter.Value>

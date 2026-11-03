@@ -198,6 +198,7 @@
 
                             <DataGrid
                                 x:Name="HeadersGrid"
+                                AlternationCount="2"
                                 MaxHeight="220"
                                 AutoGenerateColumns="False"
                                 CanUserAddRows="True"
@@ -326,6 +327,7 @@
 
                                 <DataGrid
                                     x:Name="BodyFormGrid"
+                                    AlternationCount="2"
                                     MaxHeight="200"
                                     AutoGenerateColumns="False"
                                     CanUserAddRows="True"
@@ -396,6 +398,7 @@
 
                             <DataGrid
                                 x:Name="ExtractionsGrid"
+                                AlternationCount="2"
                                 MaxHeight="160"
                                 AutoGenerateColumns="False"
                                 CanUserAddRows="True"

@@ -57,6 +57,7 @@
 
             <DataGrid
                 x:Name="VariablesGrid"
+                AlternationCount="2"
                 AutoGenerateColumns="False"
                 CanUserAddRows="True"
                 CanUserDeleteRows="True"
