@@ -21,6 +21,7 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
     private readonly ObservableCollection<HeaderItem> _pathVariables = new();
+    private readonly ObservableCollection<HeaderItem> _settingsVariables = new();
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
     private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
@@ -39,6 +40,11 @@ public partial class ApiClientView
 
     private CollectionNode? _currentRequestNode;
 
+    // Which environment the Settings popup's Environment Variables grid is
+    // currently showing/saving to -- captured when the popup opens, since
+    // EnvironmentCombo could in principle change while it's up.
+    private EnvironmentSet? _settingsEnvironment;
+
     // Runtime-only (not persisted): real token expiry per environment,
     // keyed by EnvironmentSet.FilePath, computed from the "Get Token"
     // response's expires_in/expiresIn field. Drives GetTokenButton's color.
@@ -53,6 +59,7 @@ public partial class ApiClientView
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
         PathVariablesGrid.ItemsSource = _pathVariables;
+        SettingsVariablesGrid.ItemsSource = _settingsVariables;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
         BodyFormGrid.ItemsSource = _bodyFormData;
         ExtractionsGrid.ItemsSource = _extractions;
@@ -700,6 +707,136 @@ public partial class ApiClientView
     }
 
     private void
+    SettingsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SettingsPopup.IsOpen = !SettingsPopup.IsOpen;
+    }
+
+    // Same right-alignment fix as PathVariablesPopup_Opened above --
+    // SettingsButton also sits near the toolbar's right edge.
+    private void
+    SettingsPopup_Opened(
+        object sender,
+        EventArgs e)
+    {
+        SettingsPopup.HorizontalOffset =
+            SettingsButton.ActualWidth - SettingsPopupContent.ActualWidth;
+
+        LoadSettingsVariables();
+    }
+
+    private void
+    SettingsPopup_Closed(
+        object sender,
+        EventArgs e)
+    {
+        SaveSettingsVariables();
+    }
+
+    // Populates the Settings popup's "Environment Variables" grid from
+    // whichever environment is currently selected in EnvironmentCombo --
+    // captured into _settingsEnvironment so edits save back to the right
+    // place even if that selection were to change while the popup is up.
+    private void
+    LoadSettingsVariables()
+    {
+        _settingsVariables.Clear();
+
+        var environment = EnvironmentCombo.SelectedItem as EnvironmentSet;
+
+        var hasEnvironment =
+            environment != null
+            && !string.IsNullOrEmpty(environment.FilePath);
+
+        _settingsEnvironment = hasEnvironment ? environment : null;
+
+        if (hasEnvironment)
+        {
+            foreach (var variable in environment!.Variables)
+            {
+                _settingsVariables.Add(
+                    new HeaderItem
+                    {
+                        Enabled = variable.Enabled,
+                        Key = variable.Key,
+                        Value = variable.Value
+                    });
+            }
+        }
+
+        SettingsVariablesGrid.IsEnabled = hasEnvironment;
+        SettingsVariablesEmptyText.Visibility =
+            hasEnvironment ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void
+    AddSettingsVariableRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_settingsEnvironment == null)
+        {
+            return;
+        }
+
+        _settingsVariables.Add(new HeaderItem());
+    }
+
+    private void
+    DeleteSettingsVariableRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is Button button
+            && button.DataContext is HeaderItem item)
+        {
+            _settingsVariables.Remove(item);
+
+            SaveSettingsVariables();
+        }
+    }
+
+    private void
+    SettingsVariablesGrid_LostFocus(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SaveSettingsVariables();
+    }
+
+    // No explicit Save button -- edits autosave on focus loss (and once
+    // more on the popup closing, to catch whatever cell was focused last).
+    // Key/Value/Enabled all bind UpdateSourceTrigger=PropertyChanged, so
+    // _settingsVariables is already current without a CommitEdit call.
+    private void
+    SaveSettingsVariables()
+    {
+        if (_settingsEnvironment == null)
+        {
+            return;
+        }
+
+        _settingsEnvironment.Variables = _settingsVariables.ToList();
+
+        try
+        {
+            _collectionStorage.SaveEnvironment(_settingsEnvironment);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(
+                "ApiClientView: failed to save environment variables from the Settings popup.",
+                ex);
+
+            AppMessageBox.Show(
+                ex.Message,
+                "Environment save error");
+        }
+    }
+
+    private void
     SyncUrlFromParams()
     {
         if (_syncingUrlAndParams)
@@ -820,6 +957,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         LoadCollectionsAndEnvironments();
     }
 
@@ -834,6 +973,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         _collectionStorage.EnsureFoldersExist();
 
         Process.Start(
@@ -849,6 +990,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         _collectionStorage.EnsureFoldersExist();
 
         Process.Start(
@@ -864,6 +1007,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         _collectionStorage.LoadValueLabels();
 
         Process.Start(
@@ -879,6 +1024,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         LoadCollectionsAndEnvironments();
     }
 
@@ -887,6 +1034,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
             || string.IsNullOrEmpty(environment.FilePath))
         {
@@ -1387,6 +1536,8 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        SettingsPopup.IsOpen = false;
+
         var name =
             TextInputWindow.Prompt(
                 Window.GetWindow(this),
@@ -2438,15 +2589,21 @@ public partial class ApiClientView
 
             var valueLabels = _collectionStorage.LoadValueLabels();
 
+            var hasValueLabelsError = _collectionStorage.LastValueLabelsError != null;
+
             ValueLabelsWarningText.Visibility =
-                _collectionStorage.LastValueLabelsError != null
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
+                hasValueLabelsError ? Visibility.Visible : Visibility.Collapsed;
 
             ValueLabelsWarningText.ToolTip =
-                _collectionStorage.LastValueLabelsError != null
+                hasValueLabelsError
                     ? $"Invalid ValueLabels.json, no labels applied: {_collectionStorage.LastValueLabelsError}"
                     : null;
+
+            // Surfaced on the collapsed Settings button too (SettingsWarningDot)
+            // -- Edit Value Labels now lives inside that popup, so without this
+            // dot there'd be no at-a-glance sign anything needs attention.
+            SettingsWarningDot.Visibility =
+                hasValueLabelsError ? Visibility.Visible : Visibility.Collapsed;
 
             _lastCardsView = JsonCardViewBuilder.Build(_lastResponseBody, valueLabels);
 
