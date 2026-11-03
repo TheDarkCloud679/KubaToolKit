@@ -31,6 +31,47 @@ public class CollectionStorageService
     public static string ValueLabelsFile =>
         Path.Combine(RootFolder, "ValueLabels.json");
 
+    // Remembers which environment was selected in the dropdown, across app
+    // restarts. Without this, the combo always fell back to "(No
+    // Environment)" on every launch, and sending any request whose
+    // URL/headers/body referenced a {{variable}} before re-picking the
+    // right environment failed with a raw, confusing .NET exception.
+    public static string LastEnvironmentFile =>
+        Path.Combine(RootFolder, "LastEnvironment.txt");
+
+    public void
+    SaveLastEnvironmentName(
+        string? name)
+    {
+        try
+        {
+            EnsureFoldersExist();
+
+            File.WriteAllText(LastEnvironmentFile, name ?? "");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("CollectionStorageService: failed to save the last selected environment.", ex);
+        }
+    }
+
+    public string?
+    LoadLastEnvironmentName()
+    {
+        try
+        {
+            return File.Exists(LastEnvironmentFile)
+                ? File.ReadAllText(LastEnvironmentFile).Trim()
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("CollectionStorageService: failed to load the last selected environment.", ex);
+
+            return null;
+        }
+    }
+
     public void
     EnsureFoldersExist()
     {

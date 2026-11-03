@@ -35,6 +35,21 @@ public class ApiClientService
     {
         url = SubstituteVariables(url, variables);
 
+        var unresolvedUrlVariable = VariablePattern.Match(url);
+
+        if (unresolvedUrlVariable.Success)
+        {
+            // Left as a raw {{...}} placeholder, this reaches
+            // HttpRequestMessage below as a relative/garbage URI and fails
+            // there with a generic "invalid request URI" exception that
+            // gives no hint it's actually a missing variable -- usually
+            // because no environment (or the wrong one) is selected.
+            throw new InvalidOperationException(
+                $"The variable '{unresolvedUrlVariable.Value}' is not defined in the "
+                + "currently selected environment. Check the environment picker "
+                + "(top of the API Client tab) and try again.");
+        }
+
         using var request =
             new HttpRequestMessage(
                 new HttpMethod(method),

@@ -58,7 +58,7 @@ public partial class ApiClientView
         UrlTextBox.TextChanged += (_, __) => SyncParamsFromUrl();
         UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
-        LoadCollectionsAndEnvironments();
+        LoadCollectionsAndEnvironments(_collectionStorage.LoadLastEnvironmentName());
 
         RefreshAutoHeaders();
 
@@ -699,6 +699,9 @@ public partial class ApiClientView
         object sender,
         SelectionChangedEventArgs e)
     {
+        _collectionStorage.SaveLastEnvironmentName(
+            (EnvironmentCombo.SelectedItem as EnvironmentSet)?.Name);
+
         UpdateGetTokenButtonState();
     }
 
