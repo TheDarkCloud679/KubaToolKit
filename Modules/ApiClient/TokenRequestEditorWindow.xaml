@@ -64,9 +64,16 @@
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource RadiusMedium}"
-            Background="{StaticResource SurfaceBrush}"
-            Effect="{StaticResource CardShadowEffect}">
+            Background="{StaticResource SurfaceBrush}">
 
+            <!-- No Effect here (CardShadowEffect was here before): a WPF
+                 Effect forces its whole subtree through an intermediate
+                 bitmap, which silently drops ClearType and renders all
+                 text inside with blurred grayscale antialiasing instead,
+                 exactly what made every DataGrid cell in this dialog
+                 (Headers/Body/Extraction) look smudged and illegible,
+                 while vector content like the checkboxes stayed sharp.
+                 The shadow was barely visible anyway (Opacity 0.09). -->
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
