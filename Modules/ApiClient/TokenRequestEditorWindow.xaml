@@ -3,10 +3,11 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Get Token Request"
-    Width="760"
-    Height="680"
-    MinWidth="620"
-    MinHeight="480"
+    Width="900"
+    Height="720"
+    MinWidth="700"
+    MinHeight="520"
+    ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterOwner"
     Background="{StaticResource WindowBackgroundBrush}">
 
@@ -185,14 +186,13 @@
 
                             <DataGrid
                                 x:Name="HeadersGrid"
-                                Height="220"
+                                MaxHeight="220"
                                 AutoGenerateColumns="False"
                                 CanUserAddRows="True"
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                VerticalScrollBarVisibility="Auto"
-                                RowHeight="38">
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
@@ -203,15 +203,17 @@
                                         Header="Key"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="2*"
-                                        MinWidth="160"/>
+                                        MinWidth="110"/>
 
                                     <DataGridTextColumn
                                         Header="Value"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="3*"
-                                        MinWidth="200"/>
+                                        MinWidth="140"/>
 
                                     <DataGridTemplateColumn Width="34">
                                         <DataGridTemplateColumn.CellTemplate>
@@ -303,14 +305,13 @@
 
                                 <DataGrid
                                     x:Name="BodyFormGrid"
-                                    Height="200"
+                                    MaxHeight="200"
                                     AutoGenerateColumns="False"
                                     CanUserAddRows="True"
                                     CanUserDeleteRows="True"
                                     HeadersVisibility="Column"
-                                    HorizontalScrollBarVisibility="Auto"
-                                    VerticalScrollBarVisibility="Auto"
-                                    RowHeight="38">
+                                    HorizontalScrollBarVisibility="Disabled"
+                                    VerticalScrollBarVisibility="Auto">
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn
                                             Header="On"
@@ -321,15 +322,17 @@
                                             Header="Key"
                                             Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                             CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                             Width="2*"
-                                            MinWidth="160"/>
+                                            MinWidth="110"/>
 
                                         <DataGridTextColumn
                                             Header="Value"
                                             Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                             CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                            ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                             Width="3*"
-                                            MinWidth="200"/>
+                                            MinWidth="140"/>
 
                                         <DataGridTemplateColumn Width="34">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -363,14 +366,13 @@
 
                             <DataGrid
                                 x:Name="ExtractionsGrid"
-                                Height="160"
+                                MaxHeight="160"
                                 AutoGenerateColumns="False"
                                 CanUserAddRows="True"
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Auto"
-                                VerticalScrollBarVisibility="Auto"
-                                RowHeight="38">
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
@@ -381,15 +383,17 @@
                                         Header="JSON Field (response)"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="2*"
-                                        MinWidth="160"/>
+                                        MinWidth="110"/>
 
                                     <DataGridTextColumn
                                         Header="Environment Variable"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
+                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="3*"
-                                        MinWidth="200"/>
+                                        MinWidth="140"/>
 
                                     <DataGridTemplateColumn Width="34">
                                         <DataGridTemplateColumn.CellTemplate>
