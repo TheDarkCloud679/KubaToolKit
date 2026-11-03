@@ -192,7 +192,9 @@
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
                                 HorizontalScrollBarVisibility="Disabled"
-                                VerticalScrollBarVisibility="Auto">
+                                VerticalScrollBarVisibility="Auto"
+                                EnableRowVirtualization="False"
+                                VirtualizingPanel.IsVirtualizing="False">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
@@ -311,7 +313,9 @@
                                     CanUserDeleteRows="True"
                                     HeadersVisibility="Column"
                                     HorizontalScrollBarVisibility="Disabled"
-                                    VerticalScrollBarVisibility="Auto">
+                                    VerticalScrollBarVisibility="Auto"
+                                    EnableRowVirtualization="False"
+                                    VirtualizingPanel.IsVirtualizing="False">
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn
                                             Header="On"
@@ -372,7 +376,9 @@
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
                                 HorizontalScrollBarVisibility="Disabled"
-                                VerticalScrollBarVisibility="Auto">
+                                VerticalScrollBarVisibility="Auto"
+                                EnableRowVirtualization="False"
+                                VirtualizingPanel.IsVirtualizing="False">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
