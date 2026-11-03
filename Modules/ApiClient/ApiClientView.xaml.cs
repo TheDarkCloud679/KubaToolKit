@@ -630,8 +630,21 @@ public partial class ApiClientView
             }
         }
 
-        PathVariablesSection.Visibility =
+        PathVariablesButton.Visibility =
             _pathVariables.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_pathVariables.Count == 0)
+        {
+            PathVariablesPopup.IsOpen = false;
+        }
+    }
+
+    private void
+    PathVariablesButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        PathVariablesPopup.IsOpen = !PathVariablesPopup.IsOpen;
     }
 
     private void
