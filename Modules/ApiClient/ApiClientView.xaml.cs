@@ -21,7 +21,6 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _headers = new();
     private readonly ObservableCollection<HeaderItem> _params = new();
     private readonly ObservableCollection<HeaderItem> _pathVariables = new();
-    private readonly ObservableCollection<HeaderItem> _settingsVariables = new();
     private readonly ObservableCollection<HeaderItem> _autoHeaders = new();
     private readonly ObservableCollection<HeaderItem> _bodyFormData = new();
     private readonly ObservableCollection<HeaderItem> _bodyUrlEncoded = new();
@@ -40,11 +39,6 @@ public partial class ApiClientView
 
     private CollectionNode? _currentRequestNode;
 
-    // Which environment the Settings popup's Environment Variables grid is
-    // currently showing/saving to -- captured when the popup opens, since
-    // EnvironmentCombo could in principle change while it's up.
-    private EnvironmentSet? _settingsEnvironment;
-
     // Runtime-only (not persisted): real token expiry per environment,
     // keyed by EnvironmentSet.FilePath, computed from the "Get Token"
     // response's expires_in/expiresIn field. Drives GetTokenButton's color.
@@ -59,7 +53,6 @@ public partial class ApiClientView
         HeadersGrid.ItemsSource = _headers;
         ParamsGrid.ItemsSource = _params;
         PathVariablesGrid.ItemsSource = _pathVariables;
-        SettingsVariablesGrid.ItemsSource = _settingsVariables;
         AutoHeadersGrid.ItemsSource = _autoHeaders;
         BodyFormGrid.ItemsSource = _bodyFormData;
         ExtractionsGrid.ItemsSource = _extractions;
@@ -714,8 +707,13 @@ public partial class ApiClientView
         SettingsPopup.IsOpen = !SettingsPopup.IsOpen;
     }
 
-    // Same right-alignment fix as PathVariablesPopup_Opened above --
-    // SettingsButton also sits near the toolbar's right edge.
+    // Right-aligns under the button for the same reason as
+    // PathVariablesPopup_Opened above -- SettingsButton also sits near
+    // the toolbar's right edge. (The popup originally also hosted a live
+    // "Environment Variables" grid here; a DataGrid inside a Popup with
+    // many rows measured/rendered wrong and overlapped, so that grid was
+    // dropped in favor of the existing EnvironmentEditorWindow, opened
+    // via the "Edit Environment Variables" item below instead.)
     private void
     SettingsPopup_Opened(
         object sender,
@@ -723,117 +721,6 @@ public partial class ApiClientView
     {
         SettingsPopup.HorizontalOffset =
             SettingsButton.ActualWidth - SettingsPopupContent.ActualWidth;
-
-        LoadSettingsVariables();
-    }
-
-    private void
-    SettingsPopup_Closed(
-        object sender,
-        EventArgs e)
-    {
-        SaveSettingsVariables();
-    }
-
-    // Populates the Settings popup's "Environment Variables" grid from
-    // whichever environment is currently selected in EnvironmentCombo --
-    // captured into _settingsEnvironment so edits save back to the right
-    // place even if that selection were to change while the popup is up.
-    private void
-    LoadSettingsVariables()
-    {
-        _settingsVariables.Clear();
-
-        var environment = EnvironmentCombo.SelectedItem as EnvironmentSet;
-
-        var hasEnvironment =
-            environment != null
-            && !string.IsNullOrEmpty(environment.FilePath);
-
-        _settingsEnvironment = hasEnvironment ? environment : null;
-
-        if (hasEnvironment)
-        {
-            foreach (var variable in environment!.Variables)
-            {
-                _settingsVariables.Add(
-                    new HeaderItem
-                    {
-                        Enabled = variable.Enabled,
-                        Key = variable.Key,
-                        Value = variable.Value
-                    });
-            }
-        }
-
-        SettingsVariablesGrid.IsEnabled = hasEnvironment;
-        SettingsVariablesEmptyText.Visibility =
-            hasEnvironment ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    private void
-    AddSettingsVariableRow_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (_settingsEnvironment == null)
-        {
-            return;
-        }
-
-        _settingsVariables.Add(new HeaderItem());
-    }
-
-    private void
-    DeleteSettingsVariableRow_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is Button button
-            && button.DataContext is HeaderItem item)
-        {
-            _settingsVariables.Remove(item);
-
-            SaveSettingsVariables();
-        }
-    }
-
-    private void
-    SettingsVariablesGrid_LostFocus(
-        object sender,
-        RoutedEventArgs e)
-    {
-        SaveSettingsVariables();
-    }
-
-    // No explicit Save button -- edits autosave on focus loss (and once
-    // more on the popup closing, to catch whatever cell was focused last).
-    // Key/Value/Enabled all bind UpdateSourceTrigger=PropertyChanged, so
-    // _settingsVariables is already current without a CommitEdit call.
-    private void
-    SaveSettingsVariables()
-    {
-        if (_settingsEnvironment == null)
-        {
-            return;
-        }
-
-        _settingsEnvironment.Variables = _settingsVariables.ToList();
-
-        try
-        {
-            _collectionStorage.SaveEnvironment(_settingsEnvironment);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(
-                "ApiClientView: failed to save environment variables from the Settings popup.",
-                ex);
-
-            AppMessageBox.Show(
-                ex.Message,
-                "Environment save error");
-        }
     }
 
     private void
