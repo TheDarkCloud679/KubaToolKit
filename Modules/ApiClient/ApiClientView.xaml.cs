@@ -32,6 +32,10 @@ public partial class ApiClientView
     private bool _showAutoHeaders = true;
     private string? _binaryFilePath;
     private string _lastResponseBody = "";
+    private string _selectedMethod = "GET";
+
+    private static readonly string[] KnownHttpMethods =
+        { "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS" };
 
     private CollectionNode? _currentRequestNode;
 
@@ -63,6 +67,8 @@ public partial class ApiClientView
         UrlTextBox.TextChanged += (_, __) => RefreshAutoHeaders();
 
         LoadCollectionsAndEnvironments(_collectionStorage.LoadLastEnvironmentName());
+
+        UpdateMethodButtonAppearance();
 
         RefreshAutoHeaders();
 
@@ -264,11 +270,45 @@ public partial class ApiClientView
     }
 
     private void
-    MethodCombo_SelectionChanged(
+    MethodButton_Click(
         object sender,
-        SelectionChangedEventArgs e)
+        RoutedEventArgs e)
     {
+        MethodPopup.IsOpen = !MethodPopup.IsOpen;
+    }
+
+    private void
+    PickMethod_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _selectedMethod = (string)((Button)sender).Tag;
+
+        UpdateMethodButtonAppearance();
+
+        MethodPopup.IsOpen = false;
+
         RefreshAutoHeaders();
+    }
+
+    // Mirrors HttpMethodBadgeBackgroundConverter/ForegroundConverter (same
+    // HttpMethodColors mapping as the collections tree's method badges),
+    // applied imperatively since MethodButton's color isn't driven by a
+    // bound data item -- just the locally-tracked _selectedMethod.
+    private void
+    UpdateMethodButtonAppearance()
+    {
+        var color = HttpMethodColors.Get(_selectedMethod);
+
+        var background = new SolidColorBrush(Color.FromArgb(36, color.R, color.G, color.B));
+        background.Freeze();
+
+        var foreground = new SolidColorBrush(color);
+        foreground.Freeze();
+
+        MethodButton.Background = background;
+        MethodButtonText.Foreground = foreground;
+        MethodButtonText.Text = _selectedMethod;
     }
 
     private void
@@ -363,9 +403,7 @@ public partial class ApiClientView
                 break;
         }
 
-        var method =
-            (MethodCombo?.SelectedItem as ComboBoxItem)?.Content as string
-            ?? "GET";
+        var method = _selectedMethod;
 
         var mode = GetSelectedBodyMode();
 
@@ -871,17 +909,12 @@ public partial class ApiClientView
 
         _currentRequestNode = node;
 
-        foreach (ComboBoxItem item in MethodCombo.Items)
-        {
-            if (string.Equals(
-                    item.Content as string,
-                    node.Method,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                MethodCombo.SelectedItem = item;
-                break;
-            }
-        }
+        _selectedMethod =
+            KnownHttpMethods.FirstOrDefault(m =>
+                string.Equals(m, node.Method, StringComparison.OrdinalIgnoreCase))
+            ?? "GET";
+
+        UpdateMethodButtonAppearance();
 
         UrlTextBox.Text = node.Url;
 
@@ -1429,7 +1462,7 @@ public partial class ApiClientView
                 Name = name,
                 IsRequest = true,
                 Parent = target,
-                Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET",
+                Method = _selectedMethod,
                 Url = UrlTextBox.Text.Trim(),
 
                 Headers =
@@ -1484,7 +1517,7 @@ public partial class ApiClientView
 
         var mode = GetSelectedBodyMode();
 
-        node.Method = (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string ?? "GET";
+        node.Method = _selectedMethod;
         node.Url = UrlTextBox.Text.Trim();
 
         node.Headers =
@@ -1930,9 +1963,7 @@ public partial class ApiClientView
             return;
         }
 
-        var method =
-            (MethodCombo.SelectedItem as ComboBoxItem)?.Content as string
-            ?? "GET";
+        var method = _selectedMethod;
 
         HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
         ParamsGrid.CommitEdit(DataGridEditingUnit.Row, true);

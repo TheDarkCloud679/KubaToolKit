@@ -105,8 +105,13 @@
                                     Height="24"
                                     Padding="0"
                                     ToolTip="Delete this row"
-                                    Content="✕"
-                                    Click="DeleteVariableRow_Click"/>
+                                    Click="DeleteVariableRow_Click">
+                                    <Path
+                                        Data="M6,6 L18,18 M18,6 L6,18"
+                                        Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                        StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                        Width="11" Height="11" Stretch="Uniform"/>
+                                </Button>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
