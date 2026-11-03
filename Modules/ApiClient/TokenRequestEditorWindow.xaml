@@ -198,10 +198,9 @@
                                 CanUserAddRows="True"
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Disabled"
+                                HorizontalScrollBarVisibility="Auto"
                                 VerticalScrollBarVisibility="Auto"
-                                EnableRowVirtualization="False"
-                                VirtualizingPanel.IsVirtualizing="False">
+                                RowHeight="40">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
@@ -212,7 +211,6 @@
                                         Header="Key"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="2*"
                                         MinWidth="110"/>
 
@@ -220,7 +218,6 @@
                                         Header="Value"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="3*"
                                         MinWidth="140"/>
 
@@ -319,10 +316,9 @@
                                     CanUserAddRows="True"
                                     CanUserDeleteRows="True"
                                     HeadersVisibility="Column"
-                                    HorizontalScrollBarVisibility="Disabled"
+                                    HorizontalScrollBarVisibility="Auto"
                                     VerticalScrollBarVisibility="Auto"
-                                    EnableRowVirtualization="False"
-                                    VirtualizingPanel.IsVirtualizing="False">
+                                    RowHeight="40">
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn
                                             Header="On"
@@ -333,7 +329,6 @@
                                             Header="Key"
                                             Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                             CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                            ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                             Width="2*"
                                             MinWidth="110"/>
 
@@ -341,7 +336,6 @@
                                             Header="Value"
                                             Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                             CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                            ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                             Width="3*"
                                             MinWidth="140"/>
 
@@ -382,10 +376,9 @@
                                 CanUserAddRows="True"
                                 CanUserDeleteRows="True"
                                 HeadersVisibility="Column"
-                                HorizontalScrollBarVisibility="Disabled"
+                                HorizontalScrollBarVisibility="Auto"
                                 VerticalScrollBarVisibility="Auto"
-                                EnableRowVirtualization="False"
-                                VirtualizingPanel.IsVirtualizing="False">
+                                RowHeight="40">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn
                                         Header="On"
@@ -396,7 +389,6 @@
                                         Header="JSON Field (response)"
                                         Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="2*"
                                         MinWidth="110"/>
 
@@ -404,7 +396,6 @@
                                         Header="Environment Variable"
                                         Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                         CellStyle="{StaticResource EditableDataGridCellStyle}"
-                                        ElementStyle="{StaticResource WrappingDataGridCellTextStyle}"
                                         Width="3*"
                                         MinWidth="140"/>
 

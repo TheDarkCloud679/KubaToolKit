@@ -1637,16 +1637,6 @@
         </Style.Triggers>
     </Style>
 
-    <!-- ElementStyle for a DataGridTextColumn's display-mode TextBlock:
-         without this, long values (a token URL, a JWT variable name...)
-         got silently cut off at the column's right edge instead of
-         wrapping, with no visual cue there was more text. Paired with
-         leaving DataGrid.RowHeight unset (auto-sized to content) so a
-         wrapped cell can actually grow the row instead of being clipped
-         vertically too. -->
-    <Style x:Key="WrappingDataGridCellTextStyle" TargetType="TextBlock">
-        <Setter Property="TextWrapping" Value="Wrap"/>
-    </Style>
 
     <!-- =====================================================
          TREEVIEW
