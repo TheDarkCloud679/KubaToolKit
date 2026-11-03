@@ -697,7 +697,7 @@
 
                             <!-- Params -->
                             <StackPanel x:Name="ParamsTabContent">
-                                <Grid Margin="0,0,0,2">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -719,13 +719,6 @@
                                         Content="+"
                                         Click="AddParamRow_Click"/>
                                 </Grid>
-
-                                <TextBlock
-                                    Text="Appended to the URL after &quot;?&quot; -- stays in sync whether you edit them here or type directly in the URL above."
-                                    FontSize="11"
-                                    Margin="0,2,0,8"
-                                    TextWrapping="Wrap"
-                                    Foreground="{StaticResource TextMutedBrush}"/>
 
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -813,15 +806,8 @@
                                     <TextBlock
                                         Text="Path Variables"
                                         FontWeight="SemiBold"
-                                        Margin="0,0,0,2"
+                                        Margin="0,0,0,6"
                                         Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                                    <TextBlock
-                                        Text="Detected automatically from the &quot;:name&quot; segments in the URL above -- just fill in a value."
-                                        FontSize="11"
-                                        Margin="0,0,0,8"
-                                        TextWrapping="Wrap"
-                                        Foreground="{StaticResource TextMutedBrush}"/>
 
                                     <DataGrid
                                         x:Name="PathVariablesGrid"
