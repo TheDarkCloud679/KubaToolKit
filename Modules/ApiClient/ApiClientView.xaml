@@ -1610,11 +1610,15 @@
                                                 Width="Auto"/>
 
                                             <DataGridTextColumn
-                                                Header="JSON Field (response)"
                                                 Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                 CellStyle="{StaticResource EditableDataGridCellStyle}"
                                                 Width="2*"
                                                 MinWidth="160">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock
+                                                        Text="JSON Field (response)"
+                                                        ToolTip="Dotted path for nested fields, e.g. Data.accessToken or items[0].id"/>
+                                                </DataGridTextColumn.Header>
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="ToolTip" Value="{Binding Key}"/>

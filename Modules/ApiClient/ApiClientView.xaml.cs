@@ -2788,10 +2788,10 @@ public partial class ApiClientView
 
         foreach (var rule in rules)
         {
-            if (!root.TryGetProperty(rule.Key, out var valueElement))
+            if (!TryResolveJsonPath(root, rule.Key, out var valueElement))
             {
                 Logger.Debug(
-                    $"ApiClientView: extraction -- field '{rule.Key}' missing from top level of the response.");
+                    $"ApiClientView: extraction -- path '{rule.Key}' not found in the response.");
 
                 continue;
             }
@@ -2861,6 +2861,69 @@ public partial class ApiClientView
         {
             Logger.Error("ApiClientView: failed to update the environment after extraction.", ex);
         }
+    }
+
+    // Supports a dotted path into nested objects/arrays, e.g.
+    // "Data.accessToken" or "items[0].id" -- a plain field name (no dots,
+    // no brackets) still resolves exactly like the old top-level-only
+    // lookup did.
+    private static readonly Regex JsonPathSegmentPattern =
+        new(@"^([^\[]*)((?:\[\d+\])*)$", RegexOptions.Compiled);
+
+    private static readonly Regex JsonPathIndexPattern =
+        new(@"\[(\d+)\]", RegexOptions.Compiled);
+
+    private static bool
+    TryResolveJsonPath(
+        JsonElement root,
+        string path,
+        out JsonElement result)
+    {
+        var current = root;
+
+        foreach (var segment in path.Split('.'))
+        {
+            var match = JsonPathSegmentPattern.Match(segment);
+
+            if (!match.Success)
+            {
+                result = default;
+
+                return false;
+            }
+
+            var fieldName = match.Groups[1].Value;
+
+            if (!string.IsNullOrEmpty(fieldName))
+            {
+                if (current.ValueKind != JsonValueKind.Object
+                    || !current.TryGetProperty(fieldName, out current))
+                {
+                    result = default;
+
+                    return false;
+                }
+            }
+
+            foreach (Match indexMatch in JsonPathIndexPattern.Matches(match.Groups[2].Value))
+            {
+                var index = int.Parse(indexMatch.Groups[1].Value);
+
+                if (current.ValueKind != JsonValueKind.Array
+                    || index >= current.GetArrayLength())
+                {
+                    result = default;
+
+                    return false;
+                }
+
+                current = current[index];
+            }
+        }
+
+        result = current;
+
+        return true;
     }
 
     private static string

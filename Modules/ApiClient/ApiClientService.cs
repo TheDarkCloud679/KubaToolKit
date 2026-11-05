@@ -20,8 +20,11 @@ public class ApiClientService
             Timeout = TimeSpan.FromSeconds(100)
         };
 
+    // The leading "$" is optional so this also matches Postman's dynamic
+    // variables ({{$guid}}, {{$randomInt}}, ...), generated fresh by
+    // PostmanDynamicVariables instead of looked up in the environment.
     private static readonly Regex VariablePattern =
-        new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
+        new(@"\{\{(\$?\w+)\}\}", RegexOptions.Compiled);
 
     // A Postman ":name" path segment -- distinct from {{var}} above, and
     // only matched right after a '/' so a literal port number in a URL
@@ -62,9 +65,11 @@ public class ApiClientService
             // gives no hint it's actually a missing variable -- usually
             // because no environment (or the wrong one) is selected.
             throw new InvalidOperationException(
-                $"The variable '{unresolvedUrlVariable.Value}' is not defined in the "
-                + "currently selected environment. Check the environment picker "
-                + "(top of the API Client tab) and try again.");
+                unresolvedUrlVariable.Groups[1].Value.StartsWith("$", StringComparison.Ordinal)
+                    ? $"The dynamic variable '{unresolvedUrlVariable.Value}' is not supported."
+                    : $"The variable '{unresolvedUrlVariable.Value}' is not defined in the "
+                        + "currently selected environment. Check the environment picker "
+                        + "(top of the API Client tab) and try again.");
         }
 
         using var request =
@@ -299,9 +304,7 @@ public class ApiClientService
         string? text,
         Dictionary<string, string>? variables)
     {
-        if (string.IsNullOrEmpty(text)
-            || variables == null
-            || variables.Count == 0)
+        if (string.IsNullOrEmpty(text))
         {
             return text;
         }
@@ -309,9 +312,20 @@ public class ApiClientService
         return VariablePattern.Replace(
             text,
             match =>
-                variables.TryGetValue(match.Groups[1].Value, out var value)
+            {
+                var name = match.Groups[1].Value;
+
+                if (name.StartsWith("$", StringComparison.Ordinal))
+                {
+                    return PostmanDynamicVariables.TryGenerate(name, out var dynamicValue)
+                        ? dynamicValue
+                        : match.Value;
+                }
+
+                return variables != null && variables.TryGetValue(name, out var value)
                     ? value
-                    : match.Value);
+                    : match.Value;
+            });
     }
 
     private static string
