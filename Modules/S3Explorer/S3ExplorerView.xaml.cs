@@ -1272,10 +1272,24 @@ S3FilesGrid_DoubleClick(
             // Recursing into a folder can turn one click into thousands of
             // files -- most dangerously at the bucket root, where "Download
             // All" would otherwise silently start pulling down the entire
-            // bucket. Showing what was actually found, with a Yes/No, gives
-            // a chance to back out before any of it is fetched.
+            // bucket.
             var totalBytes = objects.Sum(o => o.Size);
 
+            const long MaxZipBytes = 1024L * 1024 * 1024; // 1 GB
+
+            if (totalBytes > MaxZipBytes)
+            {
+                AppMessageBox.Show(
+                    $"This folder is {FormatBytes(totalBytes)} ({objects.Count} file(s)), "
+                    + "over the 1 GB limit for a single zip download. "
+                    + "Pick a smaller subfolder, or select individual files instead.",
+                    "Download folder");
+
+                return;
+            }
+
+            // Still worth a chance to back out below the hard limit --
+            // showing what was actually found before anything is fetched.
             var confirmed =
                 AppMessageBox.Show(
                     $"This will download {objects.Count} file(s) "
