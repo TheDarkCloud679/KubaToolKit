@@ -14,6 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -26,10 +27,11 @@
             Foreground="{StaticResource TextPrimaryBrush}"
             Margin="0,0,0,10"/>
 
-        <Grid Grid.Row="1" Margin="0,0,0,10">
+        <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -57,17 +59,37 @@
                 Content="Discover"
                 Click="DiscoverButton_Click"/>
 
+            <CheckBox
+                x:Name="ShowOnlyMissingCheckBox"
+                Grid.Column="3"
+                Margin="16,0,0,0"
+                VerticalAlignment="Center"
+                Content="Show only missing"
+                IsChecked="True"
+                ToolTip="Hide endpoints whose URL is already set on some variable in this environment"
+                Checked="ShowOnlyMissingCheckBox_Changed"
+                Unchecked="ShowOnlyMissingCheckBox_Changed"/>
+
             <TextBlock
                 x:Name="StatusText"
-                Grid.Column="3"
+                Grid.Column="4"
                 Margin="14,0,0,0"
                 VerticalAlignment="Center"
                 FontSize="12.5"
                 Foreground="{StaticResource TextMutedBrush}"/>
         </Grid>
 
-        <Border
+        <TextBlock
+            x:Name="MissingVariablesText"
             Grid.Row="2"
+            Margin="0,0,0,10"
+            TextWrapping="Wrap"
+            FontSize="12"
+            Foreground="{StaticResource WarningPressedBrush}"
+            Visibility="Collapsed"/>
+
+        <Border
+            Grid.Row="3"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="8"
@@ -155,7 +177,7 @@
         </Border>
 
         <StackPanel
-            Grid.Row="3"
+            Grid.Row="4"
             Orientation="Horizontal"
             HorizontalAlignment="Right"
             Margin="0,12,0,0">

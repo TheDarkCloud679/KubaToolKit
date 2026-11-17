@@ -934,7 +934,10 @@ public partial class ApiClientView
         }
 
         var editor =
-            new EnvironmentEditorWindow(_collectionStorage, environment);
+            new EnvironmentEditorWindow(
+                _collectionStorage,
+                environment,
+                CollectionVariableScanner.FindReferencedVariables(_collections));
 
         editor.Owner = Window.GetWindow(this);
 

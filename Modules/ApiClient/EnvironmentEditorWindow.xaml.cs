@@ -12,17 +12,20 @@ public partial class EnvironmentEditorWindow
     private readonly CollectionStorageService _storage;
     private readonly EnvironmentSet _environment;
     private readonly ObservableCollection<HeaderItem> _variables = new();
+    private readonly HashSet<string> _collectionVariables;
 
     public bool Saved { get; private set; }
 
     public EnvironmentEditorWindow(
         CollectionStorageService storage,
-        EnvironmentSet environment)
+        EnvironmentSet environment,
+        HashSet<string>? collectionVariables = null)
     {
         InitializeComponent();
 
         _storage = storage;
         _environment = environment;
+        _collectionVariables = collectionVariables ?? new HashSet<string>(StringComparer.Ordinal);
 
         NameTextBox.Text = environment.Name;
 
@@ -90,7 +93,7 @@ public partial class EnvironmentEditorWindow
         RoutedEventArgs e)
     {
         var syncWindow =
-            new AwsApiSyncWindow(_variables)
+            new AwsApiSyncWindow(_variables, _collectionVariables)
             {
                 Owner = this
             };
