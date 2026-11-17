@@ -120,23 +120,34 @@
             </DataGrid>
         </Border>
 
-        <StackPanel
+        <DockPanel
             Grid.Row="3"
-            Orientation="Horizontal"
-            HorizontalAlignment="Right"
+            LastChildFill="False"
             Margin="0,12,0,0">
 
             <Button
-                Width="100"
-                Margin="0,0,8,0"
-                Content="Cancel"
-                Click="CancelButton_Click"/>
+                DockPanel.Dock="Left"
+                Padding="12,0"
+                Height="30"
+                Content="Sync from AWS..."
+                Click="SyncFromAwsButton_Click"/>
 
-            <Button
-                Width="100"
-                Style="{StaticResource AccentButtonStyle}"
-                Content="Save"
-                Click="SaveButton_Click"/>
-        </StackPanel>
+            <StackPanel
+                DockPanel.Dock="Right"
+                Orientation="Horizontal">
+
+                <Button
+                    Width="100"
+                    Margin="0,0,8,0"
+                    Content="Cancel"
+                    Click="CancelButton_Click"/>
+
+                <Button
+                    Width="100"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Content="Save"
+                    Click="SaveButton_Click"/>
+            </StackPanel>
+        </DockPanel>
     </Grid>
 </Window>

@@ -85,6 +85,20 @@ public partial class EnvironmentEditorWindow
     }
 
     private void
+    SyncFromAwsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var syncWindow =
+            new AwsApiSyncWindow(_variables)
+            {
+                Owner = this
+            };
+
+        syncWindow.ShowDialog();
+    }
+
+    private void
     DeleteVariableRow_Click(
         object sender,
         RoutedEventArgs e)
