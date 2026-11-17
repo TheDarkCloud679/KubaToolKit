@@ -689,6 +689,10 @@ RunSearchAsync(
 
         S3DeleteButton.IsEnabled =
             count > 0;
+
+        S3DownloadAllButton.IsEnabled =
+            _currentS3Prefix != null
+            && !string.IsNullOrWhiteSpace(BucketCombo.SelectedItem?.ToString());
     }
 
     private void
@@ -1039,30 +1043,64 @@ S3FilesGrid_DoubleClick(
      object sender,
      RoutedEventArgs e)
     {
+        var files =
+            GetSelectedS3Files();
+
+        if (!files.Any())
+        {
+            return;
+        }
+
+        var bucket =
+            BucketCombo
+                .SelectedItem?
+                .ToString();
+
+        if (string.IsNullOrWhiteSpace(
+                _currentProfile)
+            ||
+            string.IsNullOrWhiteSpace(
+                bucket))
+        {
+            return;
+        }
+
+        // A single file keeps the plain "straight into the Downloads
+        // folder" flow -- zipping one file would only add a step. Two or
+        // more get zipped into a single archive instead, since saving
+        // each one individually is exactly what was reported as painful.
+        if (files.Count == 1)
+        {
+            await DownloadSingleFile(
+                bucket,
+                files[0]);
+
+            return;
+        }
+
+        var folderName =
+            string.IsNullOrEmpty(_currentS3Prefix)
+                ? bucket
+                : _currentS3Prefix!
+                    .TrimEnd('/')
+                    .Split('/')
+                    .Last();
+
+        await DownloadFilesAsZip(
+            bucket,
+            files
+                .Select(f => (f.Key, f.Name))
+                .ToList(),
+            $"{folderName} files ({files.Count}).zip");
+    }
+
+    private async Task
+    DownloadSingleFile(
+        string bucket,
+        S3ObjectItem file)
+    {
         try
         {
-            var files =
-                GetSelectedS3Files();
-
-            if (!files.Any())
-            {
-                return;
-            }
-
-            var bucket =
-                BucketCombo
-                    .SelectedItem?
-                    .ToString();
-
-            if (string.IsNullOrWhiteSpace(
-                    _currentProfile)
-                ||
-                string.IsNullOrWhiteSpace(
-                    bucket))
-            {
-                return;
-            }
-
             _downloadCancellation =
                 new CancellationTokenSource();
 
@@ -1082,46 +1120,31 @@ S3FilesGrid_DoubleClick(
             SetS3LoadingState(
                 true);
 
-            int total =
-                files.Count;
+            var localPath =
+                Path.Combine(
+                    downloadFolder,
+                    file.Name);
 
-            for (int i = 0;
-                 i < total;
-                 i++)
-            {
-                _downloadCancellation
-                    .Token
-                    .ThrowIfCancellationRequested();
+            S3QueueText.Text =
+                $"1/1  •  {file.Name}";
 
-                var file =
-                    files[i];
+            var progress =
+                new Progress<int>(
+                    percent =>
+                    {
+                        UpdateDownloadProgress(
+                            percent);
+                    });
 
-                var localPath =
-                    Path.Combine(
-                        downloadFolder,
-                        file.Name);
-
-                S3QueueText.Text =
-                    $"{i + 1}/{total}  •  {file.Name}";
-
-                var progress =
-                    new Progress<int>(
-                        percent =>
-                        {
-                            UpdateDownloadProgress(
-                                percent);
-                        });
-
-                await _s3Service
-                    .DownloadFile(
-                        _currentProfile,
-                        bucket,
-                        file.Key,
-                        localPath,
-                        progress,
-                        _downloadCancellation
-                            .Token);
-            }
+            await _s3Service
+                .DownloadFile(
+                    _currentProfile!,
+                    bucket,
+                    file.Key,
+                    localPath,
+                    progress,
+                    _downloadCancellation
+                        .Token);
         }
         catch (
             OperationCanceledException)
@@ -1138,6 +1161,226 @@ S3FilesGrid_DoubleClick(
             SetS3LoadingState(
                 false);
         }
+    }
+
+    private async void
+    S3DownloadAll_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var bucket =
+            BucketCombo
+                .SelectedItem?
+                .ToString();
+
+        if (string.IsNullOrWhiteSpace(_currentProfile)
+            || string.IsNullOrWhiteSpace(bucket)
+            || _currentS3Prefix == null)
+        {
+            return;
+        }
+
+        var folderName =
+            string.IsNullOrEmpty(_currentS3Prefix)
+                ? bucket
+                : _currentS3Prefix
+                    .TrimEnd('/')
+                    .Split('/')
+                    .Last();
+
+        await DownloadFolderAsZip(
+            bucket,
+            _currentS3Prefix,
+            $"{folderName}.zip");
+    }
+
+    private async void
+    S3DownloadFolderZip_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        // The menu applies to whichever node was right-clicked, same as
+        // S3SearchFromHere_Click above.
+        if (_contextMenuHighlightedBorder?.DataContext
+            is not S3Node node)
+        {
+            return;
+        }
+
+        var bucket =
+            BucketCombo
+                .SelectedItem?
+                .ToString();
+
+        if (string.IsNullOrWhiteSpace(_currentProfile)
+            || string.IsNullOrWhiteSpace(bucket))
+        {
+            return;
+        }
+
+        await DownloadFolderAsZip(
+            bucket,
+            node.Prefix,
+            $"{node.Name}.zip");
+    }
+
+    // Shared by the "Download All" toolbar button (current folder) and
+    // the tree's "Download this folder (zip)" menu item (any folder,
+    // whether it's the one currently open or not). Lists everything
+    // under the prefix first (can take a few pages for a large folder,
+    // hence the indeterminate bar while that's happening), then streams
+    // it all into one zip.
+    private async Task
+    DownloadFolderAsZip(
+        string bucket,
+        string prefix,
+        string suggestedZipName)
+    {
+        try
+        {
+            _downloadCancellation =
+                new CancellationTokenSource();
+
+            SetS3LoadingState(true);
+
+            SearchProgressBar.IsIndeterminate = true;
+            S3QueueText.Text = "Listing files...";
+            S3LoadingText.Text = "";
+
+            var objects =
+                await _s3Service.ListAllObjectsRecursive(
+                    _currentProfile!,
+                    bucket,
+                    prefix,
+                    _downloadCancellation.Token);
+
+            SearchProgressBar.IsIndeterminate = false;
+
+            if (objects.Count == 0)
+            {
+                AppMessageBox.Show(
+                    "This folder has no files to download.",
+                    "Download folder");
+
+                return;
+            }
+
+            var files =
+                objects
+                    .Select(o => (
+                        o.Key,
+                        RelativePath: o.Key.StartsWith(prefix)
+                            ? o.Key[prefix.Length..]
+                            : o.Key))
+                    .ToList();
+
+            await DownloadFilesAsZip(
+                bucket,
+                files,
+                suggestedZipName);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                ex.ToString(),
+                "Download error");
+        }
+        finally
+        {
+            SearchProgressBar.IsIndeterminate = false;
+
+            SetS3LoadingState(false);
+        }
+    }
+
+    // Shared by the multi-selection zip download and DownloadFolderAsZip
+    // -- asks where to save, then streams every (key, relativePath) pair
+    // straight into that one zip with live per-file progress.
+    private async Task
+    DownloadFilesAsZip(
+        string bucket,
+        List<(string Key, string RelativePath)> files,
+        string suggestedZipName)
+    {
+        var downloadFolder =
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Downloads",
+                "KubaToolKit");
+
+        Directory.CreateDirectory(downloadFolder);
+
+        var dialog =
+            new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Zip archive (*.zip)|*.zip",
+                FileName = suggestedZipName,
+                InitialDirectory = downloadFolder
+            };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _downloadCancellation ??=
+                new CancellationTokenSource();
+
+            SetS3LoadingState(true);
+
+            var progress =
+                new Progress<ZipDownloadProgress>(UpdateZipProgress);
+
+            await _s3Service.DownloadAsZip(
+                _currentProfile!,
+                bucket,
+                files,
+                dialog.FileName,
+                progress,
+                _downloadCancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The partial zip left behind by a cancelled download would
+            // otherwise look like a complete (if small) archive.
+            try
+            {
+                File.Delete(dialog.FileName);
+            }
+            catch
+            {
+            }
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                ex.ToString(),
+                "Download error");
+        }
+        finally
+        {
+            SetS3LoadingState(false);
+        }
+    }
+
+    private void
+    UpdateZipProgress(
+        ZipDownloadProgress progress)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            S3ProgressCard.Visibility = Visibility.Visible;
+            SearchProgressBar.Value = progress.FilePercent;
+            S3QueueText.Text =
+                $"{progress.FileIndex}/{progress.FileCount}  •  {progress.FileName}";
+            S3LoadingText.Visibility = Visibility.Visible;
+            S3LoadingText.Text = $"{progress.FilePercent}%";
+        });
     }
 
     private async void

@@ -912,6 +912,135 @@ DeleteFile(
                 key);
     }
 
+    // Unlike GetFiles (one Delimiter="/" page, folders kept separate from
+    // files), this walks every page under the prefix with no delimiter at
+    // all, so it returns every file anywhere underneath -- including in
+    // subfolders -- which is exactly what zipping "the whole folder"
+    // needs. Zero-byte keys ending in "/" are S3's own folder placeholder
+    // objects, not real files, and are skipped.
+    public async Task<List<S3ObjectItem>>
+    ListAllObjectsRecursive(
+        string profile,
+        string bucket,
+        string prefix,
+        CancellationToken cancellationToken = default)
+    {
+        var credentials =
+            GetCredentials(profile);
+
+        using var client =
+            new AmazonS3Client(credentials, RegionEndpoint.EUWest3);
+
+        var results = new List<S3ObjectItem>();
+        string? continuationToken = null;
+
+        do
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var request =
+                new ListObjectsV2Request
+                {
+                    BucketName = bucket,
+                    Prefix = prefix,
+                    ContinuationToken = continuationToken
+                };
+
+            var response =
+                await client.ListObjectsV2Async(request, cancellationToken);
+
+            results.AddRange(
+                response.S3Objects
+                    .Where(x => !x.Key.EndsWith("/") && (x.Size ?? 0) > 0)
+                    .Select(x => new S3ObjectItem
+                    {
+                        Name = x.Key.Split('/').Last(),
+                        Key = x.Key,
+                        Size = x.Size ?? 0,
+                        LastModified = x.LastModified ?? DateTime.MinValue
+                    }));
+
+            continuationToken =
+                response.IsTruncated == true
+                    ? response.NextContinuationToken
+                    : null;
+        }
+        while (continuationToken != null);
+
+        return results;
+    }
+
+    // Streams each object straight from S3 into its zip entry -- no
+    // intermediate temp files, and download + compression happen
+    // together as the bytes flow through, instead of two separate
+    // passes over the same data.
+    public async Task
+    DownloadAsZip(
+        string profile,
+        string bucket,
+        List<(string Key, string RelativePath)> files,
+        string zipPath,
+        IProgress<ZipDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var credentials =
+            GetCredentials(profile);
+
+        using var client =
+            new AmazonS3Client(credentials, RegionEndpoint.EUWest3);
+
+        using var zipFileStream =
+            new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+        using var archive =
+            new ZipArchive(zipFileStream, ZipArchiveMode.Create);
+
+        var buffer = new byte[81920];
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var (key, relativePath) = files[i];
+
+            using var response =
+                await client.GetObjectAsync(bucket, key);
+
+            var entry =
+                archive.CreateEntry(relativePath, CompressionLevel.Optimal);
+
+            using var entryStream =
+                entry.Open();
+
+            var totalBytes = response.ContentLength;
+            long totalRead = 0;
+            int bytesRead;
+
+            while ((bytesRead =
+                await response.ResponseStream.ReadAsync(
+                    buffer, 0, buffer.Length, cancellationToken)) > 0)
+            {
+                await entryStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+
+                totalRead += bytesRead;
+
+                int filePercent =
+                    totalBytes > 0
+                        ? (int)(totalRead * 100 / totalBytes)
+                        : 100;
+
+                progress?.Report(
+                    new ZipDownloadProgress
+                    {
+                        FileIndex = i + 1,
+                        FileCount = files.Count,
+                        FileName = relativePath,
+                        FilePercent = filePercent
+                    });
+            }
+        }
+    }
+
     // One ListObjectsV2 page (AWS caps each call at 1000 keys) -- a
     // folder/prefix with more than that used to silently show only the
     // first 1000 with no indication anything was cut off, which for a
