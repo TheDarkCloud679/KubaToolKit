@@ -903,14 +903,6 @@ OpenS3File(
                             percent);
                     });
 
-            var content =
-                await _s3Service
-                    .GetFileContent(
-                        _currentProfile,
-                        bucket,
-                        file.Key,
-                        progress);
-
             var extension =
     Path.GetExtension(
         file.Key)
@@ -922,12 +914,21 @@ OpenS3File(
                 ||
                 extension == ".rar")
             {
+                // GetFileContent would otherwise download this same file
+                // first (just to notice it's an archive and give up), then
+                // this call downloads it again from scratch with no
+                // progress reporting at all for that second pass -- on a
+                // large archive the progress bar sat frozen at 100% while
+                // the app kept working, which looked exactly like a hang.
+                // Going straight here downloads it once, with progress the
+                // whole way through.
                 var items =
                     await _s3Service
                         .GetArchiveEntries(
                             _currentProfile,
                             bucket,
-                            file.Key);
+                            file.Key,
+                            progress);
 
                 SetS3LoadingState(
                     false);
@@ -964,6 +965,14 @@ OpenS3File(
 
                 return;
             }
+
+            var content =
+                await _s3Service
+                    .GetFileContent(
+                        _currentProfile,
+                        bucket,
+                        file.Key,
+                        progress);
 
             if (string.IsNullOrWhiteSpace(
                     content))

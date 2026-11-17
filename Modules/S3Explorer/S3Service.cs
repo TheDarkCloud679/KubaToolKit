@@ -112,7 +112,8 @@ GetCredentials(
 GetArchiveEntries(
     string profile,
     string bucket,
-    string key)
+    string key,
+    IProgress<int>? progress = null)
     {
         var credentials =
             GetCredentials(
@@ -132,10 +133,45 @@ GetArchiveEntries(
         using var memoryStream =
             new MemoryStream();
 
-        await response
-            .ResponseStream
-            .CopyToAsync(
-                memoryStream);
+        var totalBytes =
+            response.ContentLength;
+
+        var buffer =
+            new byte[81920];
+
+        long totalRead =
+            0;
+
+        int bytesRead;
+
+        while ((bytesRead =
+            await response
+                .ResponseStream
+                .ReadAsync(
+                    buffer,
+                    0,
+                    buffer.Length)) > 0)
+        {
+            await memoryStream
+                .WriteAsync(
+                    buffer,
+                    0,
+                    bytesRead);
+
+            totalRead +=
+                bytesRead;
+
+            int percent =
+                totalBytes > 0
+                    ? (int)(
+                        totalRead
+                        * 100
+                        / totalBytes)
+                    : 0;
+
+            progress?.Report(
+                percent);
+        }
 
         memoryStream.Position =
             0;
