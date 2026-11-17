@@ -1048,6 +1048,10 @@ S3FilesGrid_DoubleClick(
 
         if (!files.Any())
         {
+            AppMessageBox.Show(
+                "Select at least one file to download.",
+                "Download");
+
             return;
         }
 
@@ -1265,6 +1269,26 @@ S3FilesGrid_DoubleClick(
                 return;
             }
 
+            // Recursing into a folder can turn one click into thousands of
+            // files -- most dangerously at the bucket root, where "Download
+            // All" would otherwise silently start pulling down the entire
+            // bucket. Showing what was actually found, with a Yes/No, gives
+            // a chance to back out before any of it is fetched.
+            var totalBytes = objects.Sum(o => o.Size);
+
+            var confirmed =
+                AppMessageBox.Show(
+                    $"This will download {objects.Count} file(s) "
+                    + $"({FormatBytes(totalBytes)}) into one zip.\n\nContinue?",
+                    "Download folder",
+                    MessageBoxButton.YesNo)
+                == MessageBoxResult.Yes;
+
+            if (!confirmed)
+            {
+                return;
+            }
+
             var files =
                 objects
                     .Select(o => (
@@ -1366,6 +1390,28 @@ S3FilesGrid_DoubleClick(
         {
             SetS3LoadingState(false);
         }
+    }
+
+    private static string
+    FormatBytes(
+        long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024d:0.0} KB";
+        }
+
+        if (bytes < 1024L * 1024 * 1024)
+        {
+            return $"{bytes / 1024d / 1024d:0.0} MB";
+        }
+
+        return $"{bytes / 1024d / 1024d / 1024d:0.00} GB";
     }
 
     private void
