@@ -1732,12 +1732,30 @@ public partial class ApiClientView
                     node.PathVariables,
                     CancellationToken.None);
 
+            // Shown in the Response panel either way, success or failure --
+            // a 401/403/etc. almost always carries the real reason in its
+            // body (an invalid key, a missing scope...), which used to be
+            // thrown away in favor of a bare "request failed" message box
+            // that left nothing to actually debug with besides the status
+            // code.
+            StatusTextBlock.Text = result.StatusDisplay;
+            StatusTextBlock.Foreground = result.StatusAccentBrush ?? (Brush)FindResource("TextSecondaryBrush");
+            StatusDot.Fill = result.StatusAccentBrush ?? (Brush)FindResource("TextSecondaryBrush");
+            StatusBadge.Background = result.StatusBackground ?? (Brush)FindResource("SurfaceAltBrush");
+            StatusBadge.Visibility = Visibility.Visible;
+            TimingTextBlock.Text = $"{result.ElapsedMs} ms • {result.Body.Length:N0} chars";
+
+            ResponseHeadersTextBox.Text = result.Headers;
+
+            LoadResponseBody(result.Body);
+
             if (result.StatusCode is < 200 or >= 300)
             {
                 Logger.Info($"ApiClientView: Get Token -- request failed ({result.StatusDisplay}).");
 
                 AppMessageBox.Show(
-                    $"The token request failed ({result.StatusDisplay}).",
+                    $"The token request failed ({result.StatusDisplay}). "
+                    + "See the Response panel below for the server's own error message.",
                     "Get Token failed",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
