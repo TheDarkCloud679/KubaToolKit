@@ -403,6 +403,17 @@ public partial class ApiClientView
                 break;
         }
 
+        foreach (var header in
+                 _currentRequestNode?.Parent?.ResolveInheritedDefaultHeaders()
+                 ?? new List<HeaderItem>())
+        {
+            if (!Has(header.Key))
+            {
+                _autoHeaders.Add(
+                    new HeaderItem { Key = header.Key, Value = header.Value });
+            }
+        }
+
         var method = _selectedMethod;
 
         var mode = GetSelectedBodyMode();
@@ -2169,7 +2180,7 @@ public partial class ApiClientView
                 await _apiClientService.SendAsync(
                     method,
                     url,
-                    _headers.ToList(),
+                    ResolveHeadersForSend(),
                     requestBody,
                     auth,
                     variables,
@@ -3077,5 +3088,33 @@ public partial class ApiClientView
             ? raw
             : _currentRequestNode?.Parent?.ResolveEffectiveAuth()
                 ?? new AuthConfig { Type = AuthType.None };
+    }
+
+    // Folder/collection-level default headers (set via "Folder Auth" ->
+    // Default Headers) merged with the request's own -- a closer folder
+    // overrides a farther ancestor, and the request's own header always
+    // wins over any inherited one of the same name, even a disabled row
+    // (the usual way to suppress an inherited header for one request).
+    private List<HeaderItem>
+    ResolveHeadersForSend()
+    {
+        var merged = new Dictionary<string, HeaderItem>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var header in
+                 _currentRequestNode?.Parent?.ResolveInheritedDefaultHeaders()
+                 ?? new List<HeaderItem>())
+        {
+            merged[header.Key] = header;
+        }
+
+        foreach (var header in _headers)
+        {
+            if (!string.IsNullOrWhiteSpace(header.Key))
+            {
+                merged[header.Key] = header;
+            }
+        }
+
+        return merged.Values.ToList();
     }
 }

@@ -437,7 +437,7 @@
                                 Click="RenameNode_Click"/>
                             <MenuItem
                                 x:Name="FolderAuthMenuItem"
-                                Header="Edit authentication"
+                                Header="Edit authentication &amp; default headers"
                                 Click="EditFolderAuth_Click"/>
                             <MenuItem
                                 x:Name="ApplyBearerToAllMenuItem"

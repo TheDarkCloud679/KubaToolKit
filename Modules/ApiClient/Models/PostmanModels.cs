@@ -13,6 +13,9 @@ public class PostmanCollection
 
     [JsonPropertyName("auth")]
     public PostmanAuth? Auth { get; set; }
+
+    [JsonPropertyName("_kubatoolkit_default_headers")]
+    public List<PostmanHeader>? DefaultHeaders { get; set; }
 }
 
 public class PostmanInfo
@@ -34,6 +37,16 @@ public class PostmanItem
 
     [JsonPropertyName("auth")]
     public PostmanAuth? Auth { get; set; }
+
+    // Folder/collection-level headers applied to every request underneath
+    // (merged in, the nearest folder winning over a farther ancestor for
+    // the same header name, and a request's own header always winning
+    // over both) -- not a native Postman concept (Postman only inherits
+    // auth, not plain headers, which is exactly why real collections fall
+    // back to a pre-request script for this), kept under the same
+    // _kubatoolkit_ prefix as the app's other extensions.
+    [JsonPropertyName("_kubatoolkit_default_headers")]
+    public List<PostmanHeader>? DefaultHeaders { get; set; }
 }
 
 public class PostmanRequest

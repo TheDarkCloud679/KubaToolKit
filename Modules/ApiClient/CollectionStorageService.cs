@@ -157,7 +157,8 @@ public class CollectionStorageService
                                 : collection.Info!.Name,
                         IsRequest = false,
                         FilePath = file,
-                        Auth = ParseAuth(collection.Auth)
+                        Auth = ParseAuth(collection.Auth),
+                        DefaultHeaders = ParseHeaders(collection.DefaultHeaders)
                     };
 
                 root.Children = BuildNodes(collection.Item, root);
@@ -281,7 +282,8 @@ public class CollectionStorageService
                         Name = item.Name,
                         IsRequest = false,
                         Parent = parent,
-                        Auth = ParseAuth(item.Auth)
+                        Auth = ParseAuth(item.Auth),
+                        DefaultHeaders = ParseHeaders(item.DefaultHeaders)
                     };
 
                 folder.Children = BuildNodes(item.Item, folder);
@@ -390,6 +392,14 @@ public class CollectionStorageService
             _ => new AuthConfig { Type = AuthType.Inherit }
         };
     }
+
+    private static List<HeaderItem>
+    ParseHeaders(
+        List<PostmanHeader>? headers) =>
+        headers?
+            .Select(h => new HeaderItem { Enabled = !h.Disabled, Key = h.Key, Value = h.Value })
+            .ToList()
+        ?? new List<HeaderItem>();
 
     // Mirrors the request-parsing branch of BuildNodes, standalone (no
     // enclosing PostmanItem / Parent / IsFavorite) since the "Get Token"
@@ -815,6 +825,15 @@ public class CollectionStorageService
             fileRoot.Remove("auth");
         }
 
+        if (root.DefaultHeaders.Count > 0)
+        {
+            fileRoot["_kubatoolkit_default_headers"] = BuildHeaderArray(root.DefaultHeaders);
+        }
+        else
+        {
+            fileRoot.Remove("_kubatoolkit_default_headers");
+        }
+
         File.WriteAllText(
             root.FilePath,
             fileRoot.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
@@ -914,6 +933,11 @@ public class CollectionStorageService
                     folderObject["auth"] = folderAuthNode;
                 }
 
+                if (node.DefaultHeaders.Count > 0)
+                {
+                    folderObject["_kubatoolkit_default_headers"] = BuildHeaderArray(node.DefaultHeaders);
+                }
+
                 array.Add(folderObject);
             }
         }
@@ -949,6 +973,19 @@ public class CollectionStorageService
                         .ToArray())
         };
     }
+
+    private static JsonArray
+    BuildHeaderArray(
+        List<HeaderItem> headers) =>
+        new(
+            headers
+                .Select(h => (JsonNode)new JsonObject
+                {
+                    ["key"] = h.Key,
+                    ["value"] = h.Value,
+                    ["disabled"] = !h.Enabled
+                })
+                .ToArray());
 
     private static JsonObject?
     BuildAuthNode(

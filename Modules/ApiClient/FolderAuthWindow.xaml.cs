@@ -1,4 +1,5 @@
 using KubaToolKit.Modules.ApiClient.Models;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -8,6 +9,7 @@ public partial class FolderAuthWindow
     : Window
 {
     private readonly CollectionNode _node;
+    private readonly ObservableCollection<HeaderItem> _defaultHeaders = new();
 
     public bool Saved { get; private set; }
 
@@ -18,7 +20,7 @@ public partial class FolderAuthWindow
 
         _node = node;
 
-        TitleText.Text = $"Authentication — {node.Name}";
+        TitleText.Text = $"Authentication & Default Headers — {node.Name}";
 
         BearerTokenTextBox.Text = node.Auth.BearerToken;
         BasicUsernameTextBox.Text = node.Auth.Username;
@@ -34,6 +36,14 @@ public partial class FolderAuthWindow
             AuthType.ApiKey => 4,
             _ => 0
         };
+
+        DefaultHeadersGrid.ItemsSource = _defaultHeaders;
+
+        foreach (var header in node.DefaultHeaders)
+        {
+            _defaultHeaders.Add(
+                new HeaderItem { Enabled = header.Enabled, Key = header.Key, Value = header.Value });
+        }
     }
 
     private void
@@ -79,6 +89,8 @@ public partial class FolderAuthWindow
         object sender,
         RoutedEventArgs e)
     {
+        DefaultHeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+
         var type = AuthTypeCombo.SelectedIndex switch
         {
             1 => AuthType.None,
@@ -98,9 +110,27 @@ public partial class FolderAuthWindow
             ApiKeyValue = ApiKeyValueTextBox.Text
         };
 
+        _node.DefaultHeaders =
+            _defaultHeaders
+                .Where(h => !string.IsNullOrWhiteSpace(h.Key))
+                .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                .ToList();
+
         Saved = true;
 
         Close();
+    }
+
+    private void
+    DeleteDefaultHeaderRow_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is Button button
+            && button.DataContext is HeaderItem item)
+        {
+            _defaultHeaders.Remove(item);
+        }
     }
 
     private void
