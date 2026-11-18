@@ -362,7 +362,7 @@
                                         </Border>
 
                                         <TextBlock
-                                            Text="{Binding Name}"
+                                            Text="{Binding TreeLabel}"
                                             VerticalAlignment="Center"
                                             TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>

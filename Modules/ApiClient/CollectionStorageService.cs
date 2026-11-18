@@ -122,6 +122,13 @@ public class CollectionStorageService
     // looks exactly like "I dropped a file in here and nothing happened".
     public List<string> LastCollectionLoadErrors { get; private set; } = new();
 
+    // Same idea as LastCollectionLoadErrors, for a different silent
+    // failure mode: two collection files with the same name (a sync
+    // tool's conflict copy is the common cause) load as separate,
+    // identical-looking trees, with no indication a change made on one
+    // (default headers, auth...) doesn't apply to the other.
+    public List<string> LastDuplicateCollectionWarnings { get; private set; } = new();
+
     public List<CollectionNode>
     LoadCollections()
     {
@@ -172,6 +179,27 @@ public class CollectionStorageService
         }
 
         LastCollectionLoadErrors = errors;
+
+        var duplicateWarnings = new List<string>();
+
+        foreach (var group in roots.GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (group.Count() <= 1)
+            {
+                continue;
+            }
+
+            foreach (var root in group)
+            {
+                root.HasDuplicateName = true;
+            }
+
+            duplicateWarnings.Add(
+                $"\"{group.Key}\" appears {group.Count()} times "
+                + $"({string.Join(", ", group.Select(r => Path.GetFileName(r.FilePath)))})");
+        }
+
+        LastDuplicateCollectionWarnings = duplicateWarnings;
 
         return roots;
     }

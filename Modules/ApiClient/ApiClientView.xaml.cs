@@ -828,6 +828,24 @@ public partial class ApiClientView
                     + "\n\nNot valid Postman Collection v2.1 JSON -- check the file and reload.",
                     "Collections loading error");
             }
+
+            if (_collectionStorage.LastDuplicateCollectionWarnings.Count > 0)
+            {
+                Logger.Error(
+                    "ApiClientView: duplicate collection name(s): "
+                    + string.Join("; ", _collectionStorage.LastDuplicateCollectionWarnings));
+
+                AppMessageBox.Show(
+                    "Two or more collection files share the same name -- they show up as separate, "
+                    + "identical-looking entries in the tree (the file name is now shown next to each "
+                    + "to tell them apart), and a change made on one -- default headers, auth -- won't "
+                    + "apply to the other. This is often a sync tool's conflict copy.\n\n"
+                    + string.Join("\n", _collectionStorage.LastDuplicateCollectionWarnings)
+                    + "\n\nCheck the Collections folder and remove or merge the duplicate.",
+                    "Duplicate collection name",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
         catch (Exception ex)
         {

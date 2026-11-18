@@ -41,6 +41,20 @@ public class CollectionNode
 
     public CollectionNode? Parent { get; set; }
 
+    // Set by CollectionStorageService.LoadCollections() when two or more
+    // loaded collection root files share the same name (commonly a sync
+    // tool's conflict copy) -- otherwise identical-looking, separate
+    // trees in the UI with no way to tell which is which, or that
+    // changes made on one (like default headers) don't apply to the
+    // other.
+    public bool HasDuplicateName { get; set; }
+
+    public string TreeLabel =>
+        Name
+        + (HasDuplicateName && FilePath != null
+            ? $"  ({System.IO.Path.GetFileName(FilePath)})"
+            : "");
+
     public string DisplayText =>
         (IsFavorite ? "⭐ " : "") + (IsRequest ? $"{Method}  {Name}" : Name);
 
