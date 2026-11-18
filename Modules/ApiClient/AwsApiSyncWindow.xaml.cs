@@ -74,6 +74,13 @@ public partial class AwsApiSyncWindow
 
         ResultsGrid.ItemsSource = _results;
 
+        var dominantRegion = GetDominantRegionSegment();
+
+        if (dominantRegion != null)
+        {
+            StatusText.Text = $"This environment's URLs mostly point to \"{dominantRegion}\".";
+        }
+
         var chain = new CredentialProfileStoreChain();
 
         ProfileCombo.ItemsSource =
@@ -194,26 +201,123 @@ public partial class AwsApiSyncWindow
         }
     }
 
+    // For a host like "user.api.dkr.kubapay.io" or "api.nam.kubapay.io",
+    // the label right before the last two ("dkr", "nam") is this
+    // deployment's region/project marker in every domain seen so far,
+    // regardless of how many subdomain levels precede it. Used only to
+    // flag a likely mix-up, not to validate URLs generally -- a host with
+    // fewer than 3 labels (no marker position) is simply not checked.
+    private static string?
+    ExtractRegionSegment(
+        string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        var labels = uri.Host.Split('.');
+
+        return labels.Length >= 3 ? labels[^3] : null;
+    }
+
+    // The region/project marker already dominant among this
+    // environment's own URL-valued variables -- what a newly applied
+    // mapping gets compared against to catch exactly the mistake that
+    // motivated this check: syncing from one region/project's AWS
+    // account while a different region's environment is the one open,
+    // silently mixing their URLs together.
+    private string?
+    GetDominantRegionSegment()
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var variable in _variables)
+        {
+            if (!variable.Enabled)
+            {
+                continue;
+            }
+
+            var region = ExtractRegionSegment(variable.Value);
+
+            if (region == null)
+            {
+                continue;
+            }
+
+            counts[region] = counts.GetValueOrDefault(region) + 1;
+        }
+
+        return counts.Count == 0
+            ? null
+            : counts.OrderByDescending(kv => kv.Value).First().Key;
+    }
+
     private void
     ApplyButton_Click(
         object sender,
         RoutedEventArgs e)
     {
+        var toApply =
+            _results
+                .Select(row => (row, name: row.MapsTo?.Trim()))
+                .Where(x => !string.IsNullOrWhiteSpace(x.name))
+                .ToList();
+
+        if (toApply.Count == 0)
+        {
+            AppMessageBox.Show(
+                "Choose a target variable for at least one row first.",
+                "Sync from AWS");
+
+            return;
+        }
+
+        var dominantRegion = GetDominantRegionSegment();
+
+        if (dominantRegion != null)
+        {
+            var mismatches =
+                toApply
+                    .Select(x => (x.row, x.name, region: ExtractRegionSegment(x.row.Url)))
+                    .Where(x => x.region != null
+                        && !string.Equals(x.region, dominantRegion, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+            if (mismatches.Count > 0)
+            {
+                var lines =
+                    mismatches.Select(x => $"{x.name} -> {x.row.Url}  (\"{x.region}\", not \"{dominantRegion}\")");
+
+                var confirmed =
+                    AppMessageBox.Show(
+                        $"This environment's URLs mostly point to \"{dominantRegion}\", but "
+                        + $"{mismatches.Count} mapping(s) about to be applied point elsewhere -- easy to "
+                        + "mix up when syncing from a different region/project's AWS account while this "
+                        + "environment happens to be the one open:\n\n"
+                        + string.Join("\n", lines)
+                        + "\n\nApply anyway?",
+                        "Different region/project detected",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning)
+                    == MessageBoxResult.Yes;
+
+                if (!confirmed)
+                {
+                    return;
+                }
+            }
+        }
+
         var applied = 0;
 
-        foreach (var row in _results)
+        foreach (var (row, name) in toApply)
         {
-            var name = row.MapsTo?.Trim();
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                continue;
-            }
-
             var existing = _variables.FirstOrDefault(v => v.Key == name);
 
             var updated =
-                new HeaderItem { Enabled = true, Key = name, Value = row.Url };
+                new HeaderItem { Enabled = true, Key = name!, Value = row.Url };
 
             if (existing != null)
             {
@@ -229,15 +333,6 @@ public partial class AwsApiSyncWindow
             }
 
             applied++;
-        }
-
-        if (applied == 0)
-        {
-            AppMessageBox.Show(
-                "Choose a target variable for at least one row first.",
-                "Sync from AWS");
-
-            return;
         }
 
         AppMessageBox.Show(
