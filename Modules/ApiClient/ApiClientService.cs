@@ -91,6 +91,8 @@ public class ApiClientService
                 SubstituteVariables(header.Value, variables)
                 ?? "";
 
+            EnsureResolved(headerValue, $"header '{header.Key}'");
+
             if (string.Equals(
                     header.Key,
                     "Content-Type",
@@ -177,9 +179,13 @@ public class ApiClientService
                         continue;
                     }
 
+                    var formFieldValue =
+                        SubstituteVariables(field.Value, variables) ?? "";
+
+                    EnsureResolved(formFieldValue, $"body field '{field.Key}'");
+
                     formData.Add(
-                        new StringContent(
-                            SubstituteVariables(field.Value, variables) ?? ""),
+                        new StringContent(formFieldValue),
                         field.Key);
                 }
 
@@ -187,13 +193,22 @@ public class ApiClientService
 
             case "urlencoded":
 
-                var pairs =
-                    body.UrlEncoded
-                        .Where(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key))
-                        .Select(f =>
-                            new KeyValuePair<string, string>(
-                                f.Key,
-                                SubstituteVariables(f.Value, variables) ?? ""));
+                var pairs = new List<KeyValuePair<string, string>>();
+
+                foreach (var field in body.UrlEncoded)
+                {
+                    if (!field.Enabled || string.IsNullOrWhiteSpace(field.Key))
+                    {
+                        continue;
+                    }
+
+                    var fieldValue =
+                        SubstituteVariables(field.Value, variables) ?? "";
+
+                    EnsureResolved(fieldValue, $"body field '{field.Key}'");
+
+                    pairs.Add(new KeyValuePair<string, string>(field.Key, fieldValue));
+                }
 
                 return new FormUrlEncodedContent(pairs);
 
@@ -220,6 +235,9 @@ public class ApiClientService
 
                 var query = SubstituteVariables(body.GraphQlQuery, variables) ?? "";
                 var variablesText = SubstituteVariables(body.GraphQlVariables, variables);
+
+                EnsureResolved(query, "GraphQL query");
+                EnsureResolved(variablesText, "GraphQL variables");
 
                 JsonNode? variablesNode = null;
 
@@ -254,6 +272,8 @@ public class ApiClientService
             default: // raw
 
                 var raw = SubstituteVariables(body.Raw, variables);
+
+                EnsureResolved(raw, "body");
 
                 if (string.IsNullOrEmpty(raw))
                 {
@@ -328,6 +348,38 @@ public class ApiClientService
             });
     }
 
+    // Headers and body fields had no equivalent of the URL's unresolved-
+    // variable check above -- a missing environment variable there was
+    // substituted into nothing, left as the literal "{{name}}" text, and
+    // sent to the real API as-is. The server then rejected that garbled
+    // value (e.g. a FormatException parsing "{{localisationId}}" as a
+    // number) with its own confusing error, giving no hint the actual
+    // problem was a variable missing on this side.
+    private static void
+    EnsureResolved(
+        string? text,
+        string context)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        var match = VariablePattern.Match(text);
+
+        if (!match.Success)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            match.Groups[1].Value.StartsWith("$", StringComparison.Ordinal)
+                ? $"The dynamic variable '{match.Value}' in {context} is not supported."
+                : $"The variable '{match.Value}' in {context} is not defined in the "
+                    + "currently selected environment. Check the environment picker "
+                    + "(top of the API Client tab) and try again.");
+    }
+
     private static string
     MaskForLog(
         string? value)
@@ -355,6 +407,8 @@ public class ApiClientService
                 var token =
                     SubstituteVariables(auth.BearerToken, variables);
 
+                EnsureResolved(token, "Bearer token");
+
                 Logger.Debug(
                     $"ApiClientService: ApplyAuth Bearer -- raw='{MaskForLog(auth.BearerToken)}', "
                     + $"after substitution='{MaskForLog(token)}', "
@@ -378,6 +432,9 @@ public class ApiClientService
                 var password =
                     SubstituteVariables(auth.Password, variables);
 
+                EnsureResolved(username, "Basic auth username");
+                EnsureResolved(password, "Basic auth password");
+
                 var credentials =
                     Convert.ToBase64String(
                         Encoding.UTF8.GetBytes(
@@ -396,6 +453,8 @@ public class ApiClientService
                 {
                     var apiKeyValue =
                         SubstituteVariables(auth.ApiKeyValue, variables);
+
+                    EnsureResolved(apiKeyValue, "API key value");
 
                     request.Headers.TryAddWithoutValidation(
                         auth.ApiKeyName,
