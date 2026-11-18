@@ -130,7 +130,7 @@
                     CanUserDeleteRows="True"
                     HeadersVisibility="Column"
                     HorizontalScrollBarVisibility="Auto"
-                    RowHeight="34">
+                    RowHeight="38">
                     <DataGrid.Columns>
                         <DataGridCheckBoxColumn
                             Header="On"
