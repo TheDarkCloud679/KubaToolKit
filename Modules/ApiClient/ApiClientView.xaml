@@ -4,7 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
     xmlns:behaviors="clr-namespace:KubaToolKit.Shared.Behaviors"
-    xmlns:local="clr-namespace:KubaToolKit.Modules.ApiClient">
+    xmlns:local="clr-namespace:KubaToolKit.Modules.ApiClient"
+    PreviewMouseDown="ApiClientView_PreviewMouseDown">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>

@@ -2142,6 +2142,24 @@ public partial class ApiClientView
         return null;
     }
 
+    // Belt-and-suspenders for QuickVariablePopup's click-outside-to-close:
+    // the Popup is hosted in its own top-level window (AllowsTransparency),
+    // so a click anywhere inside it never reaches this handler -- only
+    // clicks elsewhere in the app do, which is exactly "outside" the
+    // popup. Closing it here doesn't depend on StaysOpen="False"'s own
+    // mouse-capture dismiss logic at all, so it closes the popup even if
+    // that capture doesn't (re)engage correctly in some scenario.
+    private void
+    ApiClientView_PreviewMouseDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (QuickVariablePopup.IsOpen)
+        {
+            QuickVariablePopup.IsOpen = false;
+        }
+    }
+
     private void
     UrlTextBox_MouseDoubleClick(
         object sender,
@@ -2179,8 +2197,18 @@ public partial class ApiClientView
 
         QuickVariablePopup.IsOpen = true;
 
-        QuickVariableValueTextBox.Focus();
-        QuickVariableValueTextBox.SelectAll();
+        // Focusing the TextBox in the same call that opens the popup races
+        // with StaysOpen="False"'s own outside-click capture setup -- the
+        // capture ends up on the wrong element and clicking outside never
+        // closes the popup. Deferring to the next dispatcher cycle lets the
+        // popup finish opening (and arm its light-dismiss capture) first.
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                QuickVariableValueTextBox.Focus();
+                QuickVariableValueTextBox.SelectAll();
+            }));
     }
 
     private void
