@@ -2142,22 +2142,45 @@ public partial class ApiClientView
         return null;
     }
 
-    // Belt-and-suspenders for QuickVariablePopup's click-outside-to-close:
-    // the Popup is hosted in its own top-level window (AllowsTransparency),
-    // so a click anywhere inside it never reaches this handler -- only
-    // clicks elsewhere in the app do, which is exactly "outside" the
-    // popup. Closing it here doesn't depend on StaysOpen="False"'s own
-    // mouse-capture dismiss logic at all, so it closes the popup even if
-    // that capture doesn't (re)engage correctly in some scenario.
+    // Belt-and-suspenders for QuickVariablePopup's click-outside-to-close,
+    // independent of StaysOpen="False"'s own dismiss logic. This handler
+    // does fire for clicks on the popup's own content (Apply/Cancel/the
+    // TextBox) -- Popup.Child stays reachable from here -- so it must
+    // check ancestry and only close on a click that's genuinely outside;
+    // closing unconditionally here was swallowing clicks on Apply/Cancel
+    // before their own Click handler ever ran.
     private void
     ApiClientView_PreviewMouseDown(
         object sender,
         MouseButtonEventArgs e)
     {
-        if (QuickVariablePopup.IsOpen)
+        if (QuickVariablePopup.IsOpen
+            && e.OriginalSource is DependencyObject source
+            && !IsDescendantOf(source, QuickVariablePopup.Child))
         {
             QuickVariablePopup.IsOpen = false;
         }
+    }
+
+    private static bool
+    IsDescendantOf(
+        DependencyObject? element,
+        DependencyObject? ancestor)
+    {
+        while (element != null)
+        {
+            if (element == ancestor)
+            {
+                return true;
+            }
+
+            element =
+                element is Visual
+                    ? VisualTreeHelper.GetParent(element)
+                    : LogicalTreeHelper.GetParent(element);
+        }
+
+        return false;
     }
 
     private void
