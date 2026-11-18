@@ -555,8 +555,53 @@
                             VerticalContentAlignment="Center"
                             FontFamily="Cascadia Code, Consolas"
                             FontSize="12.5"
-                            Text="https://"
-                            KeyDown="UrlTextBox_KeyDown"/>
+                            KeyDown="UrlTextBox_KeyDown"
+                            MouseDoubleClick="UrlTextBox_MouseDoubleClick"/>
+
+                        <Popup
+                            x:Name="QuickVariablePopup"
+                            Grid.Column="1"
+                            PlacementTarget="{Binding ElementName=UrlTextBox}"
+                            Placement="Bottom"
+                            StaysOpen="False"
+                            AllowsTransparency="True">
+                            <Border
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource BorderStrongBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource RadiusMedium}"
+                                Effect="{StaticResource CardShadowEffect}"
+                                Padding="12"
+                                Width="280">
+                                <StackPanel>
+                                    <TextBlock
+                                        x:Name="QuickVariableNameText"
+                                        FontWeight="SemiBold"
+                                        Margin="0,0,0,8"
+                                        TextTrimming="CharacterEllipsis"
+                                        Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                    <TextBox
+                                        x:Name="QuickVariableValueTextBox"
+                                        Margin="0,0,0,10"
+                                        KeyDown="QuickVariableValueTextBox_KeyDown"/>
+
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button
+                                            Width="80"
+                                            Margin="0,0,8,0"
+                                            Content="Cancel"
+                                            Click="QuickVariableCancel_Click"/>
+
+                                        <Button
+                                            Width="80"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Content="Apply"
+                                            Click="QuickVariableApply_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
 
                         <ComboBox
                             x:Name="EnvironmentCombo"

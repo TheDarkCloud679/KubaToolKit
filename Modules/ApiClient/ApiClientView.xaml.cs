@@ -2115,6 +2115,155 @@ public partial class ApiClientView
         RefreshAutoHeaders();
     }
 
+    // Not a path variable (those get their own dedicated popup) -- a
+    // plain {{var}} that's read from the environment everywhere else
+    // too, but some of these are really per-test scratch values (a
+    // customer/card number) that change on every run, where opening the
+    // full environment editor just to flip one value is the friction
+    // being removed here.
+    private static readonly Regex QuickVariablePattern =
+        new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
+
+    private string? _quickEditVariableName;
+
+    private static string?
+    FindVariableNameAt(
+        string text,
+        int index)
+    {
+        foreach (Match match in QuickVariablePattern.Matches(text))
+        {
+            if (index >= match.Index && index <= match.Index + match.Length)
+            {
+                return match.Groups[1].Value;
+            }
+        }
+
+        return null;
+    }
+
+    private void
+    UrlTextBox_MouseDoubleClick(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        var charIndex =
+            UrlTextBox.GetCharacterIndexFromPoint(
+                e.GetPosition(UrlTextBox),
+                true);
+
+        if (charIndex < 0)
+        {
+            return;
+        }
+
+        var varName = FindVariableNameAt(UrlTextBox.Text, charIndex);
+
+        if (varName == null)
+        {
+            // Not over a {{var}} token -- leave the default double-click
+            // word-selection behavior alone.
+            return;
+        }
+
+        _quickEditVariableName = varName;
+
+        var existingValue =
+            (EnvironmentCombo.SelectedItem as EnvironmentSet)?
+                .Variables
+                .FirstOrDefault(v => v.Key == varName)?
+                .Value;
+
+        QuickVariableNameText.Text = $"Variable: {varName}";
+        QuickVariableValueTextBox.Text = existingValue ?? "";
+
+        QuickVariablePopup.IsOpen = true;
+
+        QuickVariableValueTextBox.Focus();
+        QuickVariableValueTextBox.SelectAll();
+    }
+
+    private void
+    QuickVariableValueTextBox_KeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            ApplyQuickVariableEdit();
+        }
+        else if (e.Key == Key.Escape)
+        {
+            QuickVariablePopup.IsOpen = false;
+        }
+    }
+
+    private void
+    QuickVariableApply_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ApplyQuickVariableEdit();
+    }
+
+    private void
+    QuickVariableCancel_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        QuickVariablePopup.IsOpen = false;
+    }
+
+    private void
+    ApplyQuickVariableEdit()
+    {
+        if (_quickEditVariableName == null)
+        {
+            return;
+        }
+
+        if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment
+            || string.IsNullOrEmpty(environment.FilePath))
+        {
+            AppMessageBox.Show(
+                "Select an environment first (or add one via \"+\").",
+                "No environment selected");
+
+            return;
+        }
+
+        var value = QuickVariableValueTextBox.Text;
+
+        var existing =
+            environment.Variables.FirstOrDefault(v => v.Key == _quickEditVariableName);
+
+        if (existing != null)
+        {
+            existing.Enabled = true;
+            existing.Value = value;
+        }
+        else
+        {
+            environment.Variables.Add(
+                new HeaderItem { Enabled = true, Key = _quickEditVariableName, Value = value });
+        }
+
+        try
+        {
+            _collectionStorage.SaveEnvironment(environment);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(ex.Message, "Save error");
+
+            return;
+        }
+
+        QuickVariablePopup.IsOpen = false;
+
+        RefreshAutoHeaders();
+    }
+
     private async void
     UrlTextBox_KeyDown(
         object sender,
