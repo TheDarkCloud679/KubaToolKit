@@ -20,7 +20,8 @@ public partial class TokenRequestEditorWindow
 
     public TokenRequestEditorWindow(
         CollectionStorageService storage,
-        EnvironmentSet environment)
+        EnvironmentSet environment,
+        CollectionNode? seedFromEditor = null)
     {
         InitializeComponent();
 
@@ -33,7 +34,16 @@ public partial class TokenRequestEditorWindow
         BodyFormGrid.ItemsSource = _bodyFormData;
         ExtractionsGrid.ItemsSource = _extractions;
 
-        var node = environment.TokenRequestConfig;
+        // The saved config always wins if there is one; otherwise, start
+        // from whatever's currently open in the main editor (almost
+        // certainly the actual login/auth request) rather than a blank
+        // form -- a blank URL left as the XAML default used to be the
+        // literal text "https://" on its own, which read like a hint but
+        // was a real value that sent fine past every other check and
+        // only failed deep in HttpRequestMessage with a generic
+        // "hostname could not be parsed", nothing pointing back at this
+        // window.
+        var node = environment.TokenRequestConfig ?? seedFromEditor;
 
         if (node == null)
         {

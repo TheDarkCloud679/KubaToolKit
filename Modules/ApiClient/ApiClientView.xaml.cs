@@ -1621,7 +1621,11 @@ public partial class ApiClientView
             return;
         }
 
-        var editor = new TokenRequestEditorWindow(_collectionStorage, environment);
+        var editor =
+            new TokenRequestEditorWindow(
+                _collectionStorage,
+                environment,
+                BuildSeedNodeFromEditor());
 
         editor.Owner = Window.GetWindow(this);
 
@@ -1633,6 +1637,43 @@ public partial class ApiClientView
 
             UpdateGetTokenButtonState();
         }
+    }
+
+    // Lets "Configure Get Token" start from whatever request is currently
+    // open in the main editor -- almost always the actual login/auth
+    // request the user is looking right at when they reach for this --
+    // instead of a blank form they'd have to retype URL/headers/body
+    // into from scratch. Only used when the environment has no saved
+    // token request yet (TokenRequestEditorWindow prefers that over this
+    // seed).
+    private CollectionNode
+    BuildSeedNodeFromEditor()
+    {
+        HeadersGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        BodyFormGrid.CommitEdit(DataGridEditingUnit.Row, true);
+
+        var mode = GetSelectedBodyMode();
+
+        return new CollectionNode
+        {
+            Method = _selectedMethod,
+            Url = UrlTextBox.Text.Trim(),
+
+            Headers =
+                _headers
+                    .Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value })
+                    .ToList(),
+
+            Body = BodyTextBox.Text,
+            BodyMode = mode,
+
+            BodyFormData =
+                (mode == "urlencoded" ? _bodyUrlEncoded : _bodyFormData)
+                    .Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value })
+                    .ToList(),
+
+            Auth = BuildAuthConfig()
+        };
     }
 
     private async void

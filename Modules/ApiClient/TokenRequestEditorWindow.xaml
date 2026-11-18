@@ -55,8 +55,7 @@
                 Grid.Column="1"
                 VerticalContentAlignment="Center"
                 FontFamily="Cascadia Code, Consolas"
-                FontSize="12.5"
-                Text="https://"/>
+                FontSize="12.5"/>
         </Grid>
 
         <Border
