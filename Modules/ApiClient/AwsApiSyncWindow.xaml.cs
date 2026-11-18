@@ -82,6 +82,12 @@ public partial class AwsApiSyncWindow
                 .Where(n => n != "default")
                 .OrderBy(n => n)
                 .ToList();
+
+        // Set here, not via IsChecked="True" in XAML -- that fires the
+        // Checked handler during InitializeComponent(), before _variables
+        // (assigned further up in this same constructor, but after that
+        // call) exists yet, and ApplyFilter() reading it null-refs.
+        ShowOnlyMissingCheckBox.IsChecked = true;
     }
 
     // Each row's "Maps to" ComboBox is created fresh by the cell template,

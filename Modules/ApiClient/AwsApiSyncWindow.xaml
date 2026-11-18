@@ -65,7 +65,6 @@
                 Margin="16,0,0,0"
                 VerticalAlignment="Center"
                 Content="Show only missing"
-                IsChecked="True"
                 ToolTip="Hide endpoints whose URL is already set on some variable in this environment"
                 Checked="ShowOnlyMissingCheckBox_Changed"
                 Unchecked="ShowOnlyMissingCheckBox_Changed"/>
