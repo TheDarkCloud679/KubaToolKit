@@ -1837,9 +1837,12 @@ public partial class ApiClientView
         }
     }
 
-    // Looks for a top-level expires_in/expiresIn field (case-insensitive,
-    // number or numeric string, in seconds) in a token response, per the
-    // OAuth2 client-credentials convention. Returns null if absent/unparsable.
+    // Looks for an expires_in/expiresIn field (case-insensitive, number or
+    // numeric string, in seconds) anywhere in a token response, per the
+    // OAuth2 client-credentials convention -- not just at the top level,
+    // since a real response is just as likely to wrap the token fields in
+    // an envelope (e.g. {"Data": {"accessToken": ..., "expiresIn": ...}}).
+    // Returns null if absent/unparsable.
     private static DateTime?
     ParseExpiryUtc(
         string responseBody)
@@ -1848,31 +1851,11 @@ public partial class ApiClientView
         {
             using var document = JsonDocument.Parse(responseBody);
 
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            var seconds = FindExpirySeconds(document.RootElement);
+
+            if (seconds.HasValue)
             {
-                return null;
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (!string.Equals(property.Name, "expires_in", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(property.Name, "expiresIn", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var seconds =
-                    property.Value.ValueKind switch
-                    {
-                        JsonValueKind.Number => property.Value.GetDouble(),
-                        JsonValueKind.String when double.TryParse(property.Value.GetString(), out var parsed) => parsed,
-                        _ => (double?)null
-                    };
-
-                if (seconds.HasValue)
-                {
-                    return DateTime.UtcNow.AddSeconds(seconds.Value);
-                }
+                return DateTime.UtcNow.AddSeconds(seconds.Value);
             }
         }
         catch (JsonException)
@@ -1880,6 +1863,66 @@ public partial class ApiClientView
         }
 
         return null;
+    }
+
+    private static double?
+    FindExpirySeconds(
+        JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, "expires_in", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(property.Name, "expiresIn", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var seconds =
+                            property.Value.ValueKind switch
+                            {
+                                JsonValueKind.Number => property.Value.GetDouble(),
+                                JsonValueKind.String when double.TryParse(property.Value.GetString(), out var parsed) => parsed,
+                                _ => (double?)null
+                            };
+
+                        if (seconds.HasValue)
+                        {
+                            return seconds;
+                        }
+                    }
+                }
+
+                foreach (var property in element.EnumerateObject())
+                {
+                    var nested = FindExpirySeconds(property.Value);
+
+                    if (nested.HasValue)
+                    {
+                        return nested;
+                    }
+                }
+
+                return null;
+
+            case JsonValueKind.Array:
+
+                foreach (var item in element.EnumerateArray())
+                {
+                    var nested = FindExpirySeconds(item);
+
+                    if (nested.HasValue)
+                    {
+                        return nested;
+                    }
+                }
+
+                return null;
+
+            default:
+
+                return null;
+        }
     }
 
     private void
