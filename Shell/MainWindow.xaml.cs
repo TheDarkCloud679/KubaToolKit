@@ -305,6 +305,16 @@ SearchTextBox_KeyDown(object sender, KeyEventArgs e)
     }
 
     private void
+    ConfigExportButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var window = new ConfigExportWindow { Owner = this };
+
+        window.ShowDialog();
+    }
+
+    private void
     ProfileColorButton_Click(
         object sender,
         RoutedEventArgs e)

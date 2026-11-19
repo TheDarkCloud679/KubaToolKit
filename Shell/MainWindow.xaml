@@ -90,14 +90,23 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Button
-                    x:Name="TeamSharingButton"
+                <StackPanel
                     Grid.Row="0"
+                    Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Content="Team Sharing..."
-                    ToolTip="Team Sharing - Sync via Google Drive, OneDrive, etc."
-                    Click="TeamSharingButton_Click"/>
+                    VerticalAlignment="Top">
+                    <Button
+                        x:Name="ConfigExportButton"
+                        Margin="0,0,8,0"
+                        Content="Export / Import..."
+                        ToolTip="Bundle API Client collections/environments, Wiki, Incidents, and Atlassian settings into one file, or import such a file -- for a colleague not on Team Sharing, or as a backup."
+                        Click="ConfigExportButton_Click"/>
+                    <Button
+                        x:Name="TeamSharingButton"
+                        Content="Team Sharing..."
+                        ToolTip="Team Sharing - Sync via Google Drive, OneDrive, etc."
+                        Click="TeamSharingButton_Click"/>
+                </StackPanel>
 
                 <!-- Module switcher: pill-highlighted radio labels
                      (NavPillRadioButtonStyle) directly on the header, no
