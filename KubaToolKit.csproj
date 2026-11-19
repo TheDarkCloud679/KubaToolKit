@@ -9,7 +9,7 @@
     <RootNamespace>KubaToolKit</RootNamespace>
     <AssemblyName>KubaToolKit</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>3.47.0</Version>
+    <Version>3.47.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,7 +33,9 @@
     <PackageReference Include="AWSSDK.CloudTrail" Version="4.0.100.4" />
     <PackageReference Include="AWSSDK.CloudWatch" Version="4.0.101.2" />
     <PackageReference Include="AWSSDK.CloudWatchLogs" Version="4.0.26.3" />
+    <PackageReference Include="AWSSDK.Core" Version="4.1.1.1" />
     <PackageReference Include="AWSSDK.EC2" Version="4.0.102.1" />
+    <PackageReference Include="AWSSDK.Extensions.CborProtocol" Version="4.1.0.2" />
     <PackageReference Include="AWSSDK.RDS" Version="4.0.100.2" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.24.3" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.7.3" />
