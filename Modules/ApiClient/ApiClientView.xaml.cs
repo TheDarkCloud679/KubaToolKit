@@ -27,6 +27,7 @@ public partial class ApiClientView
     private readonly ObservableCollection<HeaderItem> _extractions = new();
     private readonly ObservableCollection<CollectionNode> _collections = new();
     private CancellationTokenSource? _sendCancellation;
+    private CancellationTokenSource? _getTokenCancellation;
     private bool _syncingUrlAndParams;
     private bool _collectionsSortDescending;
     private bool _showAutoHeaders = true;
@@ -1710,6 +1711,12 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        if (_getTokenCancellation != null)
+        {
+            _getTokenCancellation.Cancel();
+            return;
+        }
+
         if (EnvironmentCombo.SelectedItem is not EnvironmentSet environment)
         {
             AppMessageBox.Show(
@@ -1744,9 +1751,14 @@ public partial class ApiClientView
                 UrlEncoded = node.BodyMode == "urlencoded" ? node.BodyFormData.ToList() : new List<HeaderItem>()
             };
 
+        _getTokenCancellation = new CancellationTokenSource();
+
+        var cancellationToken = _getTokenCancellation.Token;
+
         try
         {
-            GetTokenButton.IsEnabled = false;
+            GetTokenButtonText.Text = "Cancel";
+            GetTokenButton.ToolTip = "Cancel this request";
 
             Logger.Debug($"ApiClientView: Get Token -- sending {node.Method} {node.Url} for environment '{environment.Name}'.");
 
@@ -1759,7 +1771,7 @@ public partial class ApiClientView
                     auth,
                     environment.ToSubstitutionMap(),
                     node.PathVariables,
-                    CancellationToken.None);
+                    cancellationToken);
 
             // Shown in the Response panel either way, success or failure --
             // a 401/403/etc. almost always carries the real reason in its
@@ -1807,6 +1819,21 @@ public partial class ApiClientView
                 $"ApiClientView: Get Token -- succeeded for environment '{environment.Name}', "
                 + $"expiry={_tokenExpiryUtc[environment.FilePath]?.ToString("O") ?? "(unknown)"}.");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Logger.Debug($"ApiClientView: Get Token -- cancelled by user for environment '{environment.Name}'.");
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Info($"ApiClientView: Get Token -- timed out for environment '{environment.Name}'.");
+
+            AppMessageBox.Show(
+                "The server didn't respond within 100 seconds, so the request was aborted. "
+                + "Check the URL, your network, and that the server is actually reachable.",
+                "Get Token timed out",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
         catch (Exception ex)
         {
             Logger.Error("ApiClientView: Get Token request failed.", ex);
@@ -1815,7 +1842,9 @@ public partial class ApiClientView
         }
         finally
         {
-            GetTokenButton.IsEnabled = true;
+            _getTokenCancellation = null;
+
+            GetTokenButtonText.Text = "Get Token";
 
             UpdateGetTokenButtonState();
         }
@@ -2333,12 +2362,31 @@ public partial class ApiClientView
         object sender,
         RoutedEventArgs e)
     {
+        // While a request is in flight the button turns into "Cancel" --
+        // it used to just get disabled, leaving no way to give up on a
+        // request that never responds short of waiting out the 100s
+        // HttpClient timeout.
+        if (_sendCancellation != null)
+        {
+            _sendCancellation.Cancel();
+            return;
+        }
+
         await SendAsync();
     }
 
     public async Task
     SendAsync()
     {
+        if (_sendCancellation != null)
+        {
+            // Already in flight -- the button itself is the way to cancel
+            // this one (see SendButton_Click); a second, unrelated trigger
+            // (Enter key, double-clicking a request in the tree...) firing
+            // meanwhile is ignored rather than silently restarting it.
+            return;
+        }
+
         var url = UrlTextBox.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(url))
@@ -2359,15 +2407,17 @@ public partial class ApiClientView
 
         url = UrlTextBox.Text.Trim();
 
+        _sendCancellation = new CancellationTokenSource();
+
+        var cancellationToken = _sendCancellation.Token;
+
         try
         {
             StatusBadge.Visibility = Visibility.Collapsed;
             TimingTextBlock.Text = "";
             SendProgressBar.Visibility = Visibility.Visible;
-            SendButton.IsEnabled = false;
-
-            _sendCancellation?.Cancel();
-            _sendCancellation = new CancellationTokenSource();
+            SendButtonText.Text = "Cancel";
+            SendButton.ToolTip = "Cancel this request";
 
             var auth = ResolveAuthConfigForSend();
 
@@ -2403,7 +2453,7 @@ public partial class ApiClientView
                     auth,
                     variables,
                     _pathVariables.ToList(),
-                    _sendCancellation.Token);
+                    cancellationToken);
 
             Logger.Info($"ApiClientView: {method} {url} -> {result.StatusDisplay} ({result.ElapsedMs} ms)");
 
@@ -2423,9 +2473,29 @@ public partial class ApiClientView
                 ApplyPostResponseExtractions(result.Body);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The user clicked Cancel -- HttpClient's own 100s timeout
+            // (below) cancels an internal token of its own, not this one,
+            // so seeing *this* token cancelled means it was requested here.
+            Logger.Debug($"ApiClientView: request {method} {url} cancelled by user.");
+
+            StatusTextBlock.Text = "Cancelled";
+            StatusTextBlock.Foreground = (Brush)FindResource("TextSecondaryBrush");
+            StatusDot.Fill = (Brush)FindResource("TextSecondaryBrush");
+            StatusBadge.Background = (Brush)FindResource("SurfaceAltBrush");
+            StatusBadge.Visibility = Visibility.Visible;
+        }
         catch (OperationCanceledException)
         {
-            Logger.Debug($"ApiClientView: request {method} {url} cancelled.");
+            Logger.Info($"ApiClientView: request {method} {url} timed out.");
+
+            AppMessageBox.Show(
+                "The server didn't respond within 100 seconds, so the request was aborted. "
+                + "Check the URL, your network, and that the server is actually reachable.",
+                "Request timed out",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
@@ -2440,7 +2510,9 @@ public partial class ApiClientView
         finally
         {
             SendProgressBar.Visibility = Visibility.Collapsed;
-            SendButton.IsEnabled = true;
+            SendButtonText.Text = "Send";
+            SendButton.ToolTip = null;
+            _sendCancellation = null;
         }
     }
 
