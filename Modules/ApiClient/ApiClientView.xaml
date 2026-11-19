@@ -1100,7 +1100,7 @@
                                     TextWrapping="Wrap"
                                     FontSize="12"
                                     Foreground="{StaticResource TextSecondaryBrush}"
-                                    Text="The authorization header will be computed at send time from the authentication defined on the parent folder or collection (right-click it &#8594; «Edit authentication»)."/>
+                                    Text="Computed at send time from the parent folder or collection's authentication (right-click it &#8594; «Edit authentication»)."/>
 
                                 <StackPanel
                                     x:Name="BearerAuthPanel"

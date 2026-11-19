@@ -20,7 +20,7 @@
             FontSize="12"
             TextWrapping="Wrap"
             Foreground="{StaticResource TextSecondaryBrush}"
-            Text="Pick a color for any profile you want to stand out -- saved automatically. Profiles left on &quot;Auto&quot; keep the naming-based guess."/>
+            Text="Click a color to assign it; &quot;Auto&quot; keeps the automatic guess."/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="RowsItemsControl">

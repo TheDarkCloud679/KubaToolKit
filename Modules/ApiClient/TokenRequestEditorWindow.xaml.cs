@@ -28,7 +28,7 @@ public partial class TokenRequestEditorWindow
         _storage = storage;
         _environment = environment;
 
-        SubtitleText.Text = $"Saved with environment \"{environment.Name}\", kept in memory until you change it.";
+        SubtitleText.Text = $"Environment: {environment.Name}";
 
         HeadersGrid.ItemsSource = _headers;
         BodyFormGrid.ItemsSource = _bodyFormData;

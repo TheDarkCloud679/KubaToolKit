@@ -10,29 +10,11 @@
     <StackPanel Margin="20">
 
         <TextBlock
-            Text="Bundle everything into one file"
-            FontWeight="SemiBold"
-            Margin="0,0,0,4"/>
-        <TextBlock
             FontSize="11"
             TextWrapping="Wrap"
-            Margin="0,0,0,14"
-            Foreground="{StaticResource TextMutedBrush}">
-            <Run Text="Packs API Client collections and environments, the Wiki (including its images), the Incident Library, and your non-personal Atlassian settings (site URL, favorite Confluence spaces, saved Jira filters) into one JSON file -- handy to send a colleague who isn't on your Team Sharing folder, or as a one-off backup."/>
-        </TextBlock>
-
-        <Border
-            Background="{StaticResource SurfaceAltBrush}"
-            CornerRadius="6"
-            Padding="12"
-            Margin="0,0,0,16">
-            <TextBlock
-                FontSize="11"
-                TextWrapping="Wrap"
-                Foreground="{StaticResource TextSecondaryBrush}">
-                <Run Text="Never included: environment variable values, token-request bodies/auth, and your Atlassian email/API token -- all personal credentials that stay local. Importing only adds things that don't already exist here (by name); it never overwrites or deletes anything of yours." FontWeight="SemiBold"/>
-            </TextBlock>
-        </Border>
+            Margin="0,0,0,16"
+            Foreground="{StaticResource TextMutedBrush}"
+            Text="Bundles Collections, Environments, Wiki, Incidents, and Atlassian settings into one file -- no secrets included, and importing never overwrites anything."/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button

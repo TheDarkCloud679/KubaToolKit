@@ -10,7 +10,7 @@
     <StackPanel Margin="20">
 
         <TextBlock
-            Text="Writes directly into FileZilla's Site Manager (sitemanager.xml). Close FileZilla first, or it may overwrite this on its own exit. A timestamped backup is made before writing."
+            Text="Writes into FileZilla's Site Manager -- close FileZilla first, or it may overwrite this on exit. A backup is made first."
             TextWrapping="Wrap"
             FontSize="11"
             Foreground="{StaticResource TextSecondaryBrush}"

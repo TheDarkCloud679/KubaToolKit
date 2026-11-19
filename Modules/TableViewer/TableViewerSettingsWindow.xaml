@@ -18,7 +18,7 @@
             TextWrapping="Wrap"
             Margin="0,0,0,10"
             Foreground="{StaticResource TextMutedBrush}"
-            Text="Same 3 files as QTable's own Parameters dialog -- a file's first 3 letters pick the matching &lt;table&gt; inside whichever of these it's found in."/>
+            Text="Same 3 files as QTable's Parameters dialog, matched by a table's first 3 letters."/>
 
         <TextBlock Text="Tables definitions" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <Grid Margin="0,0,0,10">

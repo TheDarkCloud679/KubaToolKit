@@ -99,7 +99,7 @@
                         x:Name="ConfigExportButton"
                         Margin="0,0,8,0"
                         Content="Export / Import..."
-                        ToolTip="Bundle API Client collections/environments, Wiki, Incidents, and Atlassian settings into one file, or import such a file -- for a colleague not on Team Sharing, or as a backup."
+                        ToolTip="Export everything to one file, or import one -- for a colleague not on Team Sharing, or as a backup."
                         Click="ConfigExportButton_Click"/>
                     <Button
                         x:Name="TeamSharingButton"

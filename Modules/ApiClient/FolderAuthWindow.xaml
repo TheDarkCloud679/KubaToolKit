@@ -46,7 +46,7 @@
                 TextWrapping="Wrap"
                 FontSize="12"
                 Foreground="{StaticResource TextSecondaryBrush}"
-                Text="Inherits the authentication defined on the parent folder or collection (or none if there isn't one)."/>
+                Text="Inherits the parent folder or collection's authentication, if any."/>
 
             <StackPanel
                 x:Name="BearerAuthPanel"
@@ -112,7 +112,7 @@
                 FontWeight="SemiBold"
                 Foreground="{StaticResource TextSecondaryBrush}"
                 Margin="0,0,0,4"
-                ToolTip="Applied to every request under this folder, merged with that request's own headers. A closer folder overrides a farther one; the request's own header always wins."/>
+                ToolTip="Merged with each request's own headers; closer folders and the request itself win conflicts."/>
 
             <Border
                 Grid.Row="1"

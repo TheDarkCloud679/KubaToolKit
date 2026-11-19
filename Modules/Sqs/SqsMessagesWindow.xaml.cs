@@ -104,8 +104,7 @@ public partial class SqsMessagesWindow
                 new Action(() => DataGridSortHelper.RefreshColumnWidths(MessagesGrid)),
                 System.Windows.Threading.DispatcherPriority.Loaded);
 
-            StatusTextBlock.Text =
-                $"{messages.Count} message(s) • read only, no deletion";
+            StatusTextBlock.Text = $"{messages.Count} message(s)";
         }
         catch (OperationCanceledException)
         {
