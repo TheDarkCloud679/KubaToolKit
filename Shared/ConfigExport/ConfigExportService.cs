@@ -138,82 +138,25 @@ public class ConfigExportService
         }
     }
 
-    // Blanks every field that can hold a credential: the environment's own
-    // variable values, and (if a Get Token request is configured) its
-    // headers, body, and auth attribute values. Keys, URLs, extraction
-    // rules, and enabled flags all stay -- they describe shape, not
-    // secrets, and are exactly what a colleague needs to know which
-    // values to go fill in themselves after importing.
+    // Blanks the environment's own variable values -- the only place a
+    // real credential should live, since a properly-built Get Token
+    // request references {{variables}} rather than hardcoding them. The
+    // token request itself (URL, headers, body, auth type) is left as-is:
+    // it's the same auth METHOD for every environment of that shape, not
+    // a secret, and blanking it used to break the method for anything
+    // using a raw JSON body (field names lost along with the values).
     private static void
     BlankEnvironmentSecrets(
         PostmanEnvironment env)
     {
-        if (env.Values != null)
-        {
-            foreach (var value in env.Values)
-            {
-                value.Value = "";
-            }
-        }
-
-        var tokenRequest = env.TokenRequest;
-
-        if (tokenRequest == null)
+        if (env.Values == null)
         {
             return;
         }
 
-        if (tokenRequest.Header != null)
+        foreach (var value in env.Values)
         {
-            foreach (var header in tokenRequest.Header)
-            {
-                header.Value = "";
-            }
-        }
-
-        if (tokenRequest.Body != null)
-        {
-            tokenRequest.Body.Raw = "";
-
-            BlankFormParamValues(tokenRequest.Body.UrlEncoded);
-            BlankFormParamValues(tokenRequest.Body.FormData);
-        }
-
-        if (tokenRequest.Auth != null)
-        {
-            BlankAuthAttributeValues(tokenRequest.Auth.Bearer);
-            BlankAuthAttributeValues(tokenRequest.Auth.Basic);
-            BlankAuthAttributeValues(tokenRequest.Auth.ApiKey);
-        }
-    }
-
-    private static void
-    BlankFormParamValues(
-        List<PostmanFormParam>? parameters)
-    {
-        if (parameters == null)
-        {
-            return;
-        }
-
-        foreach (var parameter in parameters)
-        {
-            parameter.Value = "";
-        }
-    }
-
-    private static void
-    BlankAuthAttributeValues(
-        List<PostmanAuthAttribute>? attributes)
-    {
-        if (attributes == null)
-        {
-            return;
-        }
-
-        foreach (var attribute in attributes)
-        {
-            attribute.Value = "";
+            value.Value = "";
         }
     }
 
