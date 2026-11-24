@@ -123,4 +123,29 @@ public class CollectionNode
 
         return merged.Values.ToList();
     }
+
+    // A copy of this node's own request shape -- used when a new
+    // environment is created from a template environment's "Get Token"
+    // config, so the new one starts with the same URL/headers/extraction
+    // rules but none of the template's actual token/password values.
+    public CollectionNode
+    CloneTokenRequestWithoutSecrets() =>
+        new()
+        {
+            Name = Name,
+            IsRequest = true,
+            Method = Method,
+            Url = Url,
+            Headers = Headers.Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = "" }).ToList(),
+            PathVariables = PathVariables.Select(v => new HeaderItem { Enabled = v.Enabled, Key = v.Key, Value = "" }).ToList(),
+            BodyMode = BodyMode,
+            BodyFormData = BodyFormData.Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = "" }).ToList(),
+            PostResponseExtractions = PostResponseExtractions.Select(e => new HeaderItem { Enabled = e.Enabled, Key = e.Key, Value = e.Value }).ToList(),
+            Auth =
+                new AuthConfig
+                {
+                    Type = Auth.Type,
+                    ApiKeyName = Auth.ApiKeyName
+                }
+        };
 }

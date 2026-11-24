@@ -903,6 +903,27 @@ public partial class ApiClientView
     }
 
     private void
+    NewEnvironment_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SettingsPopup.IsOpen = false;
+
+        var existingEnvironments = _collectionStorage.LoadEnvironments();
+
+        var window =
+            new NewEnvironmentWindow(_collectionStorage, existingEnvironments)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+        if (window.ShowDialog() == true && window.CreatedEnvironment != null)
+        {
+            LoadCollectionsAndEnvironments(window.CreatedEnvironment.Name);
+        }
+    }
+
+    private void
     AddEnvironment_Click(
         object sender,
         RoutedEventArgs e)

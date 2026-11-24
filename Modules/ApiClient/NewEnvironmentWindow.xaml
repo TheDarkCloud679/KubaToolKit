@@ -1,0 +1,45 @@
+<Window
+    x:Class="KubaToolKit.Modules.ApiClient.NewEnvironmentWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="New Environment"
+    Width="420"
+    SizeToContent="Height"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20">
+
+        <TextBlock Text="Name" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox x:Name="NameTextBox" Margin="0,0,0,14"/>
+
+        <TextBlock Text="Template" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <RadioButton
+            x:Name="AbtTemplateRadio"
+            GroupName="Template"
+            Content="Modèle ABT (same variables as &quot;Nexum Nam Prod&quot;)"
+            Margin="0,0,0,6"
+            IsChecked="True"/>
+        <RadioButton
+            x:Name="KubApiTemplateRadio"
+            GroupName="Template"
+            Content="Modèle KubAPI (same variables as &quot;NAMProdKubAPI&quot;)"
+            Margin="0,0,0,6"/>
+        <RadioButton
+            x:Name="BlankTemplateRadio"
+            GroupName="Template"
+            Content="Blank"
+            Margin="0,0,0,14"/>
+
+        <TextBlock
+            FontSize="11"
+            TextWrapping="Wrap"
+            Margin="0,0,0,16"
+            Foreground="{StaticResource TextMutedBrush}"
+            Text="Copies variable names and the Get Token request's shape, blank -- fill in values via Sync from AWS or by hand afterwards."/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="CancelButton_Click"/>
+            <Button Content="Create" Width="90" Style="{StaticResource AccentButtonStyle}" Click="CreateButton_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

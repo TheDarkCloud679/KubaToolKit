@@ -778,7 +778,7 @@ public class CollectionStorageService
     {
         EnsureFoldersExist();
 
-        var fileName = MakeUniqueFileName(SanitizeFileName(name));
+        var fileName = MakeUniqueFileName(CollectionsFolder, SanitizeFileName(name));
         var filePath = Path.Combine(CollectionsFolder, fileName);
 
         var root =
@@ -797,6 +797,39 @@ public class CollectionStorageService
             root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
 
         return filePath;
+    }
+
+    // "template" is an already-loaded environment (typically one of the
+    // user's own existing "reference" environments, picked by name in
+    // NewEnvironmentWindow) whose variable KEYS and Get Token request
+    // SHAPE are copied -- never its values, which could be anyone's real
+    // tokens/passwords. Null makes a blank environment.
+    public EnvironmentSet
+    CreateEnvironment(
+        string name,
+        EnvironmentSet? template)
+    {
+        EnsureFoldersExist();
+
+        var fileName = MakeUniqueFileName(EnvironmentsFolder, SanitizeFileName(name));
+        var filePath = Path.Combine(EnvironmentsFolder, fileName);
+
+        var environment =
+            new EnvironmentSet
+            {
+                Name = name,
+                FilePath = filePath,
+                Variables =
+                    template?.Variables
+                        .Select(v => new HeaderItem { Enabled = v.Enabled, Key = v.Key, Value = "" })
+                        .ToList()
+                    ?? new List<HeaderItem>(),
+                TokenRequestConfig = template?.TokenRequestConfig?.CloneTokenRequestWithoutSecrets()
+            };
+
+        SaveEnvironment(environment);
+
+        return environment;
     }
 
     // Moved into a Backup subfolder rather than actually deleted -- once
@@ -1117,14 +1150,15 @@ public class CollectionStorageService
         return string.IsNullOrWhiteSpace(cleaned) ? "collection" : cleaned;
     }
 
-    private string
+    private static string
     MakeUniqueFileName(
+        string folder,
         string baseName)
     {
         var fileName = $"{baseName}.json";
         var counter = 1;
 
-        while (File.Exists(Path.Combine(CollectionsFolder, fileName)))
+        while (File.Exists(Path.Combine(folder, fileName)))
         {
             fileName = $"{baseName} ({++counter}).json";
         }
