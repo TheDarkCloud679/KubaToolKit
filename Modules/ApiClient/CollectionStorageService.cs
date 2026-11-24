@@ -824,7 +824,7 @@ public class CollectionStorageService
                         .Select(v => new HeaderItem { Enabled = v.Enabled, Key = v.Key, Value = "" })
                         .ToList()
                     ?? new List<HeaderItem>(),
-                TokenRequestConfig = template?.TokenRequestConfig?.CloneTokenRequestWithoutSecrets()
+                TokenRequestConfig = template?.TokenRequestConfig?.Clone()
             };
 
         SaveEnvironment(environment);

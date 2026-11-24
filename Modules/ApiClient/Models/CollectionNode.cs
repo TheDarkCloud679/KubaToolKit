@@ -124,28 +124,36 @@ public class CollectionNode
         return merged.Values.ToList();
     }
 
-    // A copy of this node's own request shape -- used when a new
+    // A deep copy of this node's own request -- used when a new
     // environment is created from a template environment's "Get Token"
-    // config, so the new one starts with the same URL/headers/extraction
-    // rules but none of the template's actual token/password values.
+    // config, so the new one starts with the exact same auth method
+    // (URL, body shape, auth type). Copied as-is, not blanked: a
+    // properly-built token request references {{variables}} for whatever
+    // actually differs per environment (credentials, URLs), which live
+    // in the new environment's own (blank) Variables, not here.
     public CollectionNode
-    CloneTokenRequestWithoutSecrets() =>
+    Clone() =>
         new()
         {
             Name = Name,
-            IsRequest = true,
+            IsRequest = IsRequest,
             Method = Method,
             Url = Url,
-            Headers = Headers.Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = "" }).ToList(),
-            PathVariables = PathVariables.Select(v => new HeaderItem { Enabled = v.Enabled, Key = v.Key, Value = "" }).ToList(),
+            Headers = Headers.Select(h => new HeaderItem { Enabled = h.Enabled, Key = h.Key, Value = h.Value }).ToList(),
+            PathVariables = PathVariables.Select(v => new HeaderItem { Enabled = v.Enabled, Key = v.Key, Value = v.Value }).ToList(),
+            Body = Body,
             BodyMode = BodyMode,
-            BodyFormData = BodyFormData.Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = "" }).ToList(),
+            BodyFormData = BodyFormData.Select(f => new HeaderItem { Enabled = f.Enabled, Key = f.Key, Value = f.Value }).ToList(),
             PostResponseExtractions = PostResponseExtractions.Select(e => new HeaderItem { Enabled = e.Enabled, Key = e.Key, Value = e.Value }).ToList(),
             Auth =
                 new AuthConfig
                 {
                     Type = Auth.Type,
-                    ApiKeyName = Auth.ApiKeyName
+                    BearerToken = Auth.BearerToken,
+                    Username = Auth.Username,
+                    Password = Auth.Password,
+                    ApiKeyName = Auth.ApiKeyName,
+                    ApiKeyValue = Auth.ApiKeyValue
                 }
         };
 }

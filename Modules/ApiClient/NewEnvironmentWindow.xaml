@@ -16,13 +16,13 @@
         <RadioButton
             x:Name="AbtTemplateRadio"
             GroupName="Template"
-            Content="Modèle ABT (same variables as &quot;Nexum Nam Prod&quot;)"
+            Content="Modèle ABT"
             Margin="0,0,0,6"
             IsChecked="True"/>
         <RadioButton
             x:Name="KubApiTemplateRadio"
             GroupName="Template"
-            Content="Modèle KubAPI (same variables as &quot;NAMProdKubAPI&quot;)"
+            Content="Modèle KubAPI"
             Margin="0,0,0,6"/>
         <RadioButton
             x:Name="BlankTemplateRadio"
@@ -35,7 +35,7 @@
             TextWrapping="Wrap"
             Margin="0,0,0,16"
             Foreground="{StaticResource TextMutedBrush}"
-            Text="Copies variable names and the Get Token request's shape, blank -- fill in values via Sync from AWS or by hand afterwards."/>
+            Text="Copies the template's variable names and Get Token setup (same auth method) -- only the variables start blank, to fill in via Sync from AWS or by hand."/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="CancelButton_Click"/>
